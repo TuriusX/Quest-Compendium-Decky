@@ -34,7 +34,7 @@ the full source is in this repository.
 2. Turn on **Developer Mode**. A **Developer** tab appears.
 3. Open **Developer**, choose **Install Plugin from URL**, and enter:
    ```
-   https://github.com/TuriusX/quest-compendium-decky/releases/latest/download/quest-compendium-decky.zip
+   https://github.com/TuriusX/Quest-Compendium-Decky/releases/latest/download/quest-compendium-decky.zip
    ```
 4. Confirm. **Quest Compendium** (book icon) appears in the Decky list.
 
