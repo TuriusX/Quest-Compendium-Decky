@@ -1,0 +1,13 @@
+{
+  "name": "quest-compendium-decky-tests",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "python3 test_backend.py && python3 test_tls.py" },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.0.0",
+    "express": "^4.21.2",
+    "tsx": "^4.21.0",
+    "typescript": "~5.8.2"
+  }
+}

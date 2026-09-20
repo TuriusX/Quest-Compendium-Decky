@@ -1,0 +1,13 @@
+#!/bin/sh
+[ "$QC_FAKE_GS_FAIL" = "1" ] && { echo "Failed to open GAMESCOPE_WAYLAND_DISPLAY." >&2; exit 1; }
+[ "$1" = "screenshot" ] || exit 2
+OUT="$2"
+FIX="$QC_FIXTURE_PNG"
+(
+  sleep 0.15
+  SZ=$(wc -c < "$FIX")
+  head -c $((SZ / 2)) "$FIX" > "$OUT"
+  sleep 0.45
+  cat "$FIX" > "$OUT"
+) >/dev/null 2>&1 &
+exit 0

@@ -1,0 +1,11 @@
+{
+  "name": "Quest Compendium",
+  "author": "Noah Minton",
+  "flags": [],
+  "api_version": 1,
+  "publish": {
+    "tags": ["ai", "guides", "utility"],
+    "description": "An AI game guide that can see your screen. Get hints, boss tips, or min-max help from the Quick Access menu, with a spoiler-friendly Roleplay mode.",
+    "image": "https://questcompendium.com/icon.png"
+  }
+}
