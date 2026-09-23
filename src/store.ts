@@ -12,6 +12,8 @@ export interface ChatState {
   limitReached: boolean;
   quota: Quota | null;
   gameKey: number | null;
+  /** The question currently being answered, shown while waiting. */
+  pending: string | null;
 }
 
 const initial: ChatState = {
@@ -23,6 +25,7 @@ const initial: ChatState = {
   limitReached: false,
   quota: null,
   gameKey: null,
+  pending: null,
 };
 
 let state: ChatState = initial;
@@ -36,7 +39,7 @@ export function setChat(patch: Partial<ChatState>): void {
 }
 
 export function resetConversation(gameKey: number | null): void {
-  setChat({ history: [], error: null, notice: null, screenshotNote: null, limitReached: false, gameKey });
+  setChat({ history: [], error: null, notice: null, screenshotNote: null, limitReached: false, gameKey, pending: null });
 }
 
 export function useChat(): ChatState {

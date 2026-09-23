@@ -13,7 +13,10 @@ for PC. It is a [Decky Loader](https://decky.xyz) plugin.
 - **Sees your game.** Sends one screenshot of the game layer (using gamescope's default screenshot mode), so answers
   match what's on screen. You can turn this off.
 - **Three styles.** Standard, Min-Max (efficiency and completion), and Roleplay (in-universe, spoiler-friendly hints).
-- **Controller-friendly.** Preset questions, the on-screen keyboard for your own, and a full-screen reader for long answers.
+- **Controller-friendly.** Preset questions, the on-screen keyboard for your own, and full answers you can read by
+  pressing down in the Quick Access panel. A full-screen view shows the whole conversation.
+- **Guides & browser.** Quick links to the running game's wiki, walkthroughs, YouTube, Reddit, PCGamingWiki, and
+  ProtonDB, plus a search box. Opens in Steam's browser, or inside the plugin (experimental).
 - **Works right away.** Try it as a guest with no sign-in. To use Premium, link your Quest Compendium account by
   scanning a QR code with your phone.
 - **Per-game conversations.** Follow-up questions keep context; a new game starts a fresh conversation.
