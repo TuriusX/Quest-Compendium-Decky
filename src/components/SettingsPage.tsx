@@ -1,7 +1,6 @@
 import { ButtonItem, DropdownItem, Field, PanelSection, PanelSectionRow, Spinner, ToggleField } from "@decky/ui";
 import { useEffect, useState } from "react";
 import { getQuota, getState, Mode, PluginState, saveSettings, Settings, testScreenshot, unlink } from "../api";
-import { getEmbedPref, setEmbedPref } from "../routes";
 import { setChat } from "../store";
 import { ThemeStyle } from "../theme";
 import { PageHeader } from "./Brand";
@@ -19,7 +18,6 @@ export function SettingsPage() {
   const [backendDown, setBackendDown] = useState(false);
   const [showLink, setShowLink] = useState(false);
   const [diag, setDiag] = useState<string | null>(null);
-  const [embed, setEmbed] = useState(getEmbedPref());
 
   const refreshState = async () => {
     try {
@@ -122,19 +120,6 @@ export function SettingsPage() {
           </PanelSection>
         )}
 
-        <PanelSection title="Browser">
-          <PanelSectionRow>
-            <ToggleField
-              label="Open pages inside the plugin (beta)"
-              description="Off: links open in Steam's built-in browser. On: they open in the plugin's own page. Some sites refuse to load there; use touch to scroll."
-              checked={embed}
-              onChange={(on) => {
-                setEmbed(on);
-                setEmbedPref(on);
-              }}
-            />
-          </PanelSectionRow>
-        </PanelSection>
 
         {ps && (
           <PanelSection title="Account">

@@ -1,6 +1,6 @@
 import { Focusable } from "@decky/ui";
 import { Fragment, type ReactElement } from "react";
-import { chunkText, inlineSegments, parseAnswer } from "../format";
+import { Block, chunkText, inlineSegments, parseAnswer } from "../format";
 
 export function Inline({ text }: { text: string }) {
   return (
@@ -15,7 +15,11 @@ export function Inline({ text }: { text: string }) {
  * and Steam scrolls the focused block into view, so the whole answer can be read without leaving the panel.
  */
 export function AnswerBlocks({ text, chunk = 280 }: { text: string; chunk?: number }) {
-  const blocks = parseAnswer(text);
+  return <BlockList blocks={parseAnswer(text)} chunk={chunk} />;
+}
+
+/** Same focusable layout for any list of blocks (AI answers and web pages). */
+export function BlockList({ blocks, chunk = 280 }: { blocks: Block[]; chunk?: number }) {
   const out: ReactElement[] = [];
   blocks.forEach((b, i) => {
     if (b.kind === "heading") {

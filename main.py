@@ -5,7 +5,8 @@ Quest Compendium server. This backend only:
 
   1. captures the game frame with `gamescopectl screenshot` (game layer only, no overlays),
   2. talks to the Quest Compendium server, and
-  3. stores the sign-in state on the Deck.
+  3. stores the sign-in state on the Deck, and
+  4. fetches web pages for the in-plugin reader browser (the frontend turns them into readable text).
 
 Callable-from-frontend methods are the public `async def`s on `Plugin` (no leading underscore).
 """
@@ -17,6 +18,8 @@ import os
 import pwd
 import secrets
 import shutil
+import ipaddress
+from urllib.parse import urlsplit
 import ssl
 import time
 from asyncio.subprocess import DEVNULL, PIPE
@@ -40,6 +43,14 @@ MAX_HISTORY_TURNS = 10
 MAX_HISTORY_CHARS = 4000
 MAX_IMAGE_BYTES = 6 * 1024 * 1024
 SCREENSHOT_MAX_WIDTH = 1280
+
+# In-plugin reader browser
+PAGE_TIMEOUT_S = 20
+MAX_PAGE_BYTES = 4 * 1024 * 1024
+BROWSER_UA = (
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/126.0 Safari/537.36"
+)
 
 VALID_MODES = ("standard", "minmax", "roleplay")
 VALID_MODELS = ("pro", "flash")
@@ -570,3 +581,53 @@ class Plugin:
         self.pending_link = None
         self._save()
         return True
+
+    # ---- reader browser ----------------------------------------------------------------------
+
+    async def fetch_page(self, url: str) -> Dict[str, Any]:
+        """Download a web page for the in-plugin reader. Returns the raw HTML; the frontend extracts the text.
+
+        Only public http(s) addresses are allowed (no file://, localhost, or local-network hosts).
+        """
+        url = str(url or "").strip()
+        parts = urlsplit(url)
+        if parts.scheme not in ("http", "https") or not parts.hostname:
+            return {"ok": False, "error": "Only web addresses (http/https) can be opened."}
+        host = parts.hostname.lower()
+        if host == "localhost" or host.endswith(".local"):
+            return {"ok": False, "error": "Local addresses can't be opened."}
+        try:
+            ip = ipaddress.ip_address(host)
+            if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_unspecified or ip.is_reserved:
+                return {"ok": False, "error": "Local addresses can't be opened."}
+        except ValueError:
+            pass  # a hostname, not an IP literal
+
+        headers = {
+            "User-Agent": BROWSER_UA,
+            "Accept": "text/html,application/xhtml+xml;q=0.9,*/*;q=0.5",
+            "Accept-Language": "en-US,en;q=0.8",
+        }
+        try:
+            timeout = aiohttp.ClientTimeout(total=PAGE_TIMEOUT_S)
+            connector = aiohttp.TCPConnector(ssl=self._ssl)
+            async with aiohttp.ClientSession(timeout=timeout, connector=connector) as session:
+                async with session.get(url, headers=headers, allow_redirects=True, max_redirects=8) as resp:
+                    ctype = resp.headers.get("Content-Type", "")
+                    if "html" not in ctype and "xml" not in ctype and "text/plain" not in ctype:
+                        return {"ok": False, "status": resp.status, "error": "This link isn't a web page (it may be a file or video)."}
+                    raw = await resp.content.read(MAX_PAGE_BYTES)
+                    try:
+                        html = raw.decode(resp.charset or "utf-8", errors="replace")
+                    except LookupError:  # unknown charset name
+                        html = raw.decode("utf-8", errors="replace")
+                    return {"ok": resp.status < 400, "status": resp.status, "url": str(resp.url), "html": html,
+                            "error": None if resp.status < 400 else f"The site returned an error (HTTP {resp.status})."}
+        except asyncio.TimeoutError:
+            return {"ok": False, "error": "The page took too long to load."}
+        except aiohttp.ClientError as e:
+            decky.logger.warning(f"fetch_page {host}: {type(e).__name__}: {str(e)[:200]}")
+            return {"ok": False, "error": f"Couldn't load the page ({type(e).__name__})."}
+        except Exception as e:  # never let a bad page take down the backend
+            decky.logger.warning(f"fetch_page {host} unexpected: {type(e).__name__}: {str(e)[:200]}")
+            return {"ok": False, "error": "Couldn't load the page."}

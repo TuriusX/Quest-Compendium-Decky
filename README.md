@@ -15,8 +15,8 @@ for PC. It is a [Decky Loader](https://decky.xyz) plugin.
 - **Three styles.** Standard, Min-Max (efficiency and completion), and Roleplay (in-universe, spoiler-friendly hints).
 - **Controller-friendly.** Preset questions, the on-screen keyboard for your own, and full answers you can read by
   pressing down in the Quick Access panel. A full-screen view shows the whole conversation.
-- **Guides & browser.** Quick links to the running game's wiki, walkthroughs, YouTube, Reddit, PCGamingWiki, and
-  ProtonDB, plus a search box. Opens in Steam's browser, or inside the plugin (experimental).
+- **Built-in browser tab.** Search the web and read wikis and guides in a clean reader view without leaving the
+  Quick Access panel. Quick searches for the running game's wiki, walkthroughs, and Reddit tips.
 - **Works right away.** Try it as a guest with no sign-in. To use Premium, link your Quest Compendium account by
   scanning a QR code with your phone.
 - **Per-game conversations.** Follow-up questions keep context; a new game starts a fresh conversation.

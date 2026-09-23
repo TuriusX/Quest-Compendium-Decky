@@ -1,6 +1,5 @@
 import { DialogButton, Focusable } from "@decky/ui";
 import { useCurrentGame } from "../game";
-import { GUIDES_ROUTE, openPage } from "../routes";
 import { resetConversation, useChat } from "../store";
 import { ThemeStyle } from "../theme";
 import { AnswerBlocks } from "./AnswerBlocks";
@@ -17,11 +16,7 @@ export function AnswerPage() {
     <div className="qc-page">
       <ThemeStyle />
       <div className="qc-page-inner">
-        <PageHeader
-          title="Conversation"
-          sub={game ? game.name : null}
-          actions={<DialogButton onClick={() => openPage(GUIDES_ROUTE)}>Guides</DialogButton>}
-        />
+        <PageHeader title="Conversation" sub={game ? game.name : null} />
         {turns.length === 0 && (
           <div className="qc-note qc-muted" style={{ margin: 8 }}>
             No questions yet. Open the Quick Access menu and ask Quest Compendium something.

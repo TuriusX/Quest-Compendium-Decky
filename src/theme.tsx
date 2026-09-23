@@ -75,16 +75,24 @@ const CSS = `
 .qc-q.qc-focused, .qc-q.gpfocus { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.7); }
 .qc-a { background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 16px 16px 16px 4px; padding: 8px 4px; }
 
-.qc-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-.qc-grid > * { min-width: 0 !important; }
-.qc-tile-label { font-size: 16px; font-weight: 700; }
-.qc-tile-sub { font-size: 12px; opacity: 0.7; margin-top: 2px; font-weight: 400; }
+/* Tabs */
+.qc-tabs { display: flex; gap: 6px; width: 100%; }
+.qc-tabs > .qc-tab { flex: 1 1 0; min-width: 0 !important; padding: 7px 4px !important; font-size: 13px !important; opacity: 0.7; }
+.qc-tabs > .qc-tab-active { opacity: 1; background: ${PURPLE} !important; color: #fff !important; }
 
-.qc-browser { display: flex; flex-direction: column; margin-top: 40px; height: calc(100% - 40px); box-sizing: border-box; padding: 8px 16px 12px; }
-.qc-browser-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-.qc-browser-bar > * { flex: 0 0 auto; }
-.qc-browser-bar > .qc-grow { flex: 1 1 auto; min-width: 0; font-size: 13px; opacity: 0.75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.qc-browser iframe { flex: 1; width: 100%; border: 1px solid rgba(139, 92, 246, 0.45); border-radius: 10px; background: #fff; }
+/* Reader browser */
+.qc-toolbar { display: flex; gap: 6px; width: 100%; }
+.qc-toolbar > * { flex: 1 1 0; min-width: 0 !important; padding: 6px 4px !important; font-size: 12px !important; }
+.qc-section-mini { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #b9b2d6; margin-top: 4px; }
+.qc-result { padding: 8px 9px; border-radius: 8px; margin-bottom: 6px; background: rgba(255, 255, 255, 0.04); }
+.qc-result.qc-focused, .qc-result.gpfocus, .qc-link.qc-focused, .qc-link.gpfocus {
+  background: rgba(139, 92, 246, 0.22); box-shadow: inset 0 0 0 1px rgba(139, 92, 246, 0.6);
+}
+.qc-result-title { font-size: 13px; font-weight: 700; color: #f4f1ff; line-height: 1.3; }
+.qc-result-domain { font-size: 11px; color: ${GOLD}; margin-top: 2px; }
+.qc-result-snippet { font-size: 12px; color: #c9c3e0; line-height: 1.35; margin-top: 3px; max-height: 3.9em; overflow: hidden; }
+.qc-page-t { font-size: 15px; font-weight: 700; color: #f4f1ff; line-height: 1.3; }
+.qc-link { font-size: 12.5px; color: #c4b5fd; padding: 5px 8px; border-radius: 6px; }
 `;
 
 /** Render once per screen (panel or page). Duplicate style tags are harmless. */
