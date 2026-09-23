@@ -193,6 +193,9 @@ export function QuickAccessPanel() {
                 value={prompt}
                 disabled={chat.busy}
                 onChange={(e) => setPrompt(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && prompt.trim() && !chat.busy) void submit(prompt);
+                }}
               />
             </PanelSectionRow>
             <PanelSectionRow>

@@ -14,11 +14,23 @@ interface PageFetch {
 }
 const fetchPage = callable<[url: string], PageFetch>("fetch_page");
 
+interface ServerSearch {
+  ok: boolean;
+  status?: number;
+  summary?: string;
+  results?: { title?: string; url?: string; domain?: string; snippet?: string; blocked?: boolean }[];
+  error?: string | null;
+}
+/** Google search through the Quest Compendium server (Gemini with Google Search). */
+const webSearch = callable<[query: string], ServerSearch>("web_search");
+
 export interface SearchResult {
   title: string;
   url: string;
   domain: string;
   snippet: string;
+  /** The site showed a bot check when the server looked at it; it may only open as a saved copy. */
+  blocked?: boolean;
 }
 
 export interface PageLink {
@@ -32,6 +44,8 @@ export interface PageDoc {
   domain: string;
   blocks: Block[];
   links: PageLink[];
+  /** Shown above the page, e.g. when a saved copy is displayed instead of the live page. */
+  note?: string;
 }
 
 export type Tab = "companion" | "browser";
@@ -41,6 +55,10 @@ interface Snapshot {
   view: View;
   query: string;
   results: SearchResult[];
+  /** Short overview written from the search results (Google search only). */
+  summary: string;
+  /** Which search engine produced the results. */
+  engine: string;
   page: PageDoc | null;
 }
 
@@ -56,6 +74,8 @@ let state: BrowserState = {
   view: "home",
   query: "",
   results: [],
+  summary: "",
+  engine: "",
   page: null,
   loading: null,
   error: null,
@@ -86,7 +106,14 @@ export function useBrowser(): BrowserState {
 
 export const setTab = (tab: Tab) => set({ tab });
 
-const snapshot = (): Snapshot => ({ view: state.view, query: state.query, results: state.results, page: state.page });
+const snapshot = (): Snapshot => ({
+  view: state.view,
+  query: state.query,
+  results: state.results,
+  summary: state.summary,
+  engine: state.engine,
+  page: state.page,
+});
 
 function pushHistory(): void {
   if (state.view === "home" && !state.results.length && !state.page) return;
@@ -179,49 +206,118 @@ export async function search(query: string): Promise<void> {
   if (!q) return;
   const id = ++requestId;
   pushHistory();
-  set({ loading: `Searching for "${q}"\u2026`, error: null, query: q });
+  set({ loading: `Searching Google for "${q}"\u2026`, error: null, query: q });
+  const failures: string[] = [];
   let results: SearchResult[] = [];
-  let lastError: string | null = null;
-  const engines: [string, (h: string) => SearchResult[]][] = [
-    [`https://html.duckduckgo.com/html/?q=${encodeURIComponent(q)}`, parseDuckDuckGo],
-    [`https://www.bing.com/search?q=${encodeURIComponent(q)}`, parseBing],
+  let summary = "";
+  let engine = "";
+
+  // 1) Google, through the Quest Compendium server.
+  try {
+    const r = await webSearch(q);
+    if (id !== requestId) return;
+    if (r.ok && r.results?.length) {
+      results = r.results
+        .filter((x): x is typeof x & { url: string } => typeof x.url === "string" && /^https?:\/\//.test(x.url))
+        .map((x) => ({
+          title: clean(x.title || x.domain || domainOf(x.url)),
+          url: x.url,
+          domain: x.domain || domainOf(x.url),
+          snippet: clean(x.snippet || ""),
+          blocked: !!x.blocked,
+        }));
+      summary = clean(r.summary || "");
+      engine = "Google";
+    } else if (r.status === 404) failures.push("Google search needs the latest server update");
+    else failures.push(`Google: ${r.error ?? "no results"}`);
+  } catch {
+    failures.push("Google: plugin backend not responding");
+  }
+
+  // 2) Fallbacks in case the server search isn't available.
+  const engines: [string, string, (h: string) => SearchResult[]][] = [
+    ["DuckDuckGo", `https://html.duckduckgo.com/html/?q=${encodeURIComponent(q)}`, parseDuckDuckGo],
+    ["Bing", `https://www.bing.com/search?q=${encodeURIComponent(q)}&setlang=en`, parseBing],
   ];
-  for (const [url, parse] of engines) {
+  for (const [name, url, parse] of engines) {
+    if (results.length) break;
+    if (id !== requestId) return;
+    set({ loading: `Searching ${name} for "${q}"\u2026` });
     try {
       const res = await fetchPage(url);
       if (id !== requestId) return;
-      if (res.html) results = parse(res.html);
-      if (!res.ok && !results.length) lastError = res.error ?? null;
+      const parsed = res.html ? parse(res.html) : [];
+      if (parsed.length) {
+        results = parsed;
+        engine = name;
+      } else {
+        const why = res.error ?? (res.status && res.status !== 200 ? `HTTP ${res.status}` : "blocked or no results");
+        failures.push(`${name}: ${why}`);
+      }
     } catch {
-      lastError = "The plugin backend isn't responding.";
+      failures.push(`${name}: plugin backend not responding`);
     }
-    if (results.length) break;
   }
+
   if (id !== requestId) return;
   if (!results.length) {
-    set({ loading: null, error: lastError ?? "No results. Try different words." });
+    set({ loading: null, error: `No results. ${failures.join(" \u00b7 ")}` });
     return;
   }
-  set({ loading: null, view: "results", results: results.slice(0, 15), page: null });
+  set({ loading: null, view: "results", results: results.slice(0, 15), summary, engine, page: null });
 }
 
 // ---- pages --------------------------------------------------------------------------------------
 
+/** Bot checks (Cloudflare and similar) that a plain page download can't get past. */
+function isBotCheck(status: number | undefined, html: string): boolean {
+  const head = html.slice(0, 30000);
+  const title = head.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] ?? "";
+  return (
+    ((status === 403 || status === 503 || status === 429) && /cloudflare|captcha|challenge/i.test(head)) ||
+    /just a moment|attention required|security check|verify you are human|are you a robot|access denied/i.test(title) ||
+    /cf-browser-verification|challenge-platform|cf_chl_|g-recaptcha|hcaptcha/i.test(head)
+  );
+}
+
 export async function openUrl(url: string): Promise<void> {
   const id = ++requestId;
-  let target = url;
   // Reddit's new site needs JavaScript; the classic site is plain HTML.
-  target = target.replace(/^https?:\/\/(www\.|new\.)?reddit\.com/i, "https://old.reddit.com");
+  const target = url.replace(/^https?:\/\/(www\.|new\.)?reddit\.com/i, "https://old.reddit.com");
   pushHistory();
   set({ loading: `Opening ${domainOf(target)}\u2026`, error: null });
   try {
     const res = await fetchPage(target);
     if (id !== requestId) return;
+    const finalUrl = res.url || target;
+
+    // Sites behind a bot check: show the Internet Archive's latest saved copy instead.
+    if (res.html && isBotCheck(res.status, res.html)) {
+      set({ loading: `${domainOf(finalUrl)} blocks readers. Trying a saved copy\u2026` });
+      // "2" asks for the most recent capture; "id_" asks for the original page without the archive's toolbar.
+      for (const archiveUrl of [`https://web.archive.org/web/2id_/${finalUrl}`, `https://web.archive.org/web/2/${finalUrl}`]) {
+        const saved = await fetchPage(archiveUrl);
+        if (id !== requestId) return;
+        if (saved.ok && saved.html && !isBotCheck(saved.status, saved.html)) {
+          const page = extractPage(saved.html, finalUrl);
+          if (page.blocks.length) {
+            page.note = `${page.domain} blocks readers like this one, so this is the latest saved copy from the Internet Archive. It may be a little out of date.`;
+            set({ loading: null, view: "page", page });
+            return;
+          }
+        }
+      }
+      set({
+        loading: null,
+        error: `${domainOf(finalUrl)} blocks readers like this one and has no saved copy. Try another result.`,
+      });
+      return;
+    }
     if (!res.html) {
       set({ loading: null, error: res.error ?? "Couldn't load the page." });
       return;
     }
-    const finalUrl = res.url || target;
+
     const page = extractPage(res.html, finalUrl);
     if (!page.blocks.length) {
       set({
@@ -290,6 +386,9 @@ const JUNK_SELECTORS = [
   ".notifications-placeholder",
   ".page-side-tools",
   ".wds-dropdown",
+  "#wm-ipp-base",
+  "#wm-ipp",
+  "#donato",
 ].join(",");
 
 // Class/id tokens that almost always mark clutter. Matched per token so e.g. "has-sidebar" layouts survive.
@@ -441,6 +540,9 @@ function collectLinks(root: Element, base: string): PageLink[] {
     } catch {
       return;
     }
+    // Links inside an Internet Archive copy point at the archive; open the original page instead.
+    const archived = url.match(/\/web\/\d+[a-z_]*\/(https?:\/\/.+)$/);
+    if (archived) url = archived[1];
     if (!/^https?:/.test(url) || url.split("#")[0] === baseNoHash) return;
     if (/[?&]action=(edit|history)|\/(Special|File|Category|Template|User|Talk):|\/login|\/signup/i.test(url)) return;
     const key = url.split("#")[0];

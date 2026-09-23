@@ -75,10 +75,15 @@ const CSS = `
 .qc-q.qc-focused, .qc-q.gpfocus { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.7); }
 .qc-a { background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 16px 16px 16px 4px; padding: 8px 4px; }
 
-/* Tabs */
-.qc-tabs { display: flex; gap: 6px; width: 100%; }
-.qc-tabs > .qc-tab { flex: 1 1 0; min-width: 0 !important; padding: 7px 4px !important; font-size: 13px !important; opacity: 0.7; }
-.qc-tabs > .qc-tab-active { opacity: 1; background: ${PURPLE} !important; color: #fff !important; }
+/* Tabs: a quiet segmented control; the active tab is marked by an underline, not a filled button. */
+.qc-tabs { display: flex; gap: 2px; width: 100%; padding: 2px; box-sizing: border-box; border-radius: 8px; background: rgba(255, 255, 255, 0.04); }
+.qc-tabs > .qc-tab {
+  flex: 1 1 0; min-width: 0 !important; padding: 5px 4px !important; font-size: 12px !important; font-weight: 600;
+  background: transparent !important; color: #9d96b8 !important; border-radius: 6px !important;
+  box-shadow: inset 0 -2px 0 transparent;
+}
+.qc-tabs > .qc-tab-active { color: #f4f1ff !important; background: rgba(139, 92, 246, 0.14) !important; box-shadow: inset 0 -2px 0 ${PURPLE}; }
+.qc-tabs > .qc-tab.gpfocus { background: rgba(255, 255, 255, 0.16) !important; color: #fff !important; }
 
 /* Reader browser */
 .qc-toolbar { display: flex; gap: 6px; width: 100%; }
@@ -92,6 +97,11 @@ const CSS = `
 .qc-result-domain { font-size: 11px; color: ${GOLD}; margin-top: 2px; }
 .qc-result-snippet { font-size: 12px; color: #c9c3e0; line-height: 1.35; margin-top: 3px; max-height: 3.9em; overflow: hidden; }
 .qc-page-t { font-size: 15px; font-weight: 700; color: #f4f1ff; line-height: 1.3; }
+.qc-overview { font-size: 12.5px; line-height: 1.45; color: #e6e1f7; padding: 8px 9px; border-radius: 8px; margin-bottom: 8px;
+  background: rgba(139, 92, 246, 0.12); border: 1px solid rgba(139, 92, 246, 0.35); }
+.qc-overview.qc-focused, .qc-overview.gpfocus { box-shadow: inset 0 0 0 1px rgba(139, 92, 246, 0.8); }
+.qc-overview-label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: ${GOLD}; margin-bottom: 3px; }
+.qc-result-flag { font-size: 11px; color: #facc15; margin-top: 3px; opacity: 0.85; }
 .qc-link { font-size: 12.5px; color: #c4b5fd; padding: 5px 8px; border-radius: 6px; }
 `;
 

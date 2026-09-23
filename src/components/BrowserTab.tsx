@@ -50,10 +50,13 @@ export function BrowserTab() {
           <>
             <PanelSectionRow>
               <TextField
-                label="Search or type an address"
+                label="Search Google or type an address"
                 value={text}
                 disabled={!!b.loading}
                 onChange={(e) => setText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && text.trim() && !b.loading) go(text);
+                }}
               />
             </PanelSectionRow>
             <PanelSectionRow>
@@ -92,15 +95,26 @@ export function BrowserTab() {
         {b.view === "results" && (
           <>
             <PanelSectionRow>
-              <div className="qc-section-mini">Results for “{b.query}”</div>
+              <div className="qc-section-mini">
+                {b.engine ? `${b.engine} results` : "Results"} for “{b.query}”
+              </div>
             </PanelSectionRow>
             <PanelSectionRow>
               <div>
+                {b.summary && (
+                  <Focusable className="qc-overview" focusClassName="qc-focused" noFocusRing>
+                    <div className="qc-overview-label">Overview</div>
+                    {b.summary}
+                  </Focusable>
+                )}
                 {b.results.map((r) => (
                   <Pressable key={r.url} className="qc-result" onPress={() => openUrl(r.url)}>
                     <div className="qc-result-title">{r.title}</div>
                     <div className="qc-result-domain">{r.domain}</div>
                     {r.snippet && <div className="qc-result-snippet">{r.snippet}</div>}
+                    {r.blocked && (
+                      <div className="qc-result-flag">This site blocks readers; may open as a saved copy</div>
+                    )}
                   </Pressable>
                 ))}
               </div>
@@ -117,6 +131,11 @@ export function BrowserTab() {
               <div className="qc-result-domain">{b.page.domain}</div>
             </div>
           </PanelSectionRow>
+          {b.page.note && (
+            <PanelSectionRow>
+              <div className="qc-note qc-warn">{b.page.note}</div>
+            </PanelSectionRow>
+          )}
           <PanelSectionRow>
             {/* Keep pressing down to read, same as answers. */}
             <div className="qc-answer">

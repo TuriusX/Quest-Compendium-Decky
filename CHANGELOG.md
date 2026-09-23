@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.2
+- **Google search in the Browser tab.** Searches run through the Quest Compendium server (Google Search via
+  Gemini), with a short overview above the results. Press Enter on the keyboard to search. If the server search is
+  unavailable, the plugin falls back to DuckDuckGo, then Bing, and says why when nothing works.
+- **Sites behind bot checks** (such as "Security check" pages) now open as the Internet Archive's latest saved copy
+  when one exists, with a note saying so. Search results flag sites known to block readers.
+- Quieter Companion / Browser tabs.
+- Press Enter to send a typed question in the Companion tab.
+
 ## 0.2.1
 - **Read the whole answer in the Quick Access panel.** The full answer now shows in the panel, one paragraph per
   focus stop, so you can keep pressing down to read it (no more cut-off preview). Long paragraphs are split at

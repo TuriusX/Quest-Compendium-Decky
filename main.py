@@ -584,6 +584,23 @@ class Plugin:
 
     # ---- reader browser ----------------------------------------------------------------------
 
+    async def web_search(self, query: str) -> Dict[str, Any]:
+        """Google search through the Quest Compendium server (Gemini + Google Search grounding)."""
+        q = str(query or "").strip()[:200]
+        if not q:
+            return {"ok": False, "error": "Type something to search for."}
+        token, is_guest, notice = await self._bearer()
+        if token is None:
+            return {"ok": False, "error": notice}
+        status, data = await self._http("POST", "/api/web-search", body={"q": q}, token=token, timeout_s=35)
+        if status == 401 and not is_guest:
+            token, is_guest, _ = await self._bearer(force_refresh=True)
+            if token is not None:
+                status, data = await self._http("POST", "/api/web-search", body={"q": q}, token=token, timeout_s=35)
+        if status == 200 and isinstance(data.get("results"), list):
+            return {"ok": True, "status": status, "summary": data.get("summary") or "", "results": data["results"]}
+        return {"ok": False, "status": status, "error": data.get("error") or f"Search failed (HTTP {status})."}
+
     async def fetch_page(self, url: str) -> Dict[str, Any]:
         """Download a web page for the in-plugin reader. Returns the raw HTML; the frontend extracts the text.
 
