@@ -1,6 +1,7 @@
-import { ButtonItem, DropdownItem, Field, PanelSection, PanelSectionRow, Spinner, ToggleField } from "@decky/ui";
+import { ButtonItem, DropdownItem, Field, PanelSection, PanelSectionRow, Spinner, TextField, ToggleField } from "@decky/ui";
 import { useEffect, useState } from "react";
 import { getQuota, getState, Mode, PluginState, saveSettings, Settings, testScreenshot, unlink } from "../api";
+import { siteLabel } from "../browser";
 import { LOCALE_OPTIONS, LocaleSetting, setLocaleSetting, useT } from "../i18n";
 import { setChat } from "../store";
 import { ThemeStyle } from "../theme";
@@ -8,6 +9,7 @@ import { PageHeader } from "./Brand";
 import { LinkView } from "./LinkView";
 
 const MODES: Mode[] = ["standard", "minmax", "roleplay"];
+const DEFAULT_SITES = ["gamefaqs.gamespot.com", "neoseeker.com", "ign.com", "reddit.com", "youtube.com"];
 
 /** Settings and account, moved out of the Quick Access panel so the panel stays focused on asking and reading. */
 export function SettingsPage() {
@@ -16,6 +18,8 @@ export function SettingsPage() {
   const [backendDown, setBackendDown] = useState(false);
   const [showLink, setShowLink] = useState(false);
   const [diag, setDiag] = useState<string | null>(null);
+  const [newSite, setNewSite] = useState("");
+  const [siteError, setSiteError] = useState<string | null>(null);
 
   const refreshState = async () => {
     try {
@@ -133,6 +137,60 @@ export function SettingsPage() {
           </PanelSection>
         )}
 
+
+        {ps && (
+          <PanelSection title={t("sites.title")}>
+            <PanelSectionRow>
+              <div className="qc-note qc-muted">{t("sites.desc")}</div>
+            </PanelSectionRow>
+            {(ps.settings.guide_sites ?? DEFAULT_SITES).map((d) => (
+              <PanelSectionRow key={d}>
+                <ButtonItem
+                  layout="inline"
+                  label={siteLabel(d)}
+                  description={siteLabel(d) !== d ? d : undefined}
+                  onClick={() => updateSettings({ guide_sites: (ps.settings.guide_sites ?? DEFAULT_SITES).filter((x) => x !== d) })}
+                >
+                  {t("sites.remove")}
+                </ButtonItem>
+              </PanelSectionRow>
+            ))}
+            <PanelSectionRow>
+              <TextField
+                label={t("sites.add")}
+                description={siteError ?? t("sites.addDesc")}
+                value={newSite}
+                onChange={(e) => {
+                  setNewSite(e.target.value);
+                  setSiteError(null);
+                }}
+              />
+            </PanelSectionRow>
+            <PanelSectionRow>
+              <ButtonItem
+                layout="below"
+                disabled={!newSite.trim()}
+                onClick={() => {
+                  const d = newSite.trim().toLowerCase().replace(/^https?:\/\//, "").split("/")[0].replace(/^www\./, "");
+                  if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(d)) {
+                    setSiteError(t("sites.invalid"));
+                    return;
+                  }
+                  const current = ps.settings.guide_sites ?? DEFAULT_SITES;
+                  if (!current.includes(d)) void updateSettings({ guide_sites: [...current, d].slice(0, 12) });
+                  setNewSite("");
+                }}
+              >
+                {t("sites.addBtn")}
+              </ButtonItem>
+            </PanelSectionRow>
+            <PanelSectionRow>
+              <ButtonItem layout="below" onClick={() => updateSettings({ guide_sites: DEFAULT_SITES })}>
+                {t("sites.reset")}
+              </ButtonItem>
+            </PanelSectionRow>
+          </PanelSection>
+        )}
 
         {ps && (
           <PanelSection title={t("account.title")}>

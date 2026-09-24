@@ -181,7 +181,7 @@ export function QuickAccessPanel() {
               className={browser.tab === "browser" ? "qc-tab qc-tab-active" : "qc-tab"}
               onClick={() => setTab("browser")}
             >
-              {t("tab.browser")}
+              {t("tab.guides")}
             </DialogButton>
           </Focusable>
         </PanelSectionRow>

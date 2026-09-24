@@ -1,42 +1,48 @@
-// In-plugin reader browser. Pages are downloaded by the Python backend (no CORS or embedding limits), then turned
-// into simple readable blocks here, so they can be read with the D-pad inside the Quick Access panel.
-// No iframes and no outside windows: many sites refuse to be embedded, and Steam's browser leaves the plugin.
+// Guides for the Steam Deck plugin.
+//  - Wiki guides: search and read the game's wiki (Fandom, StrategyWiki, PCGamingWiki, Wikipedia) right in the
+//    Quick Access panel, through the wikis' official MediaWiki API. Free, no AI, and not blocked (the plugin
+//    identifies itself honestly instead of pretending to be a browser). Articles appear in the reader below.
+//  - Guide sites: GameFAQs, Neoseeker and friends block anything that isn't a real browser, so those open in
+//    Steam's built-in browser, searching for the game you're playing.
 import { callable } from "@decky/api";
+import { Navigation } from "@decky/ui";
 import { useEffect, useState } from "react";
 import type { Block } from "./format";
-import { t } from "./i18n";
+import { getLocale, t } from "./i18n";
 
-interface PageFetch {
+interface JsonFetch {
   ok: boolean;
   status?: number;
-  url?: string;
-  html?: string;
+  data?: any;
   error?: string | null;
 }
-const fetchPage = callable<[url: string], PageFetch>("fetch_page");
+const fetchJson = callable<[url: string], JsonFetch>("fetch_json");
 
-interface ServerSearch {
-  ok: boolean;
-  status?: number;
-  summary?: string;
-  results?: { title?: string; url?: string; domain?: string; snippet?: string; blocked?: boolean }[];
-  error?: string | null;
+export type WikiKind = "fandom" | "strategywiki" | "pcgamingwiki" | "wikipedia";
+
+export interface WikiSource {
+  kind: WikiKind;
+  /** Display name, e.g. "Final Fantasy Wiki". */
+  name: string;
+  /** Site root, e.g. https://finalfantasy.fandom.com */
+  base: string;
+  /** MediaWiki API endpoint. */
+  api: string;
+  /** Path prefix for articles, e.g. "/wiki/". */
+  articlePath: string;
 }
-/** Google search through the Quest Compendium server (Gemini with Google Search). */
-const webSearch = callable<[query: string], ServerSearch>("web_search");
 
 export interface SearchResult {
   title: string;
   url: string;
-  domain: string;
   snippet: string;
-  /** The site showed a bot check when the server looked at it; it may only open as a saved copy. */
-  blocked?: boolean;
 }
 
 export interface PageLink {
   text: string;
   url: string;
+  /** Set for links to other pages on the same wiki (they open in the reader). */
+  wikiTitle?: string;
 }
 
 export interface PageDoc {
@@ -45,7 +51,6 @@ export interface PageDoc {
   domain: string;
   blocks: Block[];
   links: PageLink[];
-  /** Shown above the page, e.g. when a saved copy is displayed instead of the live page. */
   note?: string;
 }
 
@@ -56,18 +61,19 @@ interface Snapshot {
   view: View;
   query: string;
   results: SearchResult[];
-  /** Short overview written from the search results (Google search only). */
-  summary: string;
-  /** Which search engine produced the results. */
-  engine: string;
   page: PageDoc | null;
 }
 
 export interface BrowserState extends Snapshot {
   tab: Tab;
-  loading: string | null; // what is loading, for the status line
+  loading: string | null;
   error: string | null;
   back: Snapshot[];
+  /** The wiki being searched, and which game it was picked for. */
+  wiki: WikiSource | null;
+  wikiGame: string | null;
+  /** The Fandom wiki found (or chosen) for this game, offered alongside the fixed wikis. */
+  fandom: WikiSource | null;
 }
 
 let state: BrowserState = {
@@ -75,12 +81,13 @@ let state: BrowserState = {
   view: "home",
   query: "",
   results: [],
-  summary: "",
-  engine: "",
   page: null,
   loading: null,
   error: null,
   back: [],
+  wiki: null,
+  wikiGame: null,
+  fandom: null,
 };
 const listeners = new Set<() => void>();
 let requestId = 0;
@@ -107,14 +114,7 @@ export function useBrowser(): BrowserState {
 
 export const setTab = (tab: Tab) => set({ tab });
 
-const snapshot = (): Snapshot => ({
-  view: state.view,
-  query: state.query,
-  results: state.results,
-  summary: state.summary,
-  engine: state.engine,
-  page: state.page,
-});
+const snapshot = (): Snapshot => ({ view: state.view, query: state.query, results: state.results, page: state.page });
 
 function pushHistory(): void {
   if (state.view === "home" && !state.results.length && !state.page) return;
@@ -141,201 +141,248 @@ const domainOf = (url: string): string => {
   }
 };
 
-/** Text in the search box: a web address opens directly, anything else is searched. */
-export function go(input: string): void {
-  const s = input.trim();
-  if (!s) return;
-  if (/^https?:\/\//i.test(s)) return void openUrl(s);
-  if (/^[\w-]+(\.[\w-]+)+(\/\S*)?$/.test(s) && !/\s/.test(s)) return void openUrl(`https://${s}`);
-  void search(s);
+// ---- Real browser (Steam's) ---------------------------------------------------------------------------------
+
+/** Open a page in Steam's built-in browser (a full browser: every site works). */
+export function openInSteamBrowser(url: string): void {
+  Navigation.CloseSideMenus();
+  Navigation.NavigateToExternalWeb(url);
 }
 
-// ---- search -------------------------------------------------------------------------------------
+const SITE_LABELS: Record<string, string> = {
+  "gamefaqs.gamespot.com": "GameFAQs",
+  "neoseeker.com": "Neoseeker",
+  "ign.com": "IGN",
+  "reddit.com": "Reddit",
+  "youtube.com": "YouTube",
+  "fextralife.com": "Fextralife",
+  "powerpyx.com": "PowerPyx",
+  "strategywiki.org": "StrategyWiki",
+  "steamcommunity.com": "Steam Guides",
+};
 
-function parseDuckDuckGo(html: string): SearchResult[] {
-  const doc = new DOMParser().parseFromString(html, "text/html");
-  const out: SearchResult[] = [];
-  doc.querySelectorAll(".result").forEach((r) => {
-    if (r.classList.contains("result--ad")) return;
-    const a = r.querySelector<HTMLAnchorElement>("a.result__a");
-    if (!a) return;
-    let href = a.getAttribute("href") ?? "";
-    // Links go through a redirect: //duckduckgo.com/l/?uddg=<encoded target>
-    const m = href.match(/[?&]uddg=([^&]+)/);
-    if (m) href = decodeURIComponent(m[1]);
-    if (href.startsWith("//")) href = `https:${href}`;
-    if (!/^https?:\/\//.test(href) || /duckduckgo\.com\/y\.js/.test(href)) return;
-    out.push({
-      title: clean(a.textContent ?? ""),
-      url: href,
-      domain: domainOf(href),
-      snippet: clean(r.querySelector(".result__snippet")?.textContent ?? ""),
-    });
+export const siteLabel = (domain: string): string => SITE_LABELS[domain] ?? domain;
+
+/** A search on one guide site for the current game (plus optional words), for Steam's browser. */
+export function siteSearchUrl(domain: string, game: string, words: string): string {
+  const q = [game, words].filter((x) => x && x.trim()).join(" ").trim();
+  const enc = encodeURIComponent;
+  if (domain === "youtube.com") return `https://www.youtube.com/results?search_query=${enc(q ? `${q}${words ? "" : " walkthrough"}` : "game walkthrough")}`;
+  if (domain === "reddit.com") return q ? `https://www.reddit.com/search/?q=${enc(q)}` : "https://www.reddit.com/";
+  if (domain === "steamcommunity.com") return `https://steamcommunity.com/search/guides/?text=${enc(q)}`;
+  if (!q) return `https://${domain}/`;
+  // Google's site search lands on the right guide pages for almost any site.
+  return `https://www.google.com/search?q=${enc(`${q}${words ? "" : " guide"} site:${domain}`)}`;
+}
+
+/** A general web search in Steam's browser. */
+export const webSearchUrl = (game: string, words: string): string =>
+  `https://www.google.com/search?q=${encodeURIComponent([game, words || "guide"].filter(Boolean).join(" "))}`;
+
+// ---- Wikis --------------------------------------------------------------------------------------------------
+
+const wikiLang = (): string => (getLocale() === "es" ? "es" : getLocale() === "pt" ? "pt" : "en");
+
+export function fixedWiki(kind: Exclude<WikiKind, "fandom">): WikiSource {
+  if (kind === "strategywiki") return { kind, name: "StrategyWiki", base: "https://strategywiki.org", api: "https://strategywiki.org/w/api.php", articlePath: "/wiki/" };
+  if (kind === "pcgamingwiki") return { kind, name: "PCGamingWiki", base: "https://www.pcgamingwiki.com", api: "https://www.pcgamingwiki.com/w/api.php", articlePath: "/wiki/" };
+  const lang = wikiLang();
+  return { kind, name: "Wikipedia", base: `https://${lang}.wikipedia.org`, api: `https://${lang}.wikipedia.org/w/api.php`, articlePath: "/wiki/" };
+}
+
+const ROMAN: Record<string, string> = {
+  i: "1", ii: "2", iii: "3", iv: "4", v: "5", vi: "6", vii: "7", viii: "8", ix: "9", x: "10",
+  xi: "11", xii: "12", xiii: "13", xiv: "14", xv: "15", xvi: "16",
+};
+
+/** Likely Fandom wiki names for a game, most specific first. */
+export function fandomCandidates(game: string): string[] {
+  const lower = game.toLowerCase().replace(/[®™©]/g, "").replace(/&/g, "and").replace(/[’']/g, "");
+  const words = (x: string) => x.replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter(Boolean);
+  const main = words(lower.split(/[:\-–—(]/)[0]).filter((w, i) => !(i === 0 && w === "the"));
+  const full = words(lower).filter((w, i) => !(i === 0 && w === "the"));
+  const arabic = (ws: string[]) => ws.map((w) => ROMAN[w] ?? w);
+  const franchise = main.filter((w) => !/^\d+$/.test(w) && !ROMAN[w]);
+  const out = [
+    main.join(""),
+    arabic(main).join(""),
+    full.join(""),
+    franchise.join(""),
+    franchise.length > 2 ? franchise.slice(0, 2).join("") : "",
+  ];
+  return Array.from(new Set(out.filter((c) => c.length >= 3 && /^[a-z0-9]+$/.test(c)))).slice(0, 5);
+}
+
+const fandomSource = (slug: string, name: string): WikiSource => ({
+  kind: "fandom",
+  name,
+  base: `https://${slug}.fandom.com`,
+  api: `https://${slug}.fandom.com/api.php`,
+  articlePath: "/wiki/",
+});
+
+/** Check that a Fandom wiki exists; returns it with its article count, or null. */
+async function probeFandom(slug: string): Promise<{ source: WikiSource; articles: number } | null> {
+  const res = await fetchJson(`https://${slug}.fandom.com/api.php?action=query&meta=siteinfo&siprop=general%7Cstatistics&format=json&formatversion=2`);
+  const general = res.ok ? res.data?.query?.general : null;
+  if (!general?.sitename || !String(general.server ?? "").includes(`${slug}.fandom.com`)) return null;
+  return { source: fandomSource(slug, String(general.sitename)), articles: Number(res.data?.query?.statistics?.articles ?? 0) };
+}
+
+const storeKey = (game: string) => `qc-guides-wiki:${game.toLowerCase()}`;
+
+function remembered(game: string): WikiSource | null {
+  try {
+    const raw = localStorage.getItem(storeKey(game));
+    return raw ? (JSON.parse(raw) as WikiSource) : null;
+  } catch {
+    return null;
+  }
+}
+
+function remember(game: string, wiki: WikiSource): void {
+  try {
+    localStorage.setItem(storeKey(game), JSON.stringify(wiki));
+  } catch {
+    /* only a convenience */
+  }
+}
+
+/** Pick the wiki for a game: the one chosen before, else the biggest matching Fandom wiki, else StrategyWiki. */
+export async function ensureWiki(game: string | null): Promise<void> {
+  const key = game ?? "";
+  if (state.wiki && state.wikiGame === key) return;
+  const id = ++requestId;
+  if (!game) {
+    set({ wiki: fixedWiki("strategywiki"), wikiGame: key, fandom: null });
+    return;
+  }
+  const saved = remembered(game);
+  if (saved) {
+    set({ wiki: saved, wikiGame: key, fandom: saved.kind === "fandom" ? saved : null });
+    return;
+  }
+  set({ loading: t("guides.finding", { game }), error: null });
+  const found = (await Promise.all(fandomCandidates(game).map((c) => probeFandom(c).catch(() => null)))).filter(
+    (x): x is { source: WikiSource; articles: number } => !!x,
+  );
+  if (id !== requestId) return;
+  found.sort((a, b) => b.articles - a.articles);
+  const fandom = found[0]?.source ?? null;
+  set({
+    loading: null,
+    wiki: fandom ?? fixedWiki("strategywiki"),
+    wikiGame: key,
+    fandom,
+    error: fandom ? null : t("guides.noFandom"),
   });
-  return out;
 }
 
-function parseBing(html: string): SearchResult[] {
-  const doc = new DOMParser().parseFromString(html, "text/html");
-  const out: SearchResult[] = [];
-  doc.querySelectorAll("li.b_algo").forEach((r) => {
-    const a = r.querySelector<HTMLAnchorElement>("h2 a");
-    if (!a) return;
-    let href = a.getAttribute("href") ?? "";
-    // Bing sometimes wraps links: /ck/a?...&u=a1<base64url>
-    const m = href.match(/[?&]u=a1([^&]+)/);
-    if (m) {
-      try {
-        href = atob(m[1].replace(/-/g, "+").replace(/_/g, "/"));
-      } catch {
-        /* keep the wrapped link */
-      }
-    }
-    if (!/^https?:\/\//.test(href)) return;
-    out.push({
-      title: clean(a.textContent ?? ""),
-      url: href,
-      domain: domainOf(href),
-      snippet: clean(r.querySelector(".b_caption p, .b_lineclamp2, .b_lineclamp3")?.textContent ?? ""),
-    });
-  });
-  return out;
+/** Switch wikis (remembered per game). */
+export function chooseWiki(wiki: WikiSource): void {
+  if (state.wikiGame) remember(state.wikiGame, wiki);
+  set({ wiki, fandom: wiki.kind === "fandom" ? wiki : state.fandom, error: null, view: "home", results: [], page: null, back: [] });
 }
 
-export async function search(query: string): Promise<void> {
-  const q = query.trim();
+/** Use a Fandom wiki the player names ("eldenring" or a full fandom.com address). */
+export async function chooseFandomByName(input: string): Promise<boolean> {
+  const slug = input.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\.fandom\.com.*$/, "").replace(/[^a-z0-9-]/g, "");
+  if (!slug) return false;
+  set({ loading: t("guides.checking", { name: slug }), error: null });
+  const found = await probeFandom(slug).catch(() => null);
+  if (!found) {
+    set({ loading: null, error: t("guides.fandomNotFound", { name: slug }) });
+    return false;
+  }
+  set({ loading: null });
+  chooseWiki(found.source);
+  return true;
+}
+
+const articleUrl = (wiki: WikiSource, title: string) => `${wiki.base}${wiki.articlePath}${encodeURIComponent(title.replace(/ /g, "_"))}`;
+
+function stripTags(html: string): string {
+  const doc = new DOMParser().parseFromString(`<div>${html}</div>`, "text/html");
+  return clean(doc.body.textContent ?? "");
+}
+
+/** Search the current wiki. An empty search looks up the game itself. */
+export async function searchWiki(words: string, game: string | null): Promise<void> {
+  const wiki = state.wiki;
+  if (!wiki) return;
+  const q = words.trim() || game || "";
   if (!q) return;
   const id = ++requestId;
   pushHistory();
-  set({ loading: t("browser.searching", { engine: "Google", q }), error: null, query: q });
-  const failures: string[] = [];
-  let results: SearchResult[] = [];
-  let summary = "";
-  let engine = "";
-
-  // 1) Google, through the Quest Compendium server.
-  try {
-    const r = await webSearch(q);
-    if (id !== requestId) return;
-    if (r.ok && r.results?.length) {
-      results = r.results
-        .filter((x): x is typeof x & { url: string } => typeof x.url === "string" && /^https?:\/\//.test(x.url))
-        .map((x) => ({
-          title: clean(x.title || x.domain || domainOf(x.url)),
-          url: x.url,
-          domain: x.domain || domainOf(x.url),
-          snippet: clean(x.snippet || ""),
-          blocked: !!x.blocked,
-        }));
-      summary = clean(r.summary || "");
-      engine = "Google";
-    } else if (r.status === 404) failures.push("Google search needs the latest server update");
-    else failures.push(`Google: ${r.error ?? "no results"}`);
-  } catch {
-    failures.push("Google: plugin backend not responding");
-  }
-
-  // 2) Fallbacks in case the server search isn't available.
-  const engines: [string, string, (h: string) => SearchResult[]][] = [
-    ["DuckDuckGo", `https://html.duckduckgo.com/html/?q=${encodeURIComponent(q)}`, parseDuckDuckGo],
-    ["Bing", `https://www.bing.com/search?q=${encodeURIComponent(q)}&setlang=en`, parseBing],
-  ];
-  for (const [name, url, parse] of engines) {
-    if (results.length) break;
-    if (id !== requestId) return;
-    set({ loading: t("browser.searching", { engine: name, q }) });
-    try {
-      const res = await fetchPage(url);
-      if (id !== requestId) return;
-      const parsed = res.html ? parse(res.html) : [];
-      if (parsed.length) {
-        results = parsed;
-        engine = name;
-      } else {
-        const why = res.error ?? (res.status && res.status !== 200 ? `HTTP ${res.status}` : "blocked or no results");
-        failures.push(`${name}: ${why}`);
-      }
-    } catch {
-      failures.push(`${name}: plugin backend not responding`);
-    }
-  }
-
+  set({ loading: t("guides.searching", { wiki: wiki.name }), error: null, query: q });
+  const url = `${wiki.api}?action=query&list=search&srsearch=${encodeURIComponent(q)}&srlimit=12&srwhat=text&format=json&formatversion=2`;
+  const res = await fetchJson(url).catch(() => ({ ok: false, error: t("browser.backendDown") }) as JsonFetch);
   if (id !== requestId) return;
-  if (!results.length) {
-    set({ loading: null, error: `${t("browser.noResults")} ${failures.join(" \u00b7 ")}` });
+  const hits: any[] = res.ok ? (res.data?.query?.search ?? []) : [];
+  if (!res.ok) {
+    set({ loading: null, error: res.error ?? t("guides.searchFailed") });
     return;
   }
-  set({ loading: null, view: "results", results: results.slice(0, 15), summary, engine, page: null });
-}
-
-// ---- pages --------------------------------------------------------------------------------------
-
-/** Bot checks (Cloudflare and similar) that a plain page download can't get past. */
-function isBotCheck(status: number | undefined, html: string): boolean {
-  const head = html.slice(0, 30000);
-  const title = head.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] ?? "";
-  return (
-    ((status === 403 || status === 503 || status === 429) && /cloudflare|captcha|challenge/i.test(head)) ||
-    /just a moment|attention required|security check|verify you are human|are you a robot|access denied/i.test(title) ||
-    /cf-browser-verification|challenge-platform|cf_chl_|g-recaptcha|hcaptcha/i.test(head)
-  );
-}
-
-export async function openUrl(url: string): Promise<void> {
-  const id = ++requestId;
-  // Reddit's new site needs JavaScript; the classic site is plain HTML.
-  const target = url.replace(/^https?:\/\/(www\.|new\.)?reddit\.com/i, "https://old.reddit.com");
-  pushHistory();
-  set({ loading: t("browser.opening", { site: domainOf(target) }), error: null });
-  try {
-    const res = await fetchPage(target);
-    if (id !== requestId) return;
-    const finalUrl = res.url || target;
-
-    // Sites behind a bot check: show the Internet Archive's latest saved copy instead.
-    if (res.html && isBotCheck(res.status, res.html)) {
-      set({ loading: t("browser.trySaved", { site: domainOf(finalUrl) }) });
-      // "2" asks for the most recent capture; "id_" asks for the original page without the archive's toolbar.
-      for (const archiveUrl of [`https://web.archive.org/web/2id_/${finalUrl}`, `https://web.archive.org/web/2/${finalUrl}`]) {
-        const saved = await fetchPage(archiveUrl);
-        if (id !== requestId) return;
-        if (saved.ok && saved.html && !isBotCheck(saved.status, saved.html)) {
-          const page = extractPage(saved.html, finalUrl);
-          if (page.blocks.length) {
-            page.note = t("browser.savedCopy", { site: page.domain });
-            set({ loading: null, view: "page", page });
-            return;
-          }
-        }
-      }
-      set({
-        loading: null,
-        error: t("browser.blockedNoCopy", { site: domainOf(finalUrl) }),
-      });
-      return;
-    }
-    if (!res.html) {
-      set({ loading: null, error: res.error ?? t("browser.loadFailed") });
-      return;
-    }
-
-    const page = extractPage(res.html, finalUrl);
-    if (!page.blocks.length) {
-      set({
-        loading: null,
-        error: res.ok
-          ? t("browser.noText")
-          : (res.error ?? t("browser.loadFailed")),
-      });
-      return;
-    }
-    set({ loading: null, view: "page", page });
-  } catch {
-    if (id === requestId) set({ loading: null, error: t("browser.backendDown") });
+  if (!hits.length) {
+    set({ loading: null, error: t("guides.noResults") });
+    return;
   }
+  const results: SearchResult[] = hits.map((h) => ({
+    title: String(h.title),
+    url: articleUrl(wiki, String(h.title)),
+    snippet: stripTags(String(h.snippet ?? "")),
+  }));
+  set({ loading: null, view: "results", results, page: null });
 }
 
-// ---- readable-text extraction -------------------------------------------------------------------
+/** Open a wiki article in the reader. */
+export async function openWikiPage(title: string): Promise<void> {
+  const wiki = state.wiki;
+  if (!wiki) return;
+  const id = ++requestId;
+  pushHistory();
+  set({ loading: t("guides.opening", { title }), error: null });
+  const url = `${wiki.api}?action=parse&page=${encodeURIComponent(title)}&prop=text%7Cdisplaytitle&redirects=1&disableeditsection=1&format=json&formatversion=2`;
+  const res = await fetchJson(url).catch(() => ({ ok: false }) as JsonFetch);
+  if (id !== requestId) return;
+  const parsed = res.ok ? res.data?.parse : null;
+  if (!parsed?.text) {
+    set({ loading: null, error: res.data?.error?.info ? String(res.data.error.info) : t("guides.pageFailed") });
+    return;
+  }
+  const pageTitle = stripTags(String(parsed.displaytitle ?? parsed.title ?? title));
+  const pageUrl = articleUrl(wiki, String(parsed.title ?? title));
+  const html = `<html><head><title>${pageTitle.replace(/</g, "&lt;")}</title></head><body>${parsed.text}</body></html>`;
+  const page = extractPage(html, pageUrl);
+  page.title = pageTitle;
+  // Links to other articles on this wiki open in the reader; everything else opens in Steam's browser.
+  const host = new URL(wiki.base).hostname;
+  page.links = page.links.map((l) => {
+    try {
+      const u = new URL(l.url);
+      if (u.hostname === host && u.pathname.startsWith(wiki.articlePath)) {
+        const target = decodeURIComponent(u.pathname.slice(wiki.articlePath.length)).replace(/_/g, " ");
+        if (target && !target.includes(":")) return { ...l, wikiTitle: target };
+      }
+    } catch {
+      /* keep as a web link */
+    }
+    return l;
+  });
+  if (!page.blocks.length) {
+    set({ loading: null, error: t("guides.pageFailed") });
+    return;
+  }
+  set({ loading: null, view: "page", page });
+}
+
+/** Follow a link from an article. */
+export function openLink(link: PageLink): void {
+  if (link.wikiTitle) void openWikiPage(link.wikiTitle);
+  else openInSteamBrowser(link.url);
+}
+
+// ---- Readable-text extraction (shared with wiki articles) ---------------------------------------------------
 
 const clean = (s: string): string => s.replace(/\s+/g, " ").trim();
 

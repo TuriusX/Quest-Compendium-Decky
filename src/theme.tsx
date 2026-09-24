@@ -120,6 +120,11 @@ const CSS = `
 /* Desk scene strip */
 .qc-scene { display: block; width: 100%; height: 64px; object-fit: cover; object-position: 22% 62%; image-rendering: pixelated; opacity: 0.7; border: 1px solid rgba(139, 92, 246, 0.35); border-radius: 6px; }
 
+/* Guides: favorite sites (2 per row) and external-link marker */
+.qc-site-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; width: 100%; }
+.qc-site-grid > * { min-width: 0 !important; padding: 7px 4px !important; font-size: 12px !important; }
+.qc-link-ext { opacity: 0.6; font-size: 11px; }
+
 /* Follow-up suggestions under an answer */
 .qc-follow { display: flex; flex-direction: column; gap: 6px; width: 100%; }
 .qc-follow > * { min-width: 0 !important; padding: 6px 10px !important; font-size: 12px !important; text-align: left !important; justify-content: flex-start !important; background: rgba(139, 92, 246, 0.14) !important; }

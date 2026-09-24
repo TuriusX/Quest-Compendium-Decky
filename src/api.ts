@@ -9,6 +9,8 @@ export interface Settings {
   include_screenshot: boolean;
   /** "auto" follows the Steam language. */
   locale?: "auto" | "en" | "es" | "pt";
+  /** Guide sites shown in the Guides tab (domains). */
+  guide_sites?: string[];
 }
 
 export interface Quota {

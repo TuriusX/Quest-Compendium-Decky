@@ -1,6 +1,23 @@
-import { ButtonItem, DialogButton, Focusable, PanelSection, PanelSectionRow, Spinner, TextField } from "@decky/ui";
-import { useState, type ReactNode } from "react";
-import { go, goBack, goHome, openUrl, search, useBrowser } from "../browser";
+import { ButtonItem, DialogButton, DropdownItem, Focusable, PanelSection, PanelSectionRow, Spinner, TextField } from "@decky/ui";
+import { useEffect, useState, type ReactNode } from "react";
+import { getState } from "../api";
+import {
+  chooseFandomByName,
+  chooseWiki,
+  ensureWiki,
+  fixedWiki,
+  goBack,
+  goHome,
+  openInSteamBrowser,
+  openLink,
+  openWikiPage,
+  searchWiki,
+  siteLabel,
+  siteSearchUrl,
+  useBrowser,
+  webSearchUrl,
+  type WikiSource,
+} from "../browser";
 import { useCurrentGame } from "../game";
 import { useT } from "../i18n";
 import { BlockList } from "./AnswerBlocks";
@@ -14,22 +31,38 @@ function Pressable({ className, onPress, children }: { className: string; onPres
   );
 }
 
-/** Reader browser that lives entirely inside the Quick Access panel. */
+const DEFAULT_SITES = ["gamefaqs.gamespot.com", "neoseeker.com", "ign.com", "reddit.com", "youtube.com"];
+
+/** Guides: the game's wiki in the panel, plus favorite guide sites in Steam's browser. */
 export function BrowserTab() {
   const t = useT();
   const b = useBrowser();
   const game = useCurrentGame();
+  const gameName = game?.name ?? null;
   const [text, setText] = useState("");
-  const canGoBack = b.view !== "home" || b.back.length > 0;
+  const [sites, setSites] = useState<string[]>(DEFAULT_SITES);
+  const [fandomInput, setFandomInput] = useState("");
+  const [showFandomInput, setShowFandomInput] = useState(false);
 
-  const toolbar = canGoBack && (
-    <PanelSectionRow>
-      <Focusable className="qc-toolbar" flow-children="horizontal">
-        <DialogButton onClick={goBack}>{t("common.back")}</DialogButton>
-        <DialogButton onClick={goHome}>{t("common.home")}</DialogButton>
-      </Focusable>
-    </PanelSectionRow>
-  );
+  useEffect(() => {
+    void ensureWiki(gameName);
+  }, [gameName]);
+
+  useEffect(() => {
+    getState()
+      .then((s) => Array.isArray(s.settings.guide_sites) && setSites(s.settings.guide_sites))
+      .catch(() => {
+        /* keep defaults */
+      });
+  }, []);
+
+  const wikiOptions: { data: WikiSource; label: string }[] = [
+    ...(b.fandom ? [{ data: b.fandom, label: t("guides.src.fandom", { name: b.fandom.name }) }] : []),
+    { data: fixedWiki("strategywiki"), label: t("guides.src.strategywiki") },
+    { data: fixedWiki("pcgamingwiki"), label: t("guides.src.pcgamingwiki") },
+    { data: fixedWiki("wikipedia"), label: t("guides.src.wikipedia") },
+  ];
+  const selected = wikiOptions.find((o) => b.wiki && o.data.base === b.wiki.base)?.data ?? null;
 
   const status = (b.loading || b.error) && (
     <PanelSectionRow>
@@ -39,132 +72,155 @@ export function BrowserTab() {
           {b.loading}
         </div>
       ) : (
-        <div className="qc-note qc-err">{b.error}</div>
+        <div className="qc-note qc-warn">{b.error}</div>
       )}
     </PanelSectionRow>
   );
 
-  return (
-    <>
-      <PanelSection title={b.view === "page" ? undefined : t("browser.title")}>
+  const toolbar = (
+    <PanelSectionRow>
+      <Focusable className="qc-toolbar" flow-children="horizontal">
+        <DialogButton onClick={goBack}>{t("common.back")}</DialogButton>
+        <DialogButton onClick={goHome}>{t("common.home")}</DialogButton>
+      </Focusable>
+    </PanelSectionRow>
+  );
+
+  // ---- Article view
+  if (b.view === "page" && b.page) {
+    const page = b.page;
+    return (
+      <PanelSection>
         {toolbar}
-        {(b.view === "home" || b.view === "results") && (
-          <>
-            <PanelSectionRow>
-              <TextField
-                label={t("browser.field")}
-                value={text}
-                disabled={!!b.loading}
-                onChange={(e) => setText(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && text.trim() && !b.loading) go(text);
-                }}
-              />
-            </PanelSectionRow>
-            <PanelSectionRow>
-              <ButtonItem layout="below" disabled={!text.trim() || !!b.loading} onClick={() => go(text)}>
-                {t("browser.search")}
-              </ButtonItem>
-            </PanelSectionRow>
-          </>
-        )}
         {status}
-
-        {b.view === "home" && game && (
+        <PanelSectionRow>
+          <div>
+            <div className="qc-page-t">{page.title}</div>
+            <div className="qc-result-domain">{b.wiki?.name ?? page.domain}</div>
+          </div>
+        </PanelSectionRow>
+        <PanelSectionRow>
+          {/* Keep pressing down to read, same as answers. */}
+          <div className="qc-answer">
+            <BlockList blocks={page.blocks} />
+          </div>
+        </PanelSectionRow>
+        {page.links.length > 0 && (
           <>
             <PanelSectionRow>
-              <div className="qc-section-mini">{t("browser.quick", { game: game.name })}</div>
-            </PanelSectionRow>
-            {[
-              { label: t("browser.wiki"), q: `${game.name} wiki` },
-              { label: t("browser.walkthrough"), q: `${game.name} walkthrough` },
-              { label: t("browser.reddit"), q: `${game.name} tips reddit` },
-            ].map((s) => (
-              <PanelSectionRow key={s.label}>
-                <ButtonItem layout="below" disabled={!!b.loading} onClick={() => search(s.q)}>
-                  {s.label}
-                </ButtonItem>
-              </PanelSectionRow>
-            ))}
-          </>
-        )}
-        {b.view === "home" && !game && (
-          <PanelSectionRow>
-            <div className="qc-note qc-muted">{t("browser.noGame")}</div>
-          </PanelSectionRow>
-        )}
-
-        {b.view === "results" && (
-          <>
-            <PanelSectionRow>
-              <div className="qc-section-mini">
-                {b.engine ? t("browser.resultsFrom", { engine: b.engine, q: b.query }) : t("browser.results", { q: b.query })}
-              </div>
+              <div className="qc-section-mini">{t("browser.links")}</div>
             </PanelSectionRow>
             <PanelSectionRow>
               <div>
-                {b.summary && (
-                  <Focusable className="qc-overview" focusClassName="qc-focused" noFocusRing>
-                    <div className="qc-overview-label">{t("browser.overview")}</div>
-                    {b.summary}
-                  </Focusable>
-                )}
-                {b.results.map((r) => (
-                  <Pressable key={r.url} className="qc-result" onPress={() => openUrl(r.url)}>
-                    <div className="qc-result-title">{r.title}</div>
-                    <div className="qc-result-domain">{r.domain}</div>
-                    {r.snippet && <div className="qc-result-snippet">{r.snippet}</div>}
-                    {r.blocked && (
-                      <div className="qc-result-flag">{t("browser.blocked")}</div>
-                    )}
+                {page.links.slice(0, 40).map((l) => (
+                  <Pressable key={l.url} className="qc-link" onPress={() => openLink(l)}>
+                    {l.text}
+                    {!l.wikiTitle && <span className="qc-link-ext"> ↗</span>}
                   </Pressable>
                 ))}
               </div>
             </PanelSectionRow>
           </>
         )}
+        <PanelSectionRow>
+          <ButtonItem layout="below" onClick={() => openInSteamBrowser(page.url)}>
+            {t("guides.openFull")}
+          </ButtonItem>
+        </PanelSectionRow>
+        {toolbar}
       </PanelSection>
+    );
+  }
 
-      {b.view === "page" && b.page && (
-        <PanelSection>
+  // ---- Home and search results
+  return (
+    <>
+      <PanelSection title={t("guides.wikiTitle")}>
+        {b.view === "results" && toolbar}
+        <PanelSectionRow>
+          <DropdownItem
+            label={t("guides.wiki")}
+            rgOptions={wikiOptions}
+            selectedOption={selected}
+            strDefaultLabel={b.wiki?.name ?? "…"}
+            onChange={(opt) => chooseWiki(opt.data as WikiSource)}
+          />
+        </PanelSectionRow>
+        <PanelSectionRow>
+          <TextField
+            label={t("guides.searchIn", { wiki: b.wiki?.name ?? "" })}
+            value={text}
+            disabled={!!b.loading}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !b.loading) void searchWiki(text, gameName);
+            }}
+          />
+        </PanelSectionRow>
+        <PanelSectionRow>
+          <ButtonItem layout="below" disabled={!!b.loading || !b.wiki || (!text.trim() && !gameName)} onClick={() => searchWiki(text, gameName)}>
+            {text.trim() ? t("guides.searchBtn") : gameName ? t("guides.lookUpGame", { game: gameName }) : t("guides.searchBtn")}
+          </ButtonItem>
+        </PanelSectionRow>
+        {status}
+
+        {b.view === "results" && (
           <PanelSectionRow>
             <div>
-              <div className="qc-page-t">{b.page.title}</div>
-              <div className="qc-result-domain">{b.page.domain}</div>
+              {b.results.map((r) => (
+                <Pressable key={r.url} className="qc-result" onPress={() => openWikiPage(r.title)}>
+                  <div className="qc-result-title">{r.title}</div>
+                  {r.snippet && <div className="qc-result-snippet">{r.snippet}</div>}
+                </Pressable>
+              ))}
             </div>
           </PanelSectionRow>
-          {b.page.note && (
-            <PanelSectionRow>
-              <div className="qc-note qc-warn">{b.page.note}</div>
-            </PanelSectionRow>
-          )}
+        )}
+
+        {b.view === "home" && (
           <PanelSectionRow>
-            {/* Keep pressing down to read, same as answers. */}
-            <div className="qc-answer">
-              <BlockList blocks={b.page.blocks} />
-            </div>
+            {showFandomInput ? (
+              <div style={{ width: "100%" }}>
+                <TextField label={t("guides.fandomName")} value={fandomInput} onChange={(e) => setFandomInput(e.target.value)} />
+                <Focusable className="qc-toolbar" flow-children="horizontal" style={{ marginTop: 6 }}>
+                  <DialogButton
+                    disabled={!fandomInput.trim() || !!b.loading}
+                    onClick={async () => {
+                      if (await chooseFandomByName(fandomInput)) setShowFandomInput(false);
+                    }}
+                  >
+                    {t("guides.useWiki")}
+                  </DialogButton>
+                  <DialogButton onClick={() => setShowFandomInput(false)}>{t("common.back")}</DialogButton>
+                </Focusable>
+              </div>
+            ) : (
+              <ButtonItem layout="below" onClick={() => setShowFandomInput(true)}>
+                {t("guides.otherFandom")}
+              </ButtonItem>
+            )}
           </PanelSectionRow>
-          {b.page.links.length > 0 && (
-            <>
-              <PanelSectionRow>
-                <div className="qc-section-mini">{t("browser.links")}</div>
-              </PanelSectionRow>
-              <PanelSectionRow>
-                <div>
-                  {b.page.links.slice(0, 40).map((l) => (
-                    <Pressable key={l.url} className="qc-link" onPress={() => openUrl(l.url)}>
-                      {l.text}
-                    </Pressable>
-                  ))}
-                </div>
-              </PanelSectionRow>
-            </>
-          )}
+        )}
+      </PanelSection>
+
+      {b.view === "home" && (
+        <PanelSection title={t("guides.sites")}>
           <PanelSectionRow>
-            <Focusable className="qc-toolbar" flow-children="horizontal">
-              <DialogButton onClick={goBack}>{t("common.back")}</DialogButton>
-              <DialogButton onClick={goHome}>{t("common.home")}</DialogButton>
+            <div className="qc-note qc-muted">{t("guides.sitesNote")}</div>
+          </PanelSectionRow>
+          <PanelSectionRow>
+            <Focusable className="qc-site-grid" flow-children="grid">
+              {sites.map((d) => (
+                <DialogButton key={d} onClick={() => openInSteamBrowser(siteSearchUrl(d, gameName ?? "", text))}>
+                  {siteLabel(d)}
+                </DialogButton>
+              ))}
             </Focusable>
+          </PanelSectionRow>
+          <PanelSectionRow>
+            <ButtonItem layout="below" onClick={() => openInSteamBrowser(webSearchUrl(gameName ?? "", text))}>
+              {t("guides.web")}
+            </ButtonItem>
           </PanelSectionRow>
         </PanelSection>
       )}

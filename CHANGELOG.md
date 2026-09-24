@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.0
+- **The Browser tab is now Guides.** It finds your game's wiki automatically (Fandom, with StrategyWiki,
+  PCGamingWiki and Wikipedia one tap away) so you can search and read articles right in the Quick Access panel,
+  including quick facts and links to related pages. It uses the wikis' official free API: no AI requests, fast,
+  and no more "blocks readers" errors. Your wiki choice is remembered per game.
+- **Guide sites:** one-tap buttons for GameFAQs, Neoseeker, IGN, Reddit and YouTube that search for the game
+  you're playing and open in Steam's browser, where every site works. Add your own favorites (or remove any) in
+  Settings & account → Guide sites.
+- **Fix:** web pages are now downloaded completely (previously only the first part of a page could arrive).
+
 ## 0.3.0
 - **Español y Português.** The plugin's text and the AI's answers now come in Spanish or Brazilian Portuguese.
   "Auto" follows your Steam language; change it in Settings & account → Language.

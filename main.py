@@ -17,6 +17,7 @@ import json
 import os
 import pwd
 import secrets
+import re
 import shutil
 import ipaddress
 from urllib.parse import urlsplit
@@ -57,6 +58,8 @@ VALID_MODELS = ("pro", "flash")
 VALID_LOCALES = ("auto", "en", "es", "pt")
 # The language names the server puts in the AI's instructions ("Respond entirely in ...").
 AI_LANGUAGES = ("English", "Spanish", "Brazilian Portuguese")
+MAX_GUIDE_SITES = 12
+DOMAIN_RE = re.compile(r"^[a-z0-9-]+(\.[a-z0-9-]+)+$")
 
 SETTINGS_PATH = os.path.join(decky.DECKY_PLUGIN_SETTINGS_DIR, "settings.json")
 
@@ -67,6 +70,8 @@ DEFAULT_SETTINGS: Dict[str, Any] = {
     "language": "English",
     # Interface + answer language: "auto" follows the Steam language.
     "locale": "auto",
+    # Guide sites shown in the Guides tab (they open in Steam's browser).
+    "guide_sites": ["gamefaqs.gamespot.com", "neoseeker.com", "ign.com", "reddit.com", "youtube.com"],
     # Developer override, e.g. "http://192.168.1.20:3000" to test against a local server.
     "api_base": "",
 }
@@ -228,6 +233,18 @@ def _read_bytes(path: str) -> bytes:
 # ---------------------------------------------------------------------------------------------
 # Plugin
 # ---------------------------------------------------------------------------------------------
+
+
+async def _read_limited(resp, limit: int) -> bytes:
+    """Read a response body up to `limit` bytes. (content.read(n) returns only what has arrived so far.)"""
+    chunks: List[bytes] = []
+    total = 0
+    async for chunk in resp.content.iter_chunked(65536):
+        chunks.append(chunk)
+        total += len(chunk)
+        if total >= limit:
+            break
+    return b"".join(chunks)[:limit]
 
 class Plugin:
     # ---- lifecycle ---------------------------------------------------------------------------
@@ -432,6 +449,16 @@ class Plugin:
             s["include_screenshot"] = patch["include_screenshot"]
         if patch.get("locale") in VALID_LOCALES:
             s["locale"] = patch["locale"]
+        if isinstance(patch.get("guide_sites"), list):
+            sites = []
+            for d in patch["guide_sites"][:MAX_GUIDE_SITES]:
+                d = str(d or "").strip().lower()
+                d = re.sub(r"^https?://", "", d).split("/")[0]
+                if d.startswith("www."):
+                    d = d[4:]
+                if DOMAIN_RE.match(d) and d not in sites:
+                    sites.append(d)
+            s["guide_sites"] = sites
         self._save()
         return True
 
@@ -609,6 +636,55 @@ class Plugin:
             return {"ok": True, "status": status, "summary": data.get("summary") or "", "results": data["results"]}
         return {"ok": False, "status": status, "error": data.get("error") or f"Search failed (HTTP {status})."}
 
+    @staticmethod
+    def _public_url_error(url: str) -> Optional[str]:
+        """Only public http(s) addresses may be fetched (no file://, localhost or local-network hosts)."""
+        parts = urlsplit(url)
+        if parts.scheme not in ("http", "https") or not parts.hostname:
+            return "Only web addresses (http/https) can be opened."
+        host = parts.hostname.lower()
+        if host == "localhost" or host.endswith(".local"):
+            return "Local addresses can't be opened."
+        try:
+            ip = ipaddress.ip_address(host)
+            if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_unspecified or ip.is_reserved:
+                return "Local addresses can't be opened."
+        except ValueError:
+            pass  # a hostname, not an IP literal
+        return None
+
+    async def fetch_json(self, url: str) -> Dict[str, Any]:
+        """Call a public JSON API (the wikis' MediaWiki API for the Guides tab).
+
+        Wikis ask API clients to identify themselves honestly, so this uses the plugin's own User-Agent rather
+        than pretending to be a browser (which is exactly what gets blocked).
+        """
+        url = str(url or "").strip()
+        problem = self._public_url_error(url)
+        if problem:
+            return {"ok": False, "error": problem}
+        headers = {
+            "User-Agent": f"QuestCompendiumDeck/{decky.DECKY_PLUGIN_VERSION} (https://questcompendium.com; Steam Deck plugin)",
+            "Accept": "application/json",
+        }
+        try:
+            timeout = aiohttp.ClientTimeout(total=PAGE_TIMEOUT_S)
+            connector = aiohttp.TCPConnector(ssl=self._ssl)
+            async with aiohttp.ClientSession(timeout=timeout, connector=connector) as session:
+                async with session.get(url, headers=headers, allow_redirects=True, max_redirects=5) as resp:
+                    if "json" not in resp.headers.get("Content-Type", ""):
+                        return {"ok": False, "status": resp.status, "error": "Not a JSON response."}
+                    raw = await _read_limited(resp, MAX_PAGE_BYTES)
+                    return {"ok": resp.status < 400, "status": resp.status, "url": str(resp.url), "data": json.loads(raw.decode("utf-8", errors="replace"))}
+        except asyncio.TimeoutError:
+            return {"ok": False, "error": "The wiki took too long to respond."}
+        except (aiohttp.ClientError, ValueError) as e:
+            decky.logger.warning(f"fetch_json {urlsplit(url).hostname}: {type(e).__name__}: {str(e)[:200]}")
+            return {"ok": False, "error": f"Couldn't reach the wiki ({type(e).__name__})."}
+        except Exception as e:
+            decky.logger.warning(f"fetch_json unexpected: {type(e).__name__}: {str(e)[:200]}")
+            return {"ok": False, "error": "Couldn't reach the wiki."}
+
     async def fetch_page(self, url: str) -> Dict[str, Any]:
         """Download a web page for the in-plugin reader. Returns the raw HTML; the frontend extracts the text.
 
@@ -641,7 +717,7 @@ class Plugin:
                     ctype = resp.headers.get("Content-Type", "")
                     if "html" not in ctype and "xml" not in ctype and "text/plain" not in ctype:
                         return {"ok": False, "status": resp.status, "error": "This link isn't a web page (it may be a file or video)."}
-                    raw = await resp.content.read(MAX_PAGE_BYTES)
+                    raw = await _read_limited(resp, MAX_PAGE_BYTES)
                     try:
                         html = raw.decode(resp.charset or "utf-8", errors="replace")
                     except LookupError:  # unknown charset name
