@@ -120,6 +120,15 @@ const CSS = `
 /* Desk scene strip */
 .qc-scene { display: block; width: 100%; height: 64px; object-fit: cover; object-position: 22% 62%; image-rendering: pixelated; opacity: 0.7; border: 1px solid rgba(139, 92, 246, 0.35); border-radius: 6px; }
 
+/* Guide browser page: slim toolbar + live page filling the rest */
+.qc-guide-page { margin-top: 40px; height: calc(100% - 40px); display: flex; flex-direction: column; box-sizing: border-box; }
+.qc-guide-bar { display: flex; align-items: center; gap: 8px; padding: 8px 16px; background: #120e22; border-bottom: 1px solid rgba(139, 92, 246, 0.35); }
+.qc-guide-bar > button { min-width: 0 !important; width: auto !important; padding: 6px 14px !important; font-size: 13px !important; flex: 0 0 auto; }
+.qc-guide-bar > .qc-guide-game { background: ${PURPLE} !important; color: #fff !important; }
+.qc-guide-title { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; color: #b9b2d6; padding: 0 6px; }
+.qc-guide-view { flex: 1 1 auto; position: relative; min-height: 0; }
+.qc-guide-view > * { width: 100%; height: 100%; }
+
 /* Guides: favorite sites (2 per row) and external-link marker */
 .qc-site-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; width: 100%; }
 .qc-site-grid > * { min-width: 0 !important; padding: 7px 4px !important; font-size: 12px !important; }

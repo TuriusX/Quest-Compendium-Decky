@@ -158,6 +158,7 @@ const SITE_LABELS: Record<string, string> = {
   "fextralife.com": "Fextralife",
   "powerpyx.com": "PowerPyx",
   "strategywiki.org": "StrategyWiki",
+  "fandom.com": "Fandom wiki",
   "steamcommunity.com": "Steam Guides",
 };
 

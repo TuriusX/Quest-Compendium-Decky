@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.0
+- **Guide browser that stays open while you play.** GameFAQs, Neoseeker, Fandom, IGN, Reddit, YouTube (or any site
+  you add) open in a real browser page inside the plugin. Jump back into your game with ◀ Game and the page stays
+  loaded; **Resume guide** at the top of the Guides tab takes you straight back to the same spot. Uses Steam's own
+  built-in browser component; if a Steam update ever changes it, guides open in Steam's regular browser instead.
+- **Guides tab simplified:** type what you're looking for (optional), tap a guide site. The in-panel wiki reader
+  was removed; Fandom is now one of the guide sites.
+
 ## 0.4.0
 - **The Browser tab is now Guides.** It finds your game's wiki automatically (Fandom, with StrategyWiki,
   PCGamingWiki and Wikipedia one tap away) so you can search and read articles right in the Quick Access panel,

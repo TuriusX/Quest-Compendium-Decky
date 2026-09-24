@@ -6,10 +6,10 @@ import { LOCALE_OPTIONS, LocaleSetting, setLocaleSetting, useT } from "../i18n";
 import { setChat } from "../store";
 import { ThemeStyle } from "../theme";
 import { PageHeader } from "./Brand";
+import { DEFAULT_SITES } from "./BrowserTab";
 import { LinkView } from "./LinkView";
 
 const MODES: Mode[] = ["standard", "minmax", "roleplay"];
-const DEFAULT_SITES = ["gamefaqs.gamespot.com", "neoseeker.com", "ign.com", "reddit.com", "youtube.com"];
 
 /** Settings and account, moved out of the Quick Access panel so the panel stays focused on asking and reading. */
 export function SettingsPage() {

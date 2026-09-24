@@ -71,7 +71,7 @@ DEFAULT_SETTINGS: Dict[str, Any] = {
     # Interface + answer language: "auto" follows the Steam language.
     "locale": "auto",
     # Guide sites shown in the Guides tab (they open in Steam's browser).
-    "guide_sites": ["gamefaqs.gamespot.com", "neoseeker.com", "ign.com", "reddit.com", "youtube.com"],
+    "guide_sites": ["gamefaqs.gamespot.com", "neoseeker.com", "fandom.com", "ign.com", "reddit.com", "youtube.com"],
     # Developer override, e.g. "http://192.168.1.20:3000" to test against a local server.
     "api_base": "",
 }
