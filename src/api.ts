@@ -7,6 +7,8 @@ export interface Settings {
   mode: Mode;
   model: Model;
   include_screenshot: boolean;
+  /** "auto" follows the Steam language. */
+  locale?: "auto" | "en" | "es" | "pt";
 }
 
 export interface Quota {
@@ -42,6 +44,8 @@ export interface AskRequest {
   includeScreenshot: boolean;
   history: Turn[];
   game: GameInfo | null;
+  /** Language the AI should answer in ("English", "Spanish", "Brazilian Portuguese"). */
+  language?: string;
 }
 
 export interface AskResult {

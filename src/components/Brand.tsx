@@ -1,5 +1,6 @@
 import { DialogButton, Focusable, Navigation } from "@decky/ui";
 import { ReactNode } from "react";
+import { useT } from "../i18n";
 import { LOGO } from "../theme";
 
 /** Pixel-art book drawn in currentColor, for the Decky plugin list (tab icons should follow Steam's colors). */
@@ -22,6 +23,7 @@ export function Logo({ size }: { size: number }) {
 
 /** Header used on the full-screen pages: logo, title, optional subtitle, Back button, and any extra actions. */
 export function PageHeader({ title, sub, actions }: { title: string; sub?: string | null; actions?: ReactNode }) {
+  const t = useT();
   return (
     <Focusable className="qc-page-head" flow-children="horizontal">
       <Logo size={56} />
@@ -31,7 +33,7 @@ export function PageHeader({ title, sub, actions }: { title: string; sub?: strin
       </div>
       <div className="qc-page-actions">
         {actions}
-        <DialogButton onClick={() => Navigation.NavigateBack()}>Back</DialogButton>
+        <DialogButton onClick={() => Navigation.NavigateBack()}>{t("common.back")}</DialogButton>
       </div>
     </Focusable>
   );

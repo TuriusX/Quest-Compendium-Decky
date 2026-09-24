@@ -1,5 +1,6 @@
 import { DialogButton, Focusable } from "@decky/ui";
 import { useCurrentGame } from "../game";
+import { useT } from "../i18n";
 import { resetConversation, useChat } from "../store";
 import { ThemeStyle } from "../theme";
 import { AnswerBlocks } from "./AnswerBlocks";
@@ -7,6 +8,7 @@ import { PageHeader } from "./Brand";
 
 /** Full-screen reader: the whole conversation for the current game, as a scrolling chat. */
 export function AnswerPage() {
+  const t = useT();
   const chat = useChat();
   const game = useCurrentGame();
   const turns = chat.history;
@@ -16,10 +18,10 @@ export function AnswerPage() {
     <div className="qc-page">
       <ThemeStyle />
       <div className="qc-page-inner">
-        <PageHeader title="Conversation" sub={game ? game.name : null} />
+        <PageHeader title={t("conv.title")} sub={game ? game.name : null} />
         {turns.length === 0 && (
           <div className="qc-note qc-muted" style={{ margin: 8 }}>
-            No questions yet. Open the Quick Access menu and ask Quest Compendium something.
+            {t("conv.empty")}
           </div>
         )}
         {turns.map((t, i) =>
@@ -40,10 +42,10 @@ export function AnswerPage() {
             </div>
           ),
         )}
-        {chat.busy && <div className="qc-note qc-muted" style={{ margin: "16px 8px" }}>Thinking…</div>}
+        {chat.busy && <div className="qc-note qc-muted" style={{ margin: "16px 8px" }}>{t("conv.thinking")}</div>}
         {turns.length > 0 && (
           <div style={{ marginTop: 20, maxWidth: 320 }}>
-            <DialogButton onClick={() => resetConversation(game?.appId ?? null)}>New conversation</DialogButton>
+            <DialogButton onClick={() => resetConversation(game?.appId ?? null)}>{t("conv.new")}</DialogButton>
           </div>
         )}
       </div>

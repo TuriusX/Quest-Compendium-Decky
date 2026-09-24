@@ -54,6 +54,9 @@ BROWSER_UA = (
 
 VALID_MODES = ("standard", "minmax", "roleplay")
 VALID_MODELS = ("pro", "flash")
+VALID_LOCALES = ("auto", "en", "es", "pt")
+# The language names the server puts in the AI's instructions ("Respond entirely in ...").
+AI_LANGUAGES = ("English", "Spanish", "Brazilian Portuguese")
 
 SETTINGS_PATH = os.path.join(decky.DECKY_PLUGIN_SETTINGS_DIR, "settings.json")
 
@@ -62,6 +65,8 @@ DEFAULT_SETTINGS: Dict[str, Any] = {
     "model": "pro",
     "include_screenshot": True,
     "language": "English",
+    # Interface + answer language: "auto" follows the Steam language.
+    "locale": "auto",
     # Developer override, e.g. "http://192.168.1.20:3000" to test against a local server.
     "api_base": "",
 }
@@ -425,6 +430,8 @@ class Plugin:
             s["model"] = patch["model"]
         if isinstance(patch.get("include_screenshot"), bool):
             s["include_screenshot"] = patch["include_screenshot"]
+        if patch.get("locale") in VALID_LOCALES:
+            s["locale"] = patch["locale"]
         self._save()
         return True
 
@@ -470,7 +477,8 @@ class Plugin:
             "history": history,
             "aiMode": mode,
             "preferredModel": model,
-            "language": s.get("language") or "English",
+            # The panel resolves the language (including "auto" = Steam's language) and sends it along.
+            "language": req.get("language") if req.get("language") in AI_LANGUAGES else (s.get("language") or "English"),
         }
         game = req.get("game")
         if isinstance(game, dict) and game.get("name"):

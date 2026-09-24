@@ -1,19 +1,17 @@
 import { ButtonItem, DropdownItem, Field, PanelSection, PanelSectionRow, Spinner, ToggleField } from "@decky/ui";
 import { useEffect, useState } from "react";
 import { getQuota, getState, Mode, PluginState, saveSettings, Settings, testScreenshot, unlink } from "../api";
+import { LOCALE_OPTIONS, LocaleSetting, setLocaleSetting, useT } from "../i18n";
 import { setChat } from "../store";
 import { ThemeStyle } from "../theme";
 import { PageHeader } from "./Brand";
 import { LinkView } from "./LinkView";
 
-const MODE_OPTIONS: { data: Mode; label: string }[] = [
-  { data: "standard", label: "Standard" },
-  { data: "minmax", label: "Min-Max" },
-  { data: "roleplay", label: "Roleplay" },
-];
+const MODES: Mode[] = ["standard", "minmax", "roleplay"];
 
 /** Settings and account, moved out of the Quick Access panel so the panel stays focused on asking and reading. */
 export function SettingsPage() {
+  const t = useT();
   const [ps, setPs] = useState<PluginState | null>(null);
   const [backendDown, setBackendDown] = useState(false);
   const [showLink, setShowLink] = useState(false);
@@ -21,7 +19,9 @@ export function SettingsPage() {
 
   const refreshState = async () => {
     try {
-      setPs(await getState());
+      const state = await getState();
+      setLocaleSetting(state.settings.locale ?? "auto");
+      setPs(state);
       setBackendDown(false);
     } catch {
       setBackendDown(true);
@@ -55,39 +55,52 @@ export function SettingsPage() {
     <div className="qc-page">
       <ThemeStyle />
       <div className="qc-page-inner">
-        <PageHeader title="Settings" sub={ps ? `Quest Compendium for Steam Deck \u00b7 v${ps.version}` : null} />
+        <PageHeader title={t("settings.title")} sub={ps ? t("settings.sub", { v: ps.version }) : null} />
 
         {backendDown && (
           <div className="qc-note qc-err" style={{ margin: "8px 0" }}>
-            The plugin backend isn't responding. Try reloading Decky Loader.
+            {t("backend.down")}
           </div>
         )}
         {!ps && !backendDown && <Spinner style={{ width: 32, height: 32 }} />}
 
         {ps && (
-          <PanelSection title="Answers">
+          <PanelSection title={t("settings.answers")}>
             <PanelSectionRow>
               <DropdownItem
-                label="Style"
-                description="Standard, Min-Max (efficiency and completion), or Roleplay (in-universe, spoiler-friendly hints)"
-                rgOptions={MODE_OPTIONS}
+                label={t("settings.language")}
+                description={t("settings.languageDesc")}
+                rgOptions={LOCALE_OPTIONS}
+                selectedOption={ps.settings.locale ?? "auto"}
+                onChange={(opt) => {
+                  const locale = opt.data as LocaleSetting;
+                  setLocaleSetting(locale);
+                  void updateSettings({ locale });
+                }}
+              />
+            </PanelSectionRow>
+            <PanelSectionRow>
+              <DropdownItem
+                label={t("settings.style")}
+                description={t("settings.styleDesc")}
+                rgOptions={MODES.map((m) => ({ data: m, label: t(`mode.${m}`) }))}
                 selectedOption={ps.settings.mode}
                 onChange={(opt) => updateSettings({ mode: opt.data as Mode })}
               />
             </PanelSectionRow>
             <PanelSectionRow>
               <ToggleField
-                label="Use Pro model"
-                description="Smarter, but slower and uses your Pro queries"
+                label={t("settings.pro")}
+                description={t("settings.proDesc")}
                 checked={ps.settings.model === "pro"}
                 onChange={(on) => updateSettings({ model: on ? "pro" : "flash" })}
               />
             </PanelSectionRow>
             <PanelSectionRow>
               <ToggleField
-                label="Include screenshot"
+                label={t("settings.shot")}
                 description={
-                  ps.tools.gamescopectl ? "Lets the AI see your game (menus are not captured)" : "Not available on this system"
+                  ps.tools.gamescopectl ? t("settings.shotDesc") : t("settings.shotNA")
                 }
                 checked={ps.settings.include_screenshot && ps.tools.gamescopectl}
                 disabled={!ps.tools.gamescopectl}
@@ -97,24 +110,24 @@ export function SettingsPage() {
             <PanelSectionRow>
               <ButtonItem
                 layout="inline"
-                label="Screenshot check"
-                description={diag ?? "Make sure the plugin can capture your game"}
+                label={t("settings.check")}
+                description={diag ?? t("settings.checkDesc")}
                 disabled={!ps.tools.gamescopectl}
                 onClick={async () => {
-                  setDiag("Capturing\u2026");
+                  setDiag(t("settings.capturing"));
                   try {
                     const r = await testScreenshot();
                     setDiag(
                       r.ok
-                        ? `Works: ${Math.round((r.bytes ?? 0) / 1024)} KB in ${r.ms} ms`
-                        : `Failed: ${r.error ?? "unknown error"}`,
+                        ? t("settings.works", { kb: Math.round((r.bytes ?? 0) / 1024), ms: r.ms ?? 0 })
+                        : t("settings.failed", { error: r.error ?? "?" }),
                     );
                   } catch {
-                    setDiag("Failed: backend not responding");
+                    setDiag(t("settings.failedBackend"));
                   }
                 }}
               >
-                Test
+                {t("settings.test")}
               </ButtonItem>
             </PanelSectionRow>
           </PanelSection>
@@ -122,16 +135,16 @@ export function SettingsPage() {
 
 
         {ps && (
-          <PanelSection title="Account">
+          <PanelSection title={t("account.title")}>
             {ps.linked ? (
               <>
                 <PanelSectionRow>
-                  <Field label="Signed in" description={ps.email ?? undefined} />
+                  <Field label={t("account.signedIn")} description={ps.email ?? undefined} />
                 </PanelSectionRow>
                 <PanelSectionRow>
                   <ButtonItem
                     layout="inline"
-                    label="This device"
+                    label={t("account.device")}
                     onClick={async () => {
                       await unlink();
                       setShowLink(false);
@@ -139,7 +152,7 @@ export function SettingsPage() {
                       await refreshQuota();
                     }}
                   >
-                    Unlink
+                    {t("account.unlink")}
                   </ButtonItem>
                 </PanelSectionRow>
               </>
@@ -148,8 +161,8 @@ export function SettingsPage() {
                 <PanelSectionRow>
                   <div className="qc-note qc-muted">
                     {ps.relinkNeeded
-                      ? "Your linked account expired. Link again to restore Premium."
-                      : "You're using guest mode. Link your account to use Premium and keep your usage in sync."}
+                      ? t("account.expired")
+                      : t("account.guest")}
                   </div>
                 </PanelSectionRow>
                 {showLink ? (
@@ -162,8 +175,8 @@ export function SettingsPage() {
                   />
                 ) : (
                   <PanelSectionRow>
-                    <ButtonItem layout="inline" label="Link with your phone" onClick={() => setShowLink(true)}>
-                      Link account
+                    <ButtonItem layout="inline" label={t("account.linkPhone")} onClick={() => setShowLink(true)}>
+                      {t("account.link")}
                     </ButtonItem>
                   </PanelSectionRow>
                 )}

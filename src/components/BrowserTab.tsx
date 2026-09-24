@@ -2,6 +2,7 @@ import { ButtonItem, DialogButton, Focusable, PanelSection, PanelSectionRow, Spi
 import { useState, type ReactNode } from "react";
 import { go, goBack, goHome, openUrl, search, useBrowser } from "../browser";
 import { useCurrentGame } from "../game";
+import { useT } from "../i18n";
 import { BlockList } from "./AnswerBlocks";
 
 /** A focusable row that works with both the A button and touch. */
@@ -15,6 +16,7 @@ function Pressable({ className, onPress, children }: { className: string; onPres
 
 /** Reader browser that lives entirely inside the Quick Access panel. */
 export function BrowserTab() {
+  const t = useT();
   const b = useBrowser();
   const game = useCurrentGame();
   const [text, setText] = useState("");
@@ -23,8 +25,8 @@ export function BrowserTab() {
   const toolbar = canGoBack && (
     <PanelSectionRow>
       <Focusable className="qc-toolbar" flow-children="horizontal">
-        <DialogButton onClick={goBack}>Back</DialogButton>
-        <DialogButton onClick={goHome}>Home</DialogButton>
+        <DialogButton onClick={goBack}>{t("common.back")}</DialogButton>
+        <DialogButton onClick={goHome}>{t("common.home")}</DialogButton>
       </Focusable>
     </PanelSectionRow>
   );
@@ -44,13 +46,13 @@ export function BrowserTab() {
 
   return (
     <>
-      <PanelSection title={b.view === "page" ? undefined : "Browser"}>
+      <PanelSection title={b.view === "page" ? undefined : t("browser.title")}>
         {toolbar}
         {(b.view === "home" || b.view === "results") && (
           <>
             <PanelSectionRow>
               <TextField
-                label="Search Google or type an address"
+                label={t("browser.field")}
                 value={text}
                 disabled={!!b.loading}
                 onChange={(e) => setText(e.target.value)}
@@ -61,7 +63,7 @@ export function BrowserTab() {
             </PanelSectionRow>
             <PanelSectionRow>
               <ButtonItem layout="below" disabled={!text.trim() || !!b.loading} onClick={() => go(text)}>
-                Search
+                {t("browser.search")}
               </ButtonItem>
             </PanelSectionRow>
           </>
@@ -71,12 +73,12 @@ export function BrowserTab() {
         {b.view === "home" && game && (
           <>
             <PanelSectionRow>
-              <div className="qc-section-mini">Quick searches for {game.name}</div>
+              <div className="qc-section-mini">{t("browser.quick", { game: game.name })}</div>
             </PanelSectionRow>
             {[
-              { label: "Wiki", q: `${game.name} wiki` },
-              { label: "Walkthrough", q: `${game.name} walkthrough` },
-              { label: "Tips on Reddit", q: `${game.name} tips reddit` },
+              { label: t("browser.wiki"), q: `${game.name} wiki` },
+              { label: t("browser.walkthrough"), q: `${game.name} walkthrough` },
+              { label: t("browser.reddit"), q: `${game.name} tips reddit` },
             ].map((s) => (
               <PanelSectionRow key={s.label}>
                 <ButtonItem layout="below" disabled={!!b.loading} onClick={() => search(s.q)}>
@@ -88,7 +90,7 @@ export function BrowserTab() {
         )}
         {b.view === "home" && !game && (
           <PanelSectionRow>
-            <div className="qc-note qc-muted">Start a game for quick searches, or search anything above.</div>
+            <div className="qc-note qc-muted">{t("browser.noGame")}</div>
           </PanelSectionRow>
         )}
 
@@ -96,14 +98,14 @@ export function BrowserTab() {
           <>
             <PanelSectionRow>
               <div className="qc-section-mini">
-                {b.engine ? `${b.engine} results` : "Results"} for “{b.query}”
+                {b.engine ? t("browser.resultsFrom", { engine: b.engine, q: b.query }) : t("browser.results", { q: b.query })}
               </div>
             </PanelSectionRow>
             <PanelSectionRow>
               <div>
                 {b.summary && (
                   <Focusable className="qc-overview" focusClassName="qc-focused" noFocusRing>
-                    <div className="qc-overview-label">Overview</div>
+                    <div className="qc-overview-label">{t("browser.overview")}</div>
                     {b.summary}
                   </Focusable>
                 )}
@@ -113,7 +115,7 @@ export function BrowserTab() {
                     <div className="qc-result-domain">{r.domain}</div>
                     {r.snippet && <div className="qc-result-snippet">{r.snippet}</div>}
                     {r.blocked && (
-                      <div className="qc-result-flag">This site blocks readers; may open as a saved copy</div>
+                      <div className="qc-result-flag">{t("browser.blocked")}</div>
                     )}
                   </Pressable>
                 ))}
@@ -145,7 +147,7 @@ export function BrowserTab() {
           {b.page.links.length > 0 && (
             <>
               <PanelSectionRow>
-                <div className="qc-section-mini">Links on this page</div>
+                <div className="qc-section-mini">{t("browser.links")}</div>
               </PanelSectionRow>
               <PanelSectionRow>
                 <div>
@@ -160,8 +162,8 @@ export function BrowserTab() {
           )}
           <PanelSectionRow>
             <Focusable className="qc-toolbar" flow-children="horizontal">
-              <DialogButton onClick={goBack}>Back</DialogButton>
-              <DialogButton onClick={goHome}>Home</DialogButton>
+              <DialogButton onClick={goBack}>{t("common.back")}</DialogButton>
+              <DialogButton onClick={goHome}>{t("common.home")}</DialogButton>
             </Focusable>
           </PanelSectionRow>
         </PanelSection>

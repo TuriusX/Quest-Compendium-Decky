@@ -4,6 +4,7 @@
 import { callable } from "@decky/api";
 import { useEffect, useState } from "react";
 import type { Block } from "./format";
+import { t } from "./i18n";
 
 interface PageFetch {
   ok: boolean;
@@ -206,7 +207,7 @@ export async function search(query: string): Promise<void> {
   if (!q) return;
   const id = ++requestId;
   pushHistory();
-  set({ loading: `Searching Google for "${q}"\u2026`, error: null, query: q });
+  set({ loading: t("browser.searching", { engine: "Google", q }), error: null, query: q });
   const failures: string[] = [];
   let results: SearchResult[] = [];
   let summary = "";
@@ -242,7 +243,7 @@ export async function search(query: string): Promise<void> {
   for (const [name, url, parse] of engines) {
     if (results.length) break;
     if (id !== requestId) return;
-    set({ loading: `Searching ${name} for "${q}"\u2026` });
+    set({ loading: t("browser.searching", { engine: name, q }) });
     try {
       const res = await fetchPage(url);
       if (id !== requestId) return;
@@ -261,7 +262,7 @@ export async function search(query: string): Promise<void> {
 
   if (id !== requestId) return;
   if (!results.length) {
-    set({ loading: null, error: `No results. ${failures.join(" \u00b7 ")}` });
+    set({ loading: null, error: `${t("browser.noResults")} ${failures.join(" \u00b7 ")}` });
     return;
   }
   set({ loading: null, view: "results", results: results.slice(0, 15), summary, engine, page: null });
@@ -285,7 +286,7 @@ export async function openUrl(url: string): Promise<void> {
   // Reddit's new site needs JavaScript; the classic site is plain HTML.
   const target = url.replace(/^https?:\/\/(www\.|new\.)?reddit\.com/i, "https://old.reddit.com");
   pushHistory();
-  set({ loading: `Opening ${domainOf(target)}\u2026`, error: null });
+  set({ loading: t("browser.opening", { site: domainOf(target) }), error: null });
   try {
     const res = await fetchPage(target);
     if (id !== requestId) return;
@@ -293,7 +294,7 @@ export async function openUrl(url: string): Promise<void> {
 
     // Sites behind a bot check: show the Internet Archive's latest saved copy instead.
     if (res.html && isBotCheck(res.status, res.html)) {
-      set({ loading: `${domainOf(finalUrl)} blocks readers. Trying a saved copy\u2026` });
+      set({ loading: t("browser.trySaved", { site: domainOf(finalUrl) }) });
       // "2" asks for the most recent capture; "id_" asks for the original page without the archive's toolbar.
       for (const archiveUrl of [`https://web.archive.org/web/2id_/${finalUrl}`, `https://web.archive.org/web/2/${finalUrl}`]) {
         const saved = await fetchPage(archiveUrl);
@@ -301,7 +302,7 @@ export async function openUrl(url: string): Promise<void> {
         if (saved.ok && saved.html && !isBotCheck(saved.status, saved.html)) {
           const page = extractPage(saved.html, finalUrl);
           if (page.blocks.length) {
-            page.note = `${page.domain} blocks readers like this one, so this is the latest saved copy from the Internet Archive. It may be a little out of date.`;
+            page.note = t("browser.savedCopy", { site: page.domain });
             set({ loading: null, view: "page", page });
             return;
           }
@@ -309,12 +310,12 @@ export async function openUrl(url: string): Promise<void> {
       }
       set({
         loading: null,
-        error: `${domainOf(finalUrl)} blocks readers like this one and has no saved copy. Try another result.`,
+        error: t("browser.blockedNoCopy", { site: domainOf(finalUrl) }),
       });
       return;
     }
     if (!res.html) {
-      set({ loading: null, error: res.error ?? "Couldn't load the page." });
+      set({ loading: null, error: res.error ?? t("browser.loadFailed") });
       return;
     }
 
@@ -323,14 +324,14 @@ export async function openUrl(url: string): Promise<void> {
       set({
         loading: null,
         error: res.ok
-          ? "Couldn't find readable text on this page. It may need a full browser (JavaScript)."
-          : (res.error ?? "Couldn't load the page."),
+          ? t("browser.noText")
+          : (res.error ?? t("browser.loadFailed")),
       });
       return;
     }
     set({ loading: null, view: "page", page });
   } catch {
-    if (id === requestId) set({ loading: null, error: "The plugin backend isn't responding." });
+    if (id === requestId) set({ loading: null, error: t("browser.backendDown") });
   }
 }
 
@@ -569,7 +570,7 @@ function redditThread(doc: Document): Block[] {
   const selftext = post?.querySelector(".usertext-body .md");
   if (selftext) walk(selftext, blocks);
   const comments = Array.from(doc.querySelectorAll(".commentarea .thing.comment")).slice(0, 40);
-  if (comments.length) blocks.push({ kind: "heading", text: "Top comments" });
+  if (comments.length) blocks.push({ kind: "heading", text: t("browser.topComments") });
   comments.forEach((c) => {
     const author = clean(c.querySelector(":scope > .entry .author")?.textContent ?? "someone");
     const md = c.querySelector(":scope > .entry .md");
@@ -624,6 +625,6 @@ export function extractPage(html: string, url: string): PageDoc {
     seen.add(k);
     return true;
   });
-  if (infobox.length && blocks.length) blocks = [{ kind: "heading", text: "Quick facts" }, ...infobox, ...blocks];
+  if (infobox.length && blocks.length) blocks = [{ kind: "heading", text: t("browser.quickFacts") }, ...infobox, ...blocks];
   return { url, title, domain, blocks, links };
 }

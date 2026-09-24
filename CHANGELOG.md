@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0
+- **Español y Português.** The plugin's text and the AI's answers now come in Spanish or Brazilian Portuguese.
+  "Auto" follows your Steam language; change it in Settings & account → Language.
+- **Matches the desktop app's lo-fi look:** pixel fonts, the cozy desk scene, and a segmented "mana" bar for your
+  Pro questions. Quota now reads "Pro left" / "Flash left", like the desktop app.
+- **More ways to ask:** a "More questions" list with the desktop app's quick questions (boss mechanics, where to go
+  next, build & gear, missable secrets), and suggested follow-ups under each answer.
+
 ## 0.2.2
 - **Google search in the Browser tab.** Searches run through the Quest Compendium server (Google Search via
   Gemini), with a short overview above the results. Press Enter on the keyboard to search. If the server search is

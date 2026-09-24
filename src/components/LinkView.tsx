@@ -2,6 +2,7 @@ import { ButtonItem, PanelSectionRow, Spinner } from "@decky/ui";
 import { useEffect, useRef, useState } from "react";
 import qrcode from "qrcode-generator";
 import { cancelLink, pollLink, startLink } from "../api";
+import { t } from "../i18n";
 
 type Phase = "idle" | "starting" | "waiting" | "linked" | "expired" | "error";
 
@@ -47,7 +48,7 @@ export function LinkView({ onLinked }: { onLinked: () => void }) {
           return;
         }
         if (res.status === "error") {
-          setError(res.error ?? "Something went wrong.");
+          setError(res.error ?? t("answer.error"));
           setPhase("error");
           return;
         }
@@ -65,7 +66,7 @@ export function LinkView({ onLinked }: { onLinked: () => void }) {
       const res = await startLink();
       if (!alive.current) return;
       if (!res.ok || !res.verificationUrl || !res.userCode) {
-        setError(res.error ?? "Couldn't start linking.");
+        setError(res.error ?? t("answer.error"));
         setPhase("error");
         return;
       }
@@ -76,7 +77,7 @@ export function LinkView({ onLinked }: { onLinked: () => void }) {
       schedulePoll(res.interval ?? 3);
     } catch {
       if (alive.current) {
-        setError("The plugin backend isn't responding.");
+        setError(t("browser.backendDown"));
         setPhase("error");
       }
     }
@@ -87,7 +88,7 @@ export function LinkView({ onLinked }: { onLinked: () => void }) {
       <>
         {phase === "expired" && (
           <PanelSectionRow>
-            <div style={{ fontSize: 12, opacity: 0.8 }}>That code expired. Start again for a new one.</div>
+            <div style={{ fontSize: 12, opacity: 0.8 }}>{t("link.expired")}</div>
           </PanelSectionRow>
         )}
         {phase === "error" && (
@@ -97,7 +98,7 @@ export function LinkView({ onLinked }: { onLinked: () => void }) {
         )}
         <PanelSectionRow>
           <ButtonItem layout="below" onClick={begin}>
-            {phase === "idle" ? "Link account" : "Try again"}
+            {phase === "idle" ? t("account.link") : t("link.tryAgain")}
           </ButtonItem>
         </PanelSectionRow>
       </>
@@ -115,7 +116,7 @@ export function LinkView({ onLinked }: { onLinked: () => void }) {
   if (phase === "linked") {
     return (
       <PanelSectionRow>
-        <div style={{ fontSize: 13 }}>Linked! Your account is connected.</div>
+        <div style={{ fontSize: 13 }}>{t("link.done")}</div>
       </PanelSectionRow>
     );
   }
@@ -124,12 +125,12 @@ export function LinkView({ onLinked }: { onLinked: () => void }) {
     <>
       <PanelSectionRow>
         <div style={{ display: "flex", justifyContent: "center" }}>
-          {qr && <img src={qr} alt="QR code to link your account" style={{ width: 200, height: 200, borderRadius: 8 }} />}
+          {qr && <img src={qr} alt={t("link.qrAlt")} style={{ width: 200, height: 200, borderRadius: 8 }} />}
         </div>
       </PanelSectionRow>
       <PanelSectionRow>
         <div style={{ textAlign: "center", fontSize: 12, opacity: 0.85, lineHeight: 1.4 }}>
-          Scan with your phone, sign in with Google, and confirm the code:
+          {t("link.scan")}
           <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: 3, margin: "6px 0" }}>{code}</div>
           <div style={{ opacity: 0.7 }}>or go to {shortUrl}</div>
         </div>
