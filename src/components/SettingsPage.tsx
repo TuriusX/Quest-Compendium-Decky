@@ -94,14 +94,6 @@ export function SettingsPage() {
             </PanelSectionRow>
             <PanelSectionRow>
               <ToggleField
-                label={t("settings.pro")}
-                description={t("settings.proDesc")}
-                checked={ps.settings.model === "pro"}
-                onChange={(on) => updateSettings({ model: on ? "pro" : "flash" })}
-              />
-            </PanelSectionRow>
-            <PanelSectionRow>
-              <ToggleField
                 label={t("settings.shot")}
                 description={
                   ps.tools.gamescopectl ? t("settings.shotDesc") : t("settings.shotNA")

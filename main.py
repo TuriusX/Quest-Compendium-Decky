@@ -35,7 +35,7 @@ import decky
 
 DEFAULT_API_BASE = "https://quest-compendium-890629309063.us-east1.run.app"
 
-CHAT_TIMEOUT_S = 120          # Pro model + vision can be slow
+CHAT_TIMEOUT_S = 120          # vision + thinking can take a while
 SHORT_TIMEOUT_S = 20
 TOKEN_REFRESH_MARGIN_S = 120  # refresh Firebase ID tokens this long before they expire
 
@@ -166,14 +166,30 @@ def _to_int(value: Any) -> Optional[int]:
 
 
 def _quota_from(user_data: Any) -> Optional[Dict[str, Any]]:
+    """One daily question allowance (since app v0.3). `daily` is only in account-status replies."""
     if not isinstance(user_data, dict):
         return None
+    left = user_data.get("questionsAvailable", user_data.get("flashQueriesAvailable"))
     return {
-        "pro": _to_int(user_data.get("proQueriesAvailable")),
-        "flash": _to_int(user_data.get("flashQueriesAvailable")),
+        "left": _to_int(left),
+        "daily": _to_int(user_data.get("dailyQuestions")),
         "isPremium": user_data.get("isPremium") is True,
         "isGuest": user_data.get("isGuest") is True,
     }
+
+
+def _points_from(data: Any) -> List[Dict[str, Any]]:
+    """Markers the AI placed on the screenshot: up to 5 {x, y, label}, x/y as 0-1 fractions."""
+    out: List[Dict[str, Any]] = []
+    for p in (data.get("points") if isinstance(data, dict) else None) or []:
+        try:
+            x, y = float(p.get("x")), float(p.get("y"))
+        except (TypeError, ValueError, AttributeError):
+            continue
+        label = str(p.get("label") or "").strip()[:40]
+        if 0 <= x <= 1 and 0 <= y <= 1 and label:
+            out.append({"x": x, "y": y, "label": label})
+    return out[:5]
 
 
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
@@ -492,7 +508,6 @@ class Plugin:
 
         s = self.state["settings"]
         mode = req.get("mode") if req.get("mode") in VALID_MODES else s["mode"]
-        model = req.get("model") if req.get("model") in VALID_MODELS else s["model"]
 
         history: List[Dict[str, str]] = []
         for turn in (req.get("history") or [])[-MAX_HISTORY_TURNS:]:
@@ -503,7 +518,6 @@ class Plugin:
             "question": question,
             "history": history,
             "aiMode": mode,
-            "preferredModel": model,
             # The panel resolves the language (including "auto" = Steam's language) and sends it along.
             "language": req.get("language") if req.get("language") in AI_LANGUAGES else (s.get("language") or "English"),
         }
@@ -516,10 +530,12 @@ class Plugin:
             payload["isGameRunningLocally"] = True
 
         screenshot_state, screenshot_error = "off", None
+        shot_url: Optional[str] = None
         if req.get("includeScreenshot"):
             shot = await self._capture()
             if shot["ok"]:
-                payload["imageBase64"] = f"data:{shot['mime']};base64,{shot['b64']}"
+                shot_url = f"data:{shot['mime']};base64,{shot['b64']}"
+                payload["imageBase64"] = shot_url
                 screenshot_state = "attached"
             else:
                 screenshot_state, screenshot_error = "failed", shot["error"]
@@ -550,6 +566,10 @@ class Plugin:
                 modelUsed=data.get("modelUsed"),
                 quota=_quota_from(data.get("userData")),
             )
+            # Markers on the screenshot: the answer page shows the screenshot with them drawn on.
+            points = _points_from(data)
+            if points and shot_url:
+                result.update(points=points, shot=shot_url)
         elif status == 429:
             result.update(ok=True, limitReached=True, text=data.get("text") or "Daily limit reached.")
         else:

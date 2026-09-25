@@ -10,12 +10,12 @@ import {
   TextField,
 } from "@decky/ui";
 import { useEffect, useState } from "react";
-import { ask, AskRequest, getQuota, getState, PluginState } from "../api";
+import { ask, AskRequest, getQuota, getState, PluginState, Turn } from "../api";
 import { currentGame, useCurrentGame } from "../game";
 import { setTab, useBrowser } from "../browser";
 import { aiLanguageName, setLocaleSetting, useT } from "../i18n";
 import { ANSWER_ROUTE, openPage, SETTINGS_ROUTE } from "../routes";
-import { getChat, lastAnswer, lastQuestion, resetConversation, setChat, useChat } from "../store";
+import { getChat, keepRecentShots, lastAnswer, lastMarkedAnswer, lastQuestion, mergeQuota, resetConversation, setChat, useChat } from "../store";
 import { PURPLE, SCENE, ThemeStyle } from "../theme";
 import { AnswerBlocks } from "./AnswerBlocks";
 import { Logo } from "./Brand";
@@ -60,7 +60,7 @@ export function QuickAccessPanel() {
   const refreshQuota = async () => {
     try {
       const res = await getQuota();
-      if (res.ok && res.quota) setChat({ quota: res.quota });
+      if (res.ok && res.quota) setChat({ quota: mergeQuota(getChat().quota, res.quota) });
     } catch {
       /* quota display is best-effort */
     }
@@ -84,10 +84,10 @@ export function QuickAccessPanel() {
     const req: AskRequest = {
       question: q,
       mode: ps.settings.mode,
-      model: ps.settings.model,
       // A screenshot is only useful while a game is actually running.
       includeScreenshot: ps.settings.include_screenshot && ps.tools.gamescopectl && liveGame !== null,
-      history: getChat().history,
+      // Only the words go back to the server (not the screenshots kept for the answer page).
+      history: getChat().history.map(({ role, text }) => ({ role, text })),
       game: liveGame,
       language: aiLanguageName(),
     };
@@ -102,12 +102,17 @@ export function QuickAccessPanel() {
         screenshotNote:
           res.screenshot === "failed" ? t("answer.shotFailed", { error: res.screenshotError ?? "?" }) : null,
       };
-      if (res.quota) patch.quota = res.quota;
+      if (res.quota) patch.quota = mergeQuota(getChat().quota, res.quota);
       if (res.ok && res.limitReached) {
         patch.limitReached = true;
         patch.error = res.text ?? t("answer.limit");
       } else if (res.ok && res.text) {
-        patch.history = [...getChat().history, { role: "user", text: q }, { role: "assistant", text: res.text }];
+        const answerTurn: Turn = { role: "assistant", text: res.text };
+        if (res.shot && res.points?.length) {
+          answerTurn.shot = res.shot;
+          answerTurn.points = res.points;
+        }
+        patch.history = keepRecentShots([...getChat().history, { role: "user", text: q }, answerTurn]);
       } else {
         patch.error = res.error ?? t("answer.error");
       }
@@ -118,6 +123,7 @@ export function QuickAccessPanel() {
   };
 
   const answer = lastAnswer(chat);
+  const marked = lastMarkedAnswer(chat);
   const asked = lastQuestion(chat);
   const earlier = Math.max(0, chat.history.filter((turn) => turn.role === "user").length - 1);
   const q = chat.quota;
@@ -142,11 +148,8 @@ export function QuickAccessPanel() {
               {q ? (
                 <>
                   <span className="qc-chip">
-                    {t("card.proLeft", { n: q.pro ?? "?" })}
-                    {typeof q.pro === "number" && <ManaBar value={q.pro} max={q.isPremium ? 100 : 5} />}
-                  </span>
-                  <span className="qc-chip">
-                    {q.isPremium ? t("card.flashUnlimited") : t("card.flashLeft", { n: q.flash ?? "?" })}
+                    {t("card.questionsLeft", { n: q.left ?? "?" })}
+                    {typeof q.left === "number" && <ManaBar value={q.left} max={q.daily ?? (q.isPremium ? 60 : 10)} />}
                   </span>
                   <span className={tierKey === "tier.premium" ? "qc-chip qc-chip-gold" : "qc-chip"}>{tierKey && t(tierKey)}</span>
                 </>
@@ -155,7 +158,7 @@ export function QuickAccessPanel() {
               )}
               {ps && (
                 <span className="qc-chip">
-                  {t(`mode.${ps.settings.mode}`)} · {t(ps.settings.model === "pro" ? "card.model.pro" : "card.model.flash")}
+                  {t(`mode.${ps.settings.mode}`)}
                 </span>
               )}
             </div>
@@ -283,6 +286,14 @@ export function QuickAccessPanel() {
                       <div className="qc-asked">
                         <b>{t("answer.asked")}</b> {asked}
                       </div>
+                    </PanelSectionRow>
+                  )}
+                  {marked && (
+                    <PanelSectionRow>
+                      {/* The AI marked spots on the screenshot: they're drawn on it in the full answer. */}
+                      <ButtonItem layout="below" onClick={() => openPage(ANSWER_ROUTE)}>
+                        📍 {t(marked.points!.length === 1 ? "shot.marked1" : "shot.markedN", { n: marked.points!.length })}
+                      </ButtonItem>
                     </PanelSectionRow>
                   )}
                   <PanelSectionRow>

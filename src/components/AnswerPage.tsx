@@ -4,6 +4,7 @@ import { useT } from "../i18n";
 import { resetConversation, useChat } from "../store";
 import { ThemeStyle } from "../theme";
 import { AnswerBlocks } from "./AnswerBlocks";
+import { MarkedShot } from "./MarkedShot";
 import { PageHeader } from "./Brand";
 
 /** Full-screen reader: the whole conversation for the current game, as a scrolling chat. */
@@ -38,6 +39,7 @@ export function AnswerPage() {
             </Focusable>
           ) : (
             <div key={i} className="qc-a">
+              {t.points && t.points.length > 0 && <MarkedShot shot={t.shot} points={t.points} />}
               <AnswerBlocks text={t.text} chunk={420} />
             </div>
           ),

@@ -5,7 +5,8 @@ export type Model = "pro" | "flash";
 
 export interface Settings {
   mode: Mode;
-  model: Model;
+  /** No longer used: the server has one mode since app v0.3 (kept so older saved settings still load). */
+  model?: Model;
   include_screenshot: boolean;
   /** "auto" follows the Steam language. */
   locale?: "auto" | "en" | "es" | "pt";
@@ -13,11 +14,19 @@ export interface Settings {
   guide_sites?: string[];
 }
 
+/** One daily question allowance (since app v0.3). `daily` comes with account-status checks only. */
 export interface Quota {
-  pro: number | null;
-  flash: number | null;
+  left: number | null;
+  daily: number | null;
   isPremium: boolean;
   isGuest: boolean;
+}
+
+/** A spot the AI marked on the screenshot (0-1 fractions from the top-left). */
+export interface ShotPoint {
+  x: number;
+  y: number;
+  label: string;
 }
 
 export interface PluginState {
@@ -32,6 +41,9 @@ export interface PluginState {
 export interface Turn {
   role: "user" | "assistant";
   text: string;
+  /** Answers only: the screenshot the answer is about, with the spots the AI marked on it. */
+  shot?: string;
+  points?: ShotPoint[];
 }
 
 export interface GameInfo {
@@ -42,7 +54,6 @@ export interface GameInfo {
 export interface AskRequest {
   question: string;
   mode: Mode;
-  model: Model;
   includeScreenshot: boolean;
   history: Turn[];
   game: GameInfo | null;
@@ -57,6 +68,8 @@ export interface AskResult {
   limitReached?: boolean;
   modelUsed?: string;
   quota?: Quota | null;
+  points?: ShotPoint[];
+  shot?: string;
   screenshot?: "attached" | "failed" | "off";
   screenshotError?: string | null;
   notice?: string | null;

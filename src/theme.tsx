@@ -78,6 +78,19 @@ const CSS = `
 }
 .qc-q.qc-focused, .qc-q.gpfocus { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.7); }
 .qc-a { background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 16px 16px 16px 4px; padding: 8px 4px; }
+/* Marked screenshot in answers: numbered spots the AI pointed at */
+.qc-shot-wrap { display: block; margin: 4px 8px 10px; }
+.qc-shot { position: relative; display: block; max-width: 100%; border: 1px solid rgba(139, 92, 246, 0.45); overflow: hidden; }
+.qc-shot img { display: block; width: 100%; height: auto; }
+.qc-mk { position: absolute; width: 0; height: 0; }
+.qc-mk-frame { position: absolute; left: -18px; top: -18px; width: 36px; height: 36px; box-sizing: border-box;
+  border: 3px solid ${PURPLE}; box-shadow: 0 0 0 2px rgba(10, 8, 18, 0.9); }
+.qc-mk-num { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 3px;
+  background: ${PURPLE}; color: #120e22; font-family: 'Silkscreen', monospace; font-size: 12px; font-weight: 700; }
+.qc-mk .qc-mk-num { position: absolute; left: -10px; top: -44px; box-shadow: 0 0 0 2px rgba(10, 8, 18, 0.9); }
+.qc-mk-list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 14px; color: #e6e1f7; }
+.qc-mk-list li { display: flex; align-items: center; gap: 6px; }
+.qc-mk-num-inline { position: static; }
 
 /* Tabs: a quiet segmented control; the active tab is marked by an underline, not a filled button. */
 .qc-tabs { display: flex; gap: 2px; width: 100%; padding: 2px; box-sizing: border-box; border-radius: 8px; background: rgba(255, 255, 255, 0.04); }

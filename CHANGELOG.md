@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.0
+Matches Quest Compendium v0.3 (desktop and web):
+- **One daily question count.** The panel shows "X questions left", with the bar scaled to your daily allowance
+  (10 free, 60 Premium). The separate Pro / Flash counts are gone.
+- **One mode.** The "Use Pro model" setting is gone: every answer uses the same model, which thinks longer only when
+  a question needs it.
+- **Marked screenshots.** When you ask with a screenshot and the answer points at specific things (items, doors,
+  levers...), the full answer shows your screenshot with those spots numbered, plus a list of what each number is.
+  A shortcut under the answer in the panel takes you straight there.
+
 ## 0.5.0
 - **Guide browser that stays open while you play.** GameFAQs, Neoseeker, Fandom, IGN, Reddit, YouTube (or any site
   you add) open in a real browser page inside the plugin. Jump back into your game with ◀ Game and the page stays

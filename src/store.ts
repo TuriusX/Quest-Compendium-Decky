@@ -68,3 +68,30 @@ export function lastQuestion(chat: ChatState): string | null {
   }
   return null;
 }
+
+/** Answers from the chat endpoint don't include the daily allowance; keep the one from the last status check. */
+export function mergeQuota(prev: Quota | null, next: Quota): Quota {
+  return { ...next, daily: next.daily ?? prev?.daily ?? null };
+}
+
+/** Screenshots are big: keep them only on the latest few answers (older answers keep their text and markers list). */
+export function keepRecentShots(history: Turn[], keep = 3): Turn[] {
+  let seen = 0;
+  const out = [...history];
+  for (let i = out.length - 1; i >= 0; i--) {
+    if (out[i].shot) {
+      seen++;
+      if (seen > keep) out[i] = { ...out[i], shot: undefined };
+    }
+  }
+  return out;
+}
+
+/** The latest answer's marked screenshot, if it has one. */
+export function lastMarkedAnswer(chat: ChatState): Turn | null {
+  for (let i = chat.history.length - 1; i >= 0; i--) {
+    const turn = chat.history[i];
+    if (turn.role === "assistant") return turn.points?.length ? turn : null;
+  }
+  return null;
+}

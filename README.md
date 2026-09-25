@@ -15,6 +15,7 @@ for PC. It is a [Decky Loader](https://decky.xyz) plugin.
 - **Three styles.** Standard, Min-Max (efficiency and completion), and Roleplay (in-universe, spoiler-friendly hints).
 - **Controller-friendly.** Preset questions, the on-screen keyboard for your own, and full answers you can read by
   pressing down in the Quick Access panel. A full-screen view shows the whole conversation.
+- **Marked screenshots.** Answers about your screen show the screenshot with the spots the AI points at, numbered.
 - **Guides tab.** One-tap guide sites (GameFAQs, Neoseeker, Fandom, IGN, Reddit, YouTube, or your own) open in a guide
   browser that stays open while you play: jump back into the game, then **Resume guide** right where you left off.
 - **Works right away.** Try it as a guest with no sign-in. To use Premium, link your Quest Compendium account by
