@@ -3,14 +3,12 @@ import { ReactNode } from "react";
 import { useT } from "../i18n";
 import { LOGO } from "../theme";
 
-/** Pixel-art book drawn in currentColor, for the Decky plugin list (tab icons should follow Steam's colors). */
+/** Pixel-art book with the Glain stone, drawn in currentColor, for the Decky plugin list (tab icons should follow Steam's colors). */
 export function BookIcon() {
   return (
     <svg viewBox="0 0 16 16" width="1em" height="1em" fill="currentColor" style={{ shapeRendering: "crispEdges" }}>
-      <path
-        fillRule="evenodd"
-        d="M2 1h10v14H2V1zm5 4h2v1h1v2H9v1H7V8H6V6h1V5z"
-      />
+      <path fillRule="evenodd" d="M2 1h10v14H2V1zm4 6h3v3H6V7z" />
+      <path d="M7 8h1v1H7z" />
       <path d="M12 2h2v12h-2z" opacity="0.55" />
       <path d="M1 2h2v2H1zM1 12h2v2H1z" opacity="0.8" />
     </svg>
