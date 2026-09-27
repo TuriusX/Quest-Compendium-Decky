@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.6.1
+- **New logo:** a pixel-art book with the Glain stone, matching Quest Compendium v0.3.2 (desktop and web).
+
 ## 0.6.0
 Matches Quest Compendium v0.3 (desktop and web):
 - **One daily question count.** The panel shows "X questions left", with the bar scaled to your daily allowance
