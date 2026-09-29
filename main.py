@@ -20,7 +20,7 @@ import secrets
 import re
 import shutil
 import ipaddress
-from urllib.parse import urlsplit
+from urllib.parse import quote, urlsplit
 import ssl
 import time
 from asyncio.subprocess import DEVNULL, PIPE
@@ -672,6 +672,40 @@ class Plugin:
         except ValueError:
             pass  # a hostname, not an IP literal
         return None
+
+    # ---- Quest Compendium guides (shown natively in the plugin, no browser) ---------------------
+
+    async def guides_list(self) -> Dict[str, Any]:
+        """Games that have a Quest Compendium guide."""
+        status, data = await self._http("GET", "/api/guides")
+        if status == 200 and isinstance(data.get("games"), list):
+            return {"ok": True, "games": data["games"]}
+        return {"ok": False, "error": data.get("error") or f"Guides are unavailable (HTTP {status})."}
+
+    async def guide_find(self, game: str) -> Dict[str, Any]:
+        """The guide for a game by its name (the running Steam game), or ok with key None if there isn't one."""
+        name = str(game or "").strip()[:160]
+        if not name:
+            return {"ok": True, "key": None}
+        status, data = await self._http("GET", f"/api/guides/find?game={quote(name)}")
+        if status == 200:
+            return {"ok": True, **data}
+        return {"ok": False, "error": data.get("error") or f"Guides are unavailable (HTTP {status})."}
+
+    async def guide_game(self, key: str) -> Dict[str, Any]:
+        """One game's guide areas, in story order."""
+        status, data = await self._http("GET", f"/api/guides/{quote(str(key or '')[:120], safe='')}")
+        if status == 200 and isinstance(data.get("areas"), list):
+            return {"ok": True, **data}
+        return {"ok": False, "error": data.get("error") or f"Guide unavailable (HTTP {status})."}
+
+    async def guide_area(self, key: str, slug: str) -> Dict[str, Any]:
+        """One guide page."""
+        path = f"/api/guides/{quote(str(key or '')[:120], safe='')}/{quote(str(slug or '')[:120], safe='')}"
+        status, data = await self._http("GET", path)
+        if status == 200 and data.get("name"):
+            return {"ok": True, "page": data}
+        return {"ok": False, "error": data.get("error") or f"Page unavailable (HTTP {status})."}
 
     async def fetch_json(self, url: str) -> Dict[str, Any]:
         """Call a public JSON API (the wikis' MediaWiki API for the Guides tab).

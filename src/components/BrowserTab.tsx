@@ -1,6 +1,8 @@
 import { ButtonItem, DialogButton, Focusable, PanelSection, PanelSectionRow, TextField } from "@decky/ui";
 import { useEffect, useState } from "react";
-import { getState } from "../api";
+import { getState, guideFind } from "../api";
+import { QC_GUIDES_ROUTE, guideGo } from "../qcGuides";
+import { openPage } from "../routes";
 import { siteLabel, siteSearchUrl, webSearchUrl } from "../browser";
 import { useCurrentGame } from "../game";
 import { guideBrowserSupported, lastGuideUrl, openGuide, resumeGuide, useGuideInfo } from "../guideBrowser";
@@ -27,6 +29,22 @@ export function BrowserTab() {
   const resumeUrl = guide.open ? guide.url : lastGuideUrl();
   const supported = guideBrowserSupported();
 
+  // Is there a Quest Compendium guide for the game that's running?
+  const [ours, setOurs] = useState<{ key: string; game: string } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    setOurs(null);
+    if (!gameName) return;
+    guideFind(gameName)
+      .then((r) => alive && r.ok && r.key && setOurs({ key: r.key, game: r.game || gameName }))
+      .catch(() => {
+        /* no guide shown */
+      });
+    return () => {
+      alive = false;
+    };
+  }, [gameName]);
+
   useEffect(() => {
     getState()
       .then((s) => Array.isArray(s.settings.guide_sites) && setSites(s.settings.guide_sites))
@@ -37,6 +55,34 @@ export function BrowserTab() {
 
   return (
     <>
+      <PanelSection title={t("qcg.title")}>
+        {ours && (
+          <PanelSectionRow>
+            <ButtonItem
+              layout="below"
+              description={t("qcg.forGameDesc")}
+              onClick={() => {
+                guideGo({ view: "game", key: ours.key, game: ours.game }, true);
+                openPage(QC_GUIDES_ROUTE);
+              }}
+            >
+              📖 {t("qcg.forGame", { game: ours.game })}
+            </ButtonItem>
+          </PanelSectionRow>
+        )}
+        <PanelSectionRow>
+          <ButtonItem
+            layout="below"
+            onClick={() => {
+              guideGo({ view: "games" }, true);
+              openPage(QC_GUIDES_ROUTE);
+            }}
+          >
+            {t("qcg.all")}
+          </ButtonItem>
+        </PanelSectionRow>
+      </PanelSection>
+
       {resumeUrl && (
         <PanelSection title={t("guides.resumeTitle")}>
           <PanelSectionRow>
