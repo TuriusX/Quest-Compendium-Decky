@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.0
+- **Quest Compendium guides in Gaming Mode.** Published guides now show natively in the plugin, with no browser: pick a
+  game, then an area, to see its overview, items, secrets, enemies, shops and tips. Checklist ticks are saved on the
+  Deck, per game and area.
+
 ## 0.6.1
 - **New logo:** a pixel-art book with the Glain stone, matching Quest Compendium v0.3.2 (desktop and web).
 
