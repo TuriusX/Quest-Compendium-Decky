@@ -60,6 +60,19 @@ const CSS = `
   background: linear-gradient(180deg, rgba(139, 92, 246, 0.14), rgba(139, 92, 246, 0) 260px);
 }
 .qc-page-inner { max-width: 920px; margin: 0 auto; }
+.qcgp-list { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+.qcgp-row { display: flex !important; flex-direction: column; align-items: flex-start !important; text-align: left !important; padding: 8px 10px !important; min-width: 0 !important; }
+.qcgp-row-title { font-size: 14px; font-weight: 700; color: #f4f1ff; line-height: 1.3; }
+.qcgp-row-sub { font-size: 12px; color: #b9b2d6; line-height: 1.3; margin-top: 2px; }
+.qcgp-back { padding: 6px 10px !important; min-width: 0 !important; text-align: left !important; font-size: 13px !important; }
+.qcgp-title { font-size: 16px; font-weight: 700; color: #f4f1ff; line-height: 1.3; }
+.qcgp-area { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+.qcgp-section { font-size: 14px; font-weight: 700; color: #f4f1ff; margin-top: 10px; }
+.qcgp-text { font-size: 13px; line-height: 1.45; color: #e4e0f5; padding: 4px 6px; border-radius: 4px; }
+.qcgp-check { display: flex !important; align-items: flex-start !important; gap: 8px; text-align: left !important; padding: 6px 8px !important; min-width: 0 !important; }
+.qcgp-check-text { font-size: 13px; line-height: 1.4; }
+.qcg-done .qcgp-check-text { opacity: 0.55; text-decoration: line-through; }
+.qcgp-nav { padding: 6px 10px !important; min-width: 0 !important; font-size: 13px !important; margin-top: 4px; }
 .qcg-pad { margin: 12px 8px; }
 .qcg-pad-x { margin: 0 8px 8px; }
 .qcg-list { display: flex; flex-direction: column; gap: 8px; }
