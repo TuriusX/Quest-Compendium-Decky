@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.1
+- **Guides in the Quick Access panel.** Quest Compendium guides now open right inside the panel instead of on a
+  separate page.
+
 ## 0.7.0
 - **Quest Compendium guides in Gaming Mode.** Published guides now show natively in the plugin, with no browser: pick a
   game, then an area, to see its overview, items, secrets, enemies, shops and tips. Checklist ticks are saved on the
