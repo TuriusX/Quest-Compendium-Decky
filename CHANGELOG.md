@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.2
+- **Guides: Steal / drop.** The enemy column now reads "Steal / drop", and games without stealing no longer show
+  "Steal: nothing".
+
 ## 0.7.1
 - **Guides in the Quick Access panel.** Quest Compendium guides now open right inside the panel instead of on a
   separate page.
