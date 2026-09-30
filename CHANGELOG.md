@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.3
+- **Guides redesign.** "Continue" and "Where you are" jump straight to the right area, each area shows its checklist
+  progress, missable things come first with the rest in sections you open when you want them, other guide sites sit
+  behind one button, and a Full screen button opens the guide with more room.
+- **Group headings.** Character and calendar guides (Octopath Traveler, Persona) show headings for each character,
+  or for calendar and reference pages, and calendar pages show deadlines and social links.
+
 ## 0.7.2
 - **Guides: Steal / drop.** The enemy column now reads "Steal / drop", and games without stealing no longer show
   "Steal: nothing".
