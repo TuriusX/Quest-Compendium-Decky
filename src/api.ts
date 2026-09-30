@@ -73,6 +73,8 @@ export interface AskResult {
   screenshot?: "attached" | "failed" | "off";
   screenshotError?: string | null;
   notice?: string | null;
+  /** Where the server thinks the player is, when it could tell. */
+  place?: { name: string };
 }
 
 export interface QuotaResult {
@@ -118,7 +120,7 @@ export const testScreenshot = callable<[], ScreenshotTest>("test_screenshot");
 
 // ---- Quest Compendium guides (drawn natively in the plugin) ----
 export interface QcGuideGame { key: string; game: string; areas: number }
-export interface QcGuideArea { slug: string; name: string; story: string; group?: string }
+export interface QcGuideArea { slug: string; name: string; story: string; group?: string; total?: number }
 export interface QcGuideEntry { id: string; name?: string; text?: string; where?: string; weakness?: string; steal?: string; sells?: string; notes?: string; missable?: boolean }
 export interface QcGuidePage {
   key: string; slug: string; name: string; story: string; overview: string;

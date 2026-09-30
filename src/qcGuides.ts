@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 
+/** The full-screen guide reader (the same guide, with more room). */
+export const QC_GUIDES_ROUTE = "/quest-compendium/qc-guides";
+
 /**
  * State for the Quest Compendium guides in the Quick Access panel: where the player is in the guide (all games, one
  * game's areas, or one area) and which checklist items they've ticked. Ticks are kept on the Deck, per game and area.
@@ -61,4 +64,35 @@ export function writeDone(key: string, slug: string, done: Set<string>): void {
   } catch {
     /* ticks just won't be remembered */
   }
+}
+
+// ---- where the player is, and where they were in the guide ----
+const lsGet = (k: string) => {
+  try {
+    return localStorage.getItem(k);
+  } catch {
+    return null;
+  }
+};
+const lsSet = (k: string, v: string) => {
+  try {
+    localStorage.setItem(k, v);
+  } catch {
+    /* not remembered */
+  }
+};
+
+/** The place the Compendium last said the player was in, per game (from answers). */
+export const rememberPlace = (game: string, place: string) => lsSet(`qc-last-place:${game.toLowerCase()}`, place);
+export const lastPlace = (game?: string) => (game ? lsGet(`qc-last-place:${game.toLowerCase()}`) : null);
+
+/** The last guide page opened for a game, for "Continue". */
+export const rememberArea = (key: string, slug: string) => lsSet(`qc-guide-last:${key}`, slug);
+export const lastArea = (key: string) => lsGet(`qc-guide-last:${key}`);
+
+/** Same place, allowing for extra detail ("South Figaro" vs "South Figaro, Relic Shop") and small spelling differences. */
+export function samePlace(a: string, b: string): boolean {
+  const n = (x: string) => x.toLowerCase().replace(/['’]/g, "").replace(/[^a-z0-9,]+/g, " ").trim();
+  const x = n(a), y = n(b);
+  return !!x && !!y && (x === y || x.startsWith(`${y},`) || y.startsWith(`${x},`));
 }

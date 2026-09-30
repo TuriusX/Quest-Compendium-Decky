@@ -12,6 +12,7 @@ import {
 import { useEffect, useState } from "react";
 import { ask, AskRequest, getQuota, getState, PluginState, Turn } from "../api";
 import { currentGame, useCurrentGame } from "../game";
+import { rememberPlace } from "../qcGuides";
 import { setTab, useBrowser } from "../browser";
 import { aiLanguageName, setLocaleSetting, useT } from "../i18n";
 import { ANSWER_ROUTE, openPage, SETTINGS_ROUTE } from "../routes";
@@ -107,6 +108,7 @@ export function QuickAccessPanel() {
         patch.limitReached = true;
         patch.error = res.text ?? t("answer.limit");
       } else if (res.ok && res.text) {
+        if (res.place?.name && liveGame?.name) rememberPlace(liveGame.name, res.place.name);
         const answerTurn: Turn = { role: "assistant", text: res.text };
         if (res.shot && res.points?.length) {
           answerTurn.shot = res.shot;

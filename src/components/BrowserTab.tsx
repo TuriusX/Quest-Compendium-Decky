@@ -25,6 +25,7 @@ export function BrowserTab() {
   const guide = useGuideInfo();
   const [words, setWords] = useState("");
   const [sites, setSites] = useState<string[]>(DEFAULT_SITES);
+  const [showSites, setShowSites] = useState(false);
   const resumeUrl = guide.open ? guide.url : lastGuideUrl();
   const supported = guideBrowserSupported();
 
@@ -55,7 +56,7 @@ export function BrowserTab() {
   return (
     <>
       <PanelSection title={t("qcg.title")}>
-        <QcGuidesPanel ours={ours} />
+        <QcGuidesPanel ours={ours} gameName={gameName} />
       </PanelSection>
 
       {resumeUrl && (
@@ -68,6 +69,16 @@ export function BrowserTab() {
         </PanelSection>
       )}
 
+      {/* Other guide sites sit behind one button, so Quest Compendium's own guide is the tab's main content. */}
+      <PanelSection>
+        <PanelSectionRow>
+          <ButtonItem layout="below" onClick={() => setShowSites((v) => !v)}>
+            {showSites ? "▾" : "▸"} {t("guides.sites")}
+          </ButtonItem>
+        </PanelSectionRow>
+      </PanelSection>
+
+      {showSites && (
       <PanelSection title={t("guides.sites")}>
         <PanelSectionRow>
           <TextField label={t("guides.words")} value={words} onChange={(e) => setWords(e.target.value)} />
@@ -90,6 +101,7 @@ export function BrowserTab() {
           <div className="qc-note qc-muted">{supported ? t("guides.browserNote") : t("guides.fallbackNote")}</div>
         </PanelSectionRow>
       </PanelSection>
+      )}
     </>
   );
 }

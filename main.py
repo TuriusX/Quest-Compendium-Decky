@@ -570,6 +570,10 @@ class Plugin:
             points = _points_from(data)
             if points and shot_url:
                 result.update(points=points, shot=shot_url)
+            # Where the server thinks the player is (the guide uses it to offer "where you are").
+            place = data.get("place")
+            if isinstance(place, dict) and str(place.get("name") or "").strip():
+                result["place"] = {"name": str(place.get("name")).strip()[:80]}
         elif status == 429:
             result.update(ok=True, limitReached=True, text=data.get("text") or "Daily limit reached.")
         else:

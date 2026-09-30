@@ -73,6 +73,22 @@ const CSS = `
 .qcgp-check-text { font-size: 13px; line-height: 1.4; }
 .qcg-done .qcgp-check-text { opacity: 0.55; text-decoration: line-through; }
 .qcgp-nav { padding: 6px 10px !important; min-width: 0 !important; font-size: 13px !important; margin-top: 4px; }
+.qcgp-top { display: flex; justify-content: space-between; gap: 6px; width: 100%; }
+.qcgp-fs { flex-shrink: 0; }
+.qcgp-jump { border-left: 3px solid #a87ffb !important; }
+.qcgp-row-line { display: flex; align-items: baseline; gap: 8px; width: 100%; }
+.qcgp-progress { margin-left: auto; font-size: 12px; font-weight: 700; color: #a87ffb; flex-shrink: 0; }
+.qcgp-miss { display: flex; flex-direction: column; gap: 6px; padding: 6px 8px; border-radius: 6px; background: rgba(251, 191, 36, 0.08); border: 1px solid rgba(251, 191, 36, 0.25); }
+.qcgp-sechead { display: flex !important; justify-content: space-between; align-items: center; text-align: left !important; padding: 6px 10px !important; min-width: 0 !important; font-size: 14px !important; font-weight: 700 !important; margin-top: 6px; }
+/* Full-screen reader: the same guide with more room */
+.qcg-full .qcgp-row-title { font-size: 18px; }
+.qcg-full .qcgp-row-sub { font-size: 14px; }
+.qcg-full .qcgp-title { font-size: 24px; }
+.qcg-full .qcgp-section { font-size: 18px; }
+.qcg-full .qcgp-text, .qcg-full .qcgp-check-text { font-size: 17px; }
+.qcg-full .qcgp-sechead { font-size: 18px !important; padding: 10px 14px !important; }
+.qcg-full .qcgp-row { padding: 10px 14px !important; }
+.qcg-full .qcgp-check { padding: 8px 12px !important; }
 .qcg-pad { margin: 12px 8px; }
 .qcg-pad-x { margin: 0 8px 8px; }
 .qcg-list { display: flex; flex-direction: column; gap: 8px; }

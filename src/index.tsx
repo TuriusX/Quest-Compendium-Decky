@@ -3,6 +3,8 @@ import { staticClasses } from "@decky/ui";
 import type { ReactElement } from "react";
 import { AnswerPage } from "./components/AnswerPage";
 import { GuidePage } from "./components/GuidePage";
+import { QcGuidesFullPage } from "./components/QcGuidesPanel";
+import { QC_GUIDES_ROUTE } from "./qcGuides";
 import { BookIcon, Logo } from "./components/Brand";
 import { QuickAccessPanel } from "./components/QuickAccessPanel";
 import { SettingsPage } from "./components/SettingsPage";
@@ -13,6 +15,7 @@ const ROUTES: [string, () => ReactElement][] = [
   [ANSWER_ROUTE, AnswerPage],
   [SETTINGS_ROUTE, SettingsPage],
   [GUIDE_ROUTE, GuidePage],
+  [QC_GUIDES_ROUTE, QcGuidesFullPage],
 ];
 
 export default definePlugin(() => {
