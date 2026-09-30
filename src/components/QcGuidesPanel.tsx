@@ -97,11 +97,15 @@ function GameAreas({ gameKey, game }: { gameKey: string; game?: string }) {
       <Status loading={s.loading} error={s.error} />
       <PanelSectionRow>
         <Focusable className="qcgp-list" flow-children="vertical">
-          {(s.data?.areas || []).map((a) => (
-            <DialogButton key={a.slug} className="qcgp-row" onClick={() => guideGo({ view: "area", key: gameKey, slug: a.slug, game: name })}>
-              <span className="qcgp-row-title">{a.name}</span>
-              {a.story && <span className="qcgp-row-sub">{a.story}</span>}
-            </DialogButton>
+          {(s.data?.areas || []).map((a, i, all) => (
+            <div key={a.slug} className="qcgp-list">
+              {/* Chapter and calendar guides: a heading where the group changes (a character, "Calendar", "Reference"). */}
+              {a.group && a.group !== all[i - 1]?.group && <div className="qcgp-section">{a.group}</div>}
+              <DialogButton className="qcgp-row" onClick={() => guideGo({ view: "area", key: gameKey, slug: a.slug, game: name })}>
+                <span className="qcgp-row-title">{a.name}</span>
+                {a.story && <span className="qcgp-row-sub">{a.story}</span>}
+              </DialogButton>
+            </div>
           ))}
         </Focusable>
       </PanelSectionRow>
@@ -158,6 +162,15 @@ function AreaPage({ gameKey, slug, game }: { gameKey: string; slug: string; game
             <div className="qcgp-title">{page.name}</div>
             {page.story && <div className="qcgp-row-sub">{page.story}</div>}
             {page.overview && text("overview", page.overview)}
+            {(page.sections || []).map((x) => (
+              <div key={x.title} className="qcgp-area">
+                <div className="qcgp-section">
+                  {x.title}
+                  {x.check && <span className="qcg-count"> {x.entries.filter((e) => done.has(e.id)).length}/{x.entries.length}</span>}
+                </div>
+                {x.entries.map((e) => (x.check ? check({ id: e.id }, e.text) : text(e.id, <>• {e.text}</>)))}
+              </div>
+            ))}
             {page.items.length > 0 && (
               <>
                 <div className="qcgp-section">

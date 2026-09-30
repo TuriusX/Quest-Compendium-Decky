@@ -118,11 +118,13 @@ export const testScreenshot = callable<[], ScreenshotTest>("test_screenshot");
 
 // ---- Quest Compendium guides (drawn natively in the plugin) ----
 export interface QcGuideGame { key: string; game: string; areas: number }
-export interface QcGuideArea { slug: string; name: string; story: string }
+export interface QcGuideArea { slug: string; name: string; story: string; group?: string }
 export interface QcGuideEntry { id: string; name?: string; text?: string; where?: string; weakness?: string; steal?: string; sells?: string; notes?: string; missable?: boolean }
 export interface QcGuidePage {
   key: string; slug: string; name: string; story: string; overview: string;
   items: QcGuideEntry[]; secrets: QcGuideEntry[]; enemies: QcGuideEntry[]; shops: QcGuideEntry[]; tips: string[];
+  /** Structure-specific sections (a calendar page's deadlines, missable events, social links, activities). */
+  sections?: { title: string; check: boolean; entries: { id: string; text: string }[] }[];
 }
 export const guidesList = callable<[], { ok: boolean; games?: QcGuideGame[]; error?: string }>("guides_list");
 export const guideFind = callable<[game: string], { ok: boolean; key?: string | null; game?: string; areas?: QcGuideArea[]; error?: string }>("guide_find");
