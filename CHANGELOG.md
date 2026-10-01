@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.2
+- **Search.** Search games, and search inside a guide by area or item name. Guides follow your plugin language, with
+  more translations arriving every day.
+
 ## 0.8.1
 - **Guides in other languages.** The Witcher 3 is the first, in Portuguese. The guide follows your app language, and
   other games stay in English until they're translated.
