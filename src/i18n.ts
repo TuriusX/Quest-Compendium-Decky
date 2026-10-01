@@ -1,9 +1,12 @@
 // Interface translations for the Steam Deck plugin (matches the desktop/web app's languages).
-// settings.locale is "auto" | "en" | "es" | "pt"; "auto" follows the Steam client's language.
+// settings.locale is "auto" or a language code; "auto" follows the Steam client's language.
 // The resolved language is also sent with each question, so the AI answers in it.
+// English, Spanish and Portuguese are hand-written below; the other languages are AI translations in
+// locales.generated.ts (made by scripts/i18n/translate.ts in the Quest Compendium repo, --target decky).
 import { useEffect, useState } from "react";
+import { GENERATED } from "./locales.generated";
 
-export type Locale = "en" | "es" | "pt";
+export type Locale = "en" | "es" | "pt" | "de" | "fr" | "ru" | "ja" | "ko" | "zh";
 export type LocaleSetting = "auto" | Locale;
 
 export const LOCALE_OPTIONS: { data: LocaleSetting; label: string }[] = [
@@ -11,9 +14,24 @@ export const LOCALE_OPTIONS: { data: LocaleSetting; label: string }[] = [
   { data: "en", label: "English" },
   { data: "es", label: "Español" },
   { data: "pt", label: "Português (Brasil)" },
+  { data: "de", label: "Deutsch" },
+  { data: "fr", label: "Français" },
+  { data: "ru", label: "Русский" },
+  { data: "ja", label: "日本語" },
+  { data: "ko", label: "한국어" },
+  { data: "zh", label: "简体中文" },
 ];
 
-const AI_NAMES: Record<Locale, string> = { en: "English", es: "Spanish", pt: "Brazilian Portuguese" };
+const AI_NAMES: Record<Locale, string> = {
+  en: "English", es: "Spanish", pt: "Brazilian Portuguese", de: "German", fr: "French",
+  ru: "Russian", ja: "Japanese", ko: "Korean", zh: "Simplified Chinese",
+};
+const CODES = Object.keys(AI_NAMES) as Locale[];
+/** Steam's language names -> our codes. */
+const STEAM: Record<string, Locale> = {
+  brazilian: "pt", portuguese: "pt", spanish: "es", latam: "es", english: "en", german: "de", french: "fr",
+  russian: "ru", japanese: "ja", koreana: "ko", korean: "ko", schinese: "zh", tchinese: "zh",
+};
 
 /** The Steam client's language, falling back to the browser language. */
 function detect(): Locale {
@@ -21,22 +39,21 @@ function detect(): Locale {
     const list: unknown[] = (window as any).LocalizationManager?.m_rgLocalesToUse ?? [];
     for (const raw of list) {
       const l = String(raw).toLowerCase();
-      if (l === "brazilian" || l.startsWith("portuguese")) return "pt";
-      if (l.startsWith("spanish") || l === "latam") return "es";
-      if (l === "english") return "en";
+      const hit = STEAM[l] || Object.entries(STEAM).find(([k]) => l.startsWith(k))?.[1];
+      if (hit) return hit;
     }
   } catch {
     /* fall through */
   }
-  const nav = (typeof navigator !== "undefined" ? navigator.language : "en").toLowerCase();
-  return nav.startsWith("es") ? "es" : nav.startsWith("pt") ? "pt" : "en";
+  const nav = (typeof navigator !== "undefined" ? navigator.language : "en").toLowerCase().split(/[-_]/)[0];
+  return (CODES as string[]).includes(nav) ? (nav as Locale) : "en";
 }
 
 let current: Locale = detect();
 const listeners = new Set<() => void>();
 
 export function setLocaleSetting(setting: unknown): void {
-  const next: Locale = setting === "en" || setting === "es" || setting === "pt" ? setting : detect();
+  const next: Locale = (CODES as unknown[]).includes(setting) ? (setting as Locale) : detect();
   if (next === current) return;
   current = next;
   listeners.forEach((l) => l());
@@ -587,11 +604,15 @@ const pt: Dict = {
   "browser.backendDown": "O plugin não está respondendo.",
 };
 
-const DICTS: Record<Locale, Dict> = { en, es, pt };
+const DICTS: Record<Locale, Dict> = { en, es, pt, de: {}, fr: {}, ru: {}, ja: {}, ko: {}, zh: {} };
+
+/** For the translation script: the English source and the hand-written dictionaries. */
+export const SOURCE_STRINGS = en;
+export const HAND_WRITTEN: Partial<Record<Locale, Dict>> = { es, pt };
 
 /** Translate with the current language (usable outside React, e.g. in the browser store). */
 export function t(key: string, vars?: Record<string, string | number>): string {
-  let s = DICTS[current][key] ?? en[key] ?? key;
+  let s = DICTS[current][key] ?? GENERATED[current]?.[key] ?? en[key] ?? key;
   if (vars) for (const [k, v] of Object.entries(vars)) s = s.split(`{${k}}`).join(String(v));
   return s;
 }

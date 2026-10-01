@@ -9,7 +9,7 @@ export interface Settings {
   model?: Model;
   include_screenshot: boolean;
   /** "auto" follows the Steam language. */
-  locale?: "auto" | "en" | "es" | "pt";
+  locale?: "auto" | "en" | "es" | "pt" | "de" | "fr" | "ru" | "ja" | "ko" | "zh";
   /** Guide sites shown in the Guides tab (domains). */
   guide_sites?: string[];
 }

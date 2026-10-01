@@ -55,9 +55,9 @@ BROWSER_UA = (
 
 VALID_MODES = ("standard", "minmax", "roleplay")
 VALID_MODELS = ("pro", "flash")
-VALID_LOCALES = ("auto", "en", "es", "pt")
+VALID_LOCALES = ("auto", "en", "es", "pt", "de", "fr", "ru", "ja", "ko", "zh")
 # The language names the server puts in the AI's instructions ("Respond entirely in ...").
-AI_LANGUAGES = ("English", "Spanish", "Brazilian Portuguese")
+AI_LANGUAGES = ("English", "Spanish", "Brazilian Portuguese", "German", "French", "Russian", "Japanese", "Korean", "Simplified Chinese")
 MAX_GUIDE_SITES = 12
 DOMAIN_RE = re.compile(r"^[a-z0-9-]+(\.[a-z0-9-]+)+$")
 
