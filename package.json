@@ -1,6 +1,6 @@
 {
   "name": "quest-compendium-decky",
-  "version": "0.8.2",
+  "version": "0.8.3",
   "description": "Quest Compendium for Steam Deck: an AI game guide in the Quick Access menu.",
   "type": "module",
   "scripts": {

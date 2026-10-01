@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.8.3
+- **Achievements and roadmap.** Guides with an achievement guide show it at the top of the area list: time to 100%,
+  points of no return, what can still be missed, and every achievement with how to get it and a link to its area.
+  Tick them off as you go. In your plugin language where the guide has been translated.
+
 ## 0.8.2
 - **Search.** Search games, and search inside a guide by area or item name. Guides follow your plugin language, with
   more translations arriving every day.
