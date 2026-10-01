@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.1
+- **Guides in other languages.** The Witcher 3 is the first, in Portuguese. The guide follows your app language, and
+  other games stay in English until they're translated.
+
 ## 0.8.0
 - **Six more languages.** Now in German, French, Russian, Japanese, Korean and Simplified Chinese, alongside English,
   Spanish and Portuguese. Auto follows your Steam language.
