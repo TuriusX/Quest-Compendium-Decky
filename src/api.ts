@@ -129,6 +129,6 @@ export interface QcGuidePage {
   sections?: { title: string; check: boolean; entries: { id: string; text: string }[] }[];
 }
 export const guidesList = callable<[], { ok: boolean; games?: QcGuideGame[]; error?: string }>("guides_list");
-export const guideFind = callable<[game: string], { ok: boolean; key?: string | null; game?: string; areas?: QcGuideArea[]; error?: string }>("guide_find");
-export const guideGame = callable<[key: string], { ok: boolean; key?: string; game?: string; areas?: QcGuideArea[]; error?: string }>("guide_game");
-export const guideArea = callable<[key: string, slug: string], { ok: boolean; page?: QcGuidePage; error?: string }>("guide_area");
+export const guideFind = callable<[game: string, lang?: string], { ok: boolean; key?: string | null; game?: string; areas?: QcGuideArea[]; error?: string }>("guide_find");
+export const guideGame = callable<[key: string, lang?: string], { ok: boolean; key?: string; game?: string; areas?: QcGuideArea[]; error?: string }>("guide_game");
+export const guideArea = callable<[key: string, slug: string, lang?: string], { ok: boolean; page?: QcGuidePage; error?: string }>("guide_area");

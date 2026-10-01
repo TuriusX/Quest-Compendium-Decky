@@ -686,26 +686,35 @@ class Plugin:
             return {"ok": True, "games": data["games"]}
         return {"ok": False, "error": data.get("error") or f"Guides are unavailable (HTTP {status})."}
 
-    async def guide_find(self, game: str) -> Dict[str, Any]:
+    @staticmethod
+    def _guide_lang(lang: str = "") -> str:
+        """A translated guide where one exists (the server falls back to English)."""
+        lang = str(lang or "").lower()
+        return f"lang={lang}" if lang in ("es", "pt", "de", "fr", "ru", "ja", "ko", "zh") else ""
+
+    async def guide_find(self, game: str, lang: str = "") -> Dict[str, Any]:
         """The guide for a game by its name (the running Steam game), or ok with key None if there isn't one."""
         name = str(game or "").strip()[:160]
         if not name:
             return {"ok": True, "key": None}
-        status, data = await self._http("GET", f"/api/guides/find?game={quote(name)}")
+        q = self._guide_lang(lang)
+        status, data = await self._http("GET", f"/api/guides/find?game={quote(name)}" + (f"&{q}" if q else ""))
         if status == 200:
             return {"ok": True, **data}
         return {"ok": False, "error": data.get("error") or f"Guides are unavailable (HTTP {status})."}
 
-    async def guide_game(self, key: str) -> Dict[str, Any]:
+    async def guide_game(self, key: str, lang: str = "") -> Dict[str, Any]:
         """One game's guide areas, in story order."""
-        status, data = await self._http("GET", f"/api/guides/{quote(str(key or '')[:120], safe='')}")
+        q = self._guide_lang(lang)
+        status, data = await self._http("GET", f"/api/guides/{quote(str(key or '')[:120], safe='')}" + (f"?{q}" if q else ""))
         if status == 200 and isinstance(data.get("areas"), list):
             return {"ok": True, **data}
         return {"ok": False, "error": data.get("error") or f"Guide unavailable (HTTP {status})."}
 
-    async def guide_area(self, key: str, slug: str) -> Dict[str, Any]:
+    async def guide_area(self, key: str, slug: str, lang: str = "") -> Dict[str, Any]:
         """One guide page."""
-        path = f"/api/guides/{quote(str(key or '')[:120], safe='')}/{quote(str(slug or '')[:120], safe='')}"
+        q = self._guide_lang(lang)
+        path = f"/api/guides/{quote(str(key or '')[:120], safe='')}/{quote(str(slug or '')[:120], safe='')}" + (f"?{q}" if q else "")
         status, data = await self._http("GET", path)
         if status == 200 and data.get("name"):
             return {"ok": True, "page": data}

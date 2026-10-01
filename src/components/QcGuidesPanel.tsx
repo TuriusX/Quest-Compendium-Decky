@@ -1,7 +1,7 @@
 import { DialogButton, Focusable, Navigation, PanelSectionRow } from "@decky/ui";
 import { useEffect, useState } from "react";
 import { guideArea, guideGame, guidesList, type QcGuideArea, type QcGuideEntry, type QcGuideGame, type QcGuidePage } from "../api";
-import { useT } from "../i18n";
+import { getLocale, useT } from "../i18n";
 import { openPage } from "../routes";
 import { ThemeStyle } from "../theme";
 import { Logo } from "./Brand";
@@ -150,7 +150,7 @@ function AllGames({ ours, full }: { ours: { key: string; game: string } | null; 
 
 function GameAreas({ gameKey, game, full, gameName }: { gameKey: string; game?: string; full: boolean; gameName?: string }) {
   const t = useT();
-  const s = useLoad<{ game?: string; areas?: QcGuideArea[] }>(() => guideGame(gameKey));
+  const s = useLoad<{ game?: string; areas?: QcGuideArea[] }>(() => guideGame(gameKey, getLocale()));
   const name = s.data?.game || game || "";
   const areas = s.data?.areas || [];
   const open = (a: QcGuideArea) => guideGo({ view: "area", key: gameKey, slug: a.slug, game: name });
@@ -213,8 +213,8 @@ function GameAreas({ gameKey, game, full, gameName }: { gameKey: string; game?: 
 
 function AreaPage({ gameKey, slug, game, full }: { gameKey: string; slug: string; game?: string; full: boolean }) {
   const t = useT();
-  const s = useLoad<{ page?: QcGuidePage }>(() => guideArea(gameKey, slug));
-  const order = useLoad<{ areas?: QcGuideArea[] }>(() => guideGame(gameKey));
+  const s = useLoad<{ page?: QcGuidePage }>(() => guideArea(gameKey, slug, getLocale()));
+  const order = useLoad<{ areas?: QcGuideArea[] }>(() => guideGame(gameKey, getLocale()));
   const [done, setDone] = useState<Set<string>>(() => readDone(gameKey, slug));
   const [openSec, setOpenSec] = useState<Set<string>>(new Set());
   useEffect(() => rememberArea(gameKey, slug), [gameKey, slug]);

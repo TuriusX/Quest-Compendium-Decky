@@ -5,7 +5,7 @@ import { QcGuidesPanel } from "./QcGuidesPanel";
 import { siteLabel, siteSearchUrl, webSearchUrl } from "../browser";
 import { useCurrentGame } from "../game";
 import { guideBrowserSupported, lastGuideUrl, openGuide, resumeGuide, useGuideInfo } from "../guideBrowser";
-import { useT } from "../i18n";
+import { getLocale, useT } from "../i18n";
 
 export const DEFAULT_SITES = ["gamefaqs.gamespot.com", "neoseeker.com", "fandom.com", "ign.com", "reddit.com", "youtube.com"];
 
@@ -35,7 +35,7 @@ export function BrowserTab() {
     let alive = true;
     setOurs(null);
     if (!gameName) return;
-    guideFind(gameName)
+    guideFind(gameName, getLocale())
       .then((r) => alive && r.ok && r.key && setOurs({ key: r.key, game: r.game || gameName }))
       .catch(() => {
         /* no guide shown */
