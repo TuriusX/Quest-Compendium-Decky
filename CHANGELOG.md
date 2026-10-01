@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.0
+- **Six more languages.** Now in German, French, Russian, Japanese, Korean and Simplified Chinese, alongside English,
+  Spanish and Portuguese. Auto follows your Steam language.
+
 ## 0.7.3
 - **Guides redesign.** "Continue" and "Where you are" jump straight to the right area, each area shows its checklist
   progress, missable things come first with the rest in sections you open when you want them, other guide sites sit
