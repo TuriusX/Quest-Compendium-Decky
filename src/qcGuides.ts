@@ -9,7 +9,11 @@ export const QC_GUIDES_ROUTE = "/quest-compendium/qc-guides";
  * The place in the guide lives for as long as the plugin runs, so reopening the side menu comes back to it.
  */
 
-export type GuideView = { view: "games" } | { view: "game"; key: string; game?: string } | { view: "area"; key: string; slug: string; game?: string };
+export type GuideView =
+  | { view: "games" }
+  | { view: "game"; key: string; game?: string }
+  | { view: "area"; key: string; slug: string; game?: string }
+  | { view: "achievements"; key: string; game?: string };
 
 let stack: GuideView[] = [{ view: "games" }];
 let touched = false; // the player has moved around the guide themselves

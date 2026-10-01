@@ -720,6 +720,15 @@ class Plugin:
             return {"ok": True, "page": data}
         return {"ok": False, "error": data.get("error") or f"Page unavailable (HTTP {status})."}
 
+    async def guide_achievements(self, key: str, lang: str = "") -> Dict[str, Any]:
+        """A guide's achievement guide (Steam's list with tips, plus a roadmap), in the plugin's language."""
+        q = self._guide_lang(lang)
+        path = f"/api/guides/{quote(str(key or '')[:120], safe='')}/achievements" + (f"?{q}" if q else "")
+        status, data = await self._http("GET", path)
+        if status == 200 and isinstance(data.get("list"), list) and data["list"]:
+            return {"ok": True, "guide": data}
+        return {"ok": False, "error": data.get("error") or f"No achievement guide (HTTP {status})."}
+
     async def fetch_json(self, url: str) -> Dict[str, Any]:
         """Call a public JSON API (the wikis' MediaWiki API for the Guides tab).
 

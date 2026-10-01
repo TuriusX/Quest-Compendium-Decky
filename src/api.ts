@@ -132,3 +132,13 @@ export const guidesList = callable<[], { ok: boolean; games?: QcGuideGame[]; err
 export const guideFind = callable<[game: string, lang?: string], { ok: boolean; key?: string | null; game?: string; areas?: QcGuideArea[]; error?: string }>("guide_find");
 export const guideGame = callable<[key: string, lang?: string], { ok: boolean; key?: string; game?: string; areas?: QcGuideArea[]; error?: string }>("guide_game");
 export const guideArea = callable<[key: string, slug: string, lang?: string], { ok: boolean; page?: QcGuidePage; error?: string }>("guide_area");
+/** One achievement in a guide's achievement guide (name and tips in the guide's language; englishName is Steam's). */
+export interface QcAchievementTip {
+  name: string; englishName?: string; desc: string; rarity: number | null; icon: string; hidden: boolean;
+  missable?: boolean; how?: string; area?: string; areaName?: string;
+}
+export interface QcAchievementGuide {
+  key: string; verified?: boolean; list: QcAchievementTip[];
+  roadmap?: { time?: string; difficulty?: string; playthroughs?: string; missables?: string; steps?: string[]; noReturn?: { point: string; lost: string }[] } | null;
+}
+export const guideAchievements = callable<[key: string, lang?: string], { ok: boolean; guide?: QcAchievementGuide; error?: string }>("guide_achievements");

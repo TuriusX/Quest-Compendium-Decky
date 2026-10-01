@@ -1,6 +1,17 @@
 import { DialogButton, Focusable, Navigation, PanelSectionRow, TextField } from "@decky/ui";
 import { useEffect, useState } from "react";
-import { guideArea, guideGame, guidesList, type QcGuideArea, type QcGuideEntry, type QcGuideGame, type QcGuidePage } from "../api";
+import {
+  guideAchievements,
+  guideArea,
+  guideGame,
+  guidesList,
+  type QcAchievementGuide,
+  type QcAchievementTip,
+  type QcGuideArea,
+  type QcGuideEntry,
+  type QcGuideGame,
+  type QcGuidePage,
+} from "../api";
 import { getLocale, useT } from "../i18n";
 import { openPage } from "../routes";
 import { ThemeStyle } from "../theme";
@@ -21,7 +32,8 @@ import {
 
 /**
  * Quest Compendium guides, right inside the plugin's Quick Access panel (with a button to open the same guide full
- * screen). All games -> a game's areas -> an area page. Built for quick use while playing:
+ * screen). All games -> a game's areas (with "Achievements and roadmap" at the top when the guide has
+ * one) -> an area page. Built for quick use while playing:
  *   - the running game's guide opens by itself; "Continue" and "Where you are" jump straight to the right area
  *   - each area shows its checklist progress, so the list doubles as a map of what's left
  *   - an area page leads with what you can miss, and the rest is in sections you open when you want them
@@ -68,6 +80,7 @@ function GuideViews({ full, ours, gameName }: { full: boolean; ours: { key: stri
   const v = useGuideView();
   if (v.view === "game") return <GameAreas key={v.key} gameKey={v.key} game={v.game} full={full} gameName={gameName} />;
   if (v.view === "area") return <AreaPage key={`${v.key}/${v.slug}`} gameKey={v.key} slug={v.slug} game={v.game} full={full} />;
+  if (v.view === "achievements") return <AchievementsPage key={`${v.key}/achievements`} gameKey={v.key} game={v.game} full={full} />;
   return <AllGames ours={ours} full={full} />;
 }
 
@@ -168,6 +181,8 @@ function AllGames({ ours, full }: { ours: { key: string; game: string } | null; 
 function GameAreas({ gameKey, game, full, gameName }: { gameKey: string; game?: string; full: boolean; gameName?: string }) {
   const t = useT();
   const s = useLoad<{ game?: string; areas?: QcGuideArea[] }>(() => guideGame(gameKey, getLocale()));
+  // The achievement guide, by the guide's key and in the plugin's language (most guides don't have one yet).
+  const ach = useLoad<{ guide?: QcAchievementGuide }>(() => guideAchievements(gameKey, getLocale())).data?.guide;
   const name = s.data?.game || game || "";
   const [q, setQ] = useState("");
   const needle = fold(q.trim());
@@ -213,6 +228,18 @@ function GameAreas({ gameKey, game, full, gameName }: { gameKey: string; game?: 
       )}
       <Row>
         <Focusable className="qcgp-list" flow-children="vertical">
+          {!needle && ach && (
+            <DialogButton className="qcgp-row" onClick={() => guideGo({ view: "achievements", key: gameKey, game: name })}>
+              <span className="qcgp-row-line">
+                <span className="qcgp-row-title">🏆 {t("qcg.achTitle")}</span>
+                {achProgress(gameKey, ach) && <span className="qcgp-progress">{achProgress(gameKey, ach)}</span>}
+              </span>
+              <span className="qcgp-row-sub">
+                {t("qcg.achCount", { n: ach.list.length })}
+                {ach.list.some((x) => x.missable) ? ` · ${t("qcg.achMissable", { n: ach.list.filter((x) => x.missable).length })}` : ""}
+              </span>
+            </DialogButton>
+          )}
           {areas.map((a, i) => (
             <div key={a.slug} className="qcgp-list">
               {/* Chapter and calendar guides: a heading where the group changes (a character, "Calendar", "Reference"). */}
@@ -385,6 +412,153 @@ function AreaPage({ gameKey, slug, game, full }: { gameKey: string; slug: string
               {next.name} ▶
             </DialogButton>
           )}
+        </Focusable>
+      </Row>
+    </>
+  );
+}
+
+// ---- Achievements and roadmap ----
+// Ticks are kept on the Deck like an area's checklist, keyed by Steam's English name so they survive a language change.
+const ACH_SLUG = "__achievements";
+const achId = (x: QcAchievementTip) => x.englishName || x.name;
+function achProgress(gameKey: string, ach: QcAchievementGuide): string {
+  const done = readDone(gameKey, ACH_SLUG);
+  const n = ach.list.filter((x) => done.has(achId(x))).length;
+  return n >= ach.list.length ? "✓" : n ? `${n}/${ach.list.length}` : "";
+}
+
+function AchievementsPage({ gameKey, game, full }: { gameKey: string; game?: string; full: boolean }) {
+  const t = useT();
+  const s = useLoad<{ guide?: QcAchievementGuide }>(() => guideAchievements(gameKey, getLocale()));
+  const [done, setDone] = useState<Set<string>>(() => readDone(gameKey, ACH_SLUG));
+  const [openSec, setOpenSec] = useState<Set<string>>(new Set());
+  const [showHidden, setShowHidden] = useState(false);
+  const [q, setQ] = useState("");
+  const ach = s.data?.guide;
+  const toggle = (id: string) => {
+    const next = new Set(done);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setDone(next);
+    writeDone(gameKey, ACH_SLUG, next);
+  };
+  const flip = (k: string) =>
+    setOpenSec((prev) => {
+      const n = new Set(prev);
+      if (n.has(k)) n.delete(k);
+      else n.add(k);
+      return n;
+    });
+
+  if (!ach) {
+    return (
+      <>
+        <TopBar backLabel={game || t("qcg.title")} full={full} />
+        <Status loading={s.loading} error={s.error} />
+      </>
+    );
+  }
+
+  const r = ach.roadmap || {};
+  const needle = fold(q.trim());
+  // Hidden achievements keep their name, description and tip covered until the player asks to see them.
+  const covered = (x: QcAchievementTip) => x.hidden && !showHidden;
+  const list = ach.list
+    .slice()
+    .sort((x, y) => (y.rarity ?? 0) - (x.rarity ?? 0))
+    .filter((x) => !needle || (!covered(x) && fold(`${x.name} ${x.desc} ${x.areaName || ""}`).includes(needle)));
+  const canMiss = list.filter((x) => x.missable && !done.has(achId(x)));
+  const n = (xs: QcAchievementTip[]) => xs.filter((x) => done.has(achId(x))).length;
+  const text = (key: string | number, children: React.ReactNode) => (
+    <Focusable key={key} className="qcgp-text" focusClassName="qc-focused" noFocusRing>
+      {children}
+    </Focusable>
+  );
+  const row = (x: QcAchievementTip, where: string) => {
+    const id = achId(x);
+    const hide = covered(x);
+    return (
+      <div key={`${where}:${id}`} className="qcgp-list">
+        <DialogButton className={`qcgp-check ${done.has(id) ? "qcg-done" : ""}`} onClick={() => toggle(id)}>
+          <span className="qcg-box">{done.has(id) ? "☑" : "☐"}</span>
+          <span className="qcgp-check-text">
+            <span className="qcg-strong">{hide ? "???" : x.name}</span>
+            {x.missable && <span className="qcg-tag">{t("qcg.missable")}</span>}
+            {x.hidden && <span className="qcg-tag">{t("qcg.achHidden")}</span>}
+            {x.rarity != null && <span className="qcg-detail"> · {x.rarity}%</span>}
+            {!hide && x.desc && <span className="qcg-detail">: {x.desc}</span>}
+          </span>
+        </DialogButton>
+        {!hide && x.how && text(`${where}:${id}:how`, x.how)}
+        {!hide && x.area && (
+          <DialogButton className="qcgp-nav" onClick={() => guideGo({ view: "area", key: gameKey, slug: x.area!, game })}>
+            {t("qcg.achInGuide", { area: x.areaName || x.area })} ▶
+          </DialogButton>
+        )}
+      </div>
+    );
+  };
+  const section = (k: string, title: string, body: React.ReactNode, count?: number, total?: number) => (
+    <div key={k} className="qcgp-area">
+      <DialogButton className="qcgp-sechead" onClick={() => flip(k)}>
+        <span>{openSec.has(k) ? "▾" : "▸"} {title}</span>
+        {total !== undefined && <span className="qcg-count">{count}/{total}</span>}
+      </DialogButton>
+      {openSec.has(k) && body}
+    </div>
+  );
+  const stats = [
+    r.time && `${t("qcg.achTime")}: ${r.time}`,
+    r.difficulty && `${t("qcg.achDifficulty")}: ${r.difficulty}`,
+    r.playthroughs && `${t("qcg.achPlaythroughs")}: ${r.playthroughs}`,
+  ].filter(Boolean) as string[];
+
+  return (
+    <>
+      <TopBar backLabel={game || t("qcg.title")} full={full} />
+      <Search value={q} onChange={setQ} label={t("qcg.achSearch")} />
+      <Row>
+        <Focusable flow-children="vertical" className="qcgp-area">
+          <div className="qcgp-title">{t("qcg.achTitle")}</div>
+          <div className="qcgp-row-sub">
+            {t("qcg.achTicked", { done: n(ach.list), total: ach.list.length })}
+            {ach.list.some((x) => x.missable) ? ` · ${t("qcg.achMissable", { n: ach.list.filter((x) => x.missable).length })}` : ""}
+          </div>
+          {!needle && stats.map((st, i) => text(`stat${i}`, st))}
+
+          {!needle && !!r.noReturn?.length && (
+            <div className="qcgp-miss">
+              <div className="qcgp-section">⚠ {t("qcg.achNoReturn")}</div>
+              {r.noReturn.map((p, i) =>
+                text(
+                  `nr${i}`,
+                  <>
+                    <span className="qcg-strong">{p.point}</span>: {p.lost}
+                  </>,
+                ),
+              )}
+            </div>
+          )}
+
+          {!needle && canMiss.length > 0 && (
+            <div className="qcgp-miss">
+              <div className="qcgp-section">⚠ {t("qcg.achCanMiss")}</div>
+              {canMiss.map((x) => row(x, "miss"))}
+            </div>
+          )}
+
+          {!needle && !!r.steps?.length && section("steps", t("qcg.achSteps"), r.steps.map((st, i) => text(`step${i}`, `${i + 1}. ${st}`)))}
+
+          {ach.list.some((x) => x.hidden) && (
+            <DialogButton className="qcgp-nav" onClick={() => setShowHidden((v) => !v)}>
+              {showHidden ? t("qcg.achHideHidden") : t("qcg.achShowHidden")}
+            </DialogButton>
+          )}
+          <div className="qcgp-section">
+            {t("qcg.achAll")} <span className="qcg-count">{n(list)}/{list.length}</span>
+          </div>
+          {list.map((x) => row(x, "all"))}
         </Focusable>
       </Row>
     </>
