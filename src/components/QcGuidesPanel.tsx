@@ -1,4 +1,4 @@
-import { DialogButton, Focusable, Navigation, PanelSectionRow } from "@decky/ui";
+import { DialogButton, Focusable, Navigation, PanelSectionRow, TextField } from "@decky/ui";
 import { useEffect, useState } from "react";
 import { guideArea, guideGame, guidesList, type QcGuideArea, type QcGuideEntry, type QcGuideGame, type QcGuidePage } from "../api";
 import { getLocale, useT } from "../i18n";
@@ -85,6 +85,18 @@ function useLoad<T>(load: () => Promise<{ ok: boolean; error?: string } & T>) {
   return state;
 }
 
+const fold = (x: string) => x.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+const sortName = (n: string) => n.replace(/^(the|a|an)\s+/i, "").toLowerCase();
+
+/** A search box (opens the Deck's keyboard). */
+function Search({ value, onChange, label }: { value: string; onChange: (v: string) => void; label: string }) {
+  return (
+    <PanelSectionRow>
+      <TextField label={label} value={value} onChange={(e: any) => onChange(e?.target?.value ?? "")} />
+    </PanelSectionRow>
+  );
+}
+
 function Row({ children }: { children: React.ReactNode }) {
   return <PanelSectionRow>{children}</PanelSectionRow>;
 }
@@ -124,10 +136,15 @@ function TopBar({ backLabel, full }: { backLabel?: string; full: boolean }) {
 function AllGames({ ours, full }: { ours: { key: string; game: string } | null; full: boolean }) {
   const t = useT();
   const s = useLoad<{ games?: QcGuideGame[] }>(() => guidesList());
-  const games = (s.data?.games || []).slice().sort((a, b) => (a.key === ours?.key ? -1 : b.key === ours?.key ? 1 : 0));
+  const [q, setQ] = useState("");
+  const games = (s.data?.games || [])
+    .slice()
+    .sort((a, b) => (a.key === ours?.key ? -1 : b.key === ours?.key ? 1 : sortName(a.game).localeCompare(sortName(b.game))))
+    .filter((g) => !q.trim() || fold(g.game).includes(fold(q.trim())));
   return (
     <>
       <TopBar full={full} />
+      <Search value={q} onChange={setQ} label={t("qcg.searchGames")} />
       <Status loading={s.loading} error={s.error} />
       {!s.loading && !s.error && !games.length && (
         <Row>
@@ -152,7 +169,10 @@ function GameAreas({ gameKey, game, full, gameName }: { gameKey: string; game?: 
   const t = useT();
   const s = useLoad<{ game?: string; areas?: QcGuideArea[] }>(() => guideGame(gameKey, getLocale()));
   const name = s.data?.game || game || "";
-  const areas = s.data?.areas || [];
+  const [q, setQ] = useState("");
+  const needle = fold(q.trim());
+  // Search by area name, story note, or anything on the page (items, secrets, enemies).
+  const areas = (s.data?.areas || []).filter((a) => !needle || fold(`${a.name} ${a.story} ${a.search || ""}`).includes(needle));
   const open = (a: QcGuideArea) => guideGo({ view: "area", key: gameKey, slug: a.slug, game: name });
   // "Continue" (the last page opened) and "Where you are" (the place from the latest answer), when they match a page.
   const cont = areas.find((a) => a.slug === lastArea(gameKey));
@@ -172,7 +192,8 @@ function GameAreas({ gameKey, game, full, gameName }: { gameKey: string; game?: 
         </Row>
       )}
       <Status loading={s.loading} error={s.error} />
-      {(here || cont) && (
+      <Search value={q} onChange={setQ} label={t("qcg.searchAreas")} />
+      {!needle && (here || cont) && (
         <Row>
           <Focusable className="qcgp-list" flow-children="vertical">
             {here && (
