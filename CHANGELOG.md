@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.4
+- **Game art.** Every guide shows its game's banner, on the games list and at the top of the guide, so finding the
+  right game at a glance is easier.
+
 ## 0.8.3
 - **Achievements and roadmap.** Guides with an achievement guide show it at the top of the area list: time to 100%,
   points of no return, what can still be missed, and every achievement with how to get it and a link to its area.
