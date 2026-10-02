@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.5
+- **Place names in every language.** The guide finds where you are with Japanese, Russian and other non-Latin place
+  names too.
+
 ## 0.8.4
 - **Game art.** Every guide shows its game's banner, on the games list and at the top of the guide, so finding the
   right game at a glance is easier.
