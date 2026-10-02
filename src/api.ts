@@ -27,6 +27,12 @@ export interface ShotPoint {
   x: number;
   y: number;
   label: string;
+  /** Which one it is among similar things on screen. */
+  where?: string;
+  /** What it is and why it matters. */
+  note?: string;
+  /** The player can lose it for good by moving on. */
+  missable?: boolean;
 }
 
 export interface PluginState {
@@ -44,6 +50,12 @@ export interface Turn {
   /** Answers only: the screenshot the answer is about, with the spots the AI marked on it. */
   shot?: string;
   points?: ShotPoint[];
+  /** Answers only: short quest name for what the player is doing (comes with points). */
+  title?: string;
+  /** Answers only: where the server thought the player was. */
+  place?: string;
+  /** Answers only: indexes of the points the player has ticked off. */
+  donePoints?: number[];
 }
 
 export interface GameInfo {
@@ -70,6 +82,8 @@ export interface AskResult {
   quota?: Quota | null;
   points?: ShotPoint[];
   shot?: string;
+  /** Short quest name for what the player is doing (only with points). */
+  title?: string;
   screenshot?: "attached" | "failed" | "off";
   screenshotError?: string | null;
   notice?: string | null;

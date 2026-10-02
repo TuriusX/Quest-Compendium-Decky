@@ -14,17 +14,19 @@ export function Inline({ text }: { text: string }) {
  * Renders an answer as a column of focusable blocks. Moving down with the D-pad steps from block to block,
  * and Steam scrolls the focused block into view, so the whole answer can be read without leaving the panel.
  */
-export function AnswerBlocks({ text, chunk = 280 }: { text: string; chunk?: number }) {
-  return <BlockList blocks={parseAnswer(text)} chunk={chunk} />;
+export function AnswerBlocks({ text, chunk = 280, autoFocusFirst = false }: { text: string; chunk?: number; autoFocusFirst?: boolean }) {
+  return <BlockList blocks={parseAnswer(text)} chunk={chunk} autoFocusFirst={autoFocusFirst} />;
 }
 
 /** Same focusable layout for any list of blocks (AI answers and web pages). */
-export function BlockList({ blocks, chunk = 280 }: { blocks: Block[]; chunk?: number }) {
+export function BlockList({ blocks, chunk = 280, autoFocusFirst = false }: { blocks: Block[]; chunk?: number; autoFocusFirst?: boolean }) {
   const out: ReactElement[] = [];
+  // Only the very first block takes focus (e.g. when a new answer lands in the panel).
+  const focus = () => autoFocusFirst && out.length === 0;
   blocks.forEach((b, i) => {
     if (b.kind === "heading") {
       out.push(
-        <Focusable key={`${i}`} className="qc-block qc-h" focusClassName="qc-focused" noFocusRing>
+        <Focusable key={`${i}`} className="qc-block qc-h" focusClassName="qc-focused" noFocusRing autoFocus={focus()}>
           {b.text}
         </Focusable>,
       );
@@ -35,13 +37,13 @@ export function BlockList({ blocks, chunk = 280 }: { blocks: Block[]; chunk?: nu
       const key = `${i}-${j}`;
       if (b.kind === "text") {
         out.push(
-          <Focusable key={key} className="qc-block" focusClassName="qc-focused" noFocusRing>
+          <Focusable key={key} className="qc-block" focusClassName="qc-focused" noFocusRing autoFocus={focus()}>
             <Inline text={p} />
           </Focusable>,
         );
       } else if (j === 0) {
         out.push(
-          <Focusable key={key} className="qc-block qc-li" focusClassName="qc-focused" noFocusRing>
+          <Focusable key={key} className="qc-block qc-li" focusClassName="qc-focused" noFocusRing autoFocus={focus()}>
             <span className="qc-li-mark">{b.kind === "bullet" ? "\u2022" : b.label}</span>
             <span>
               <Inline text={p} />
@@ -50,7 +52,7 @@ export function BlockList({ blocks, chunk = 280 }: { blocks: Block[]; chunk?: nu
         );
       } else {
         out.push(
-          <Focusable key={key} className="qc-block qc-li-cont" focusClassName="qc-focused" noFocusRing>
+          <Focusable key={key} className="qc-block qc-li-cont" focusClassName="qc-focused" noFocusRing autoFocus={focus()}>
             <Inline text={p} />
           </Focusable>,
         );

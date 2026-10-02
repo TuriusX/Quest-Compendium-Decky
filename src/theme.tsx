@@ -25,12 +25,18 @@ const CSS = `
 .qc-brand-text { min-width: 0; }
 .qc-brand-title { font-size: 15px; font-weight: 700; color: #f4f1ff; line-height: 1.2; }
 .qc-brand-sub { font-size: 12px; color: #b9b2d6; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.qc-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
 .qc-chip {
   font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 999px;
   background: rgba(255, 255, 255, 0.08); color: #e6e1f7;
 }
 .qc-chip-gold { background: rgba(232, 184, 74, 0.2); color: ${GOLD}; }
+
+/* Status strip under the header card: game · place · collected, with the quota chip on the right */
+.qc-strip { display: flex; align-items: center; gap: 8px; width: 100%; min-width: 0; font-size: 12px; color: #b9b2d6; }
+.qc-strip-info { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.qc-strip-info b { color: #e6e1f7; font-weight: 600; }
+.qc-strip-sep { opacity: 0.5; margin: 0 5px; }
+.qc-strip > .qc-chip { flex: 0 0 auto; white-space: nowrap; }
 
 .qc-presets { display: flex; gap: 6px; width: 100%; }
 .qc-presets > * { flex: 1 1 0; min-width: 0 !important; padding: 8px 4px !important; font-size: 12px !important; line-height: 1.2 !important; }
@@ -51,7 +57,39 @@ const CSS = `
 .qc-warn { color: #facc15; }
 .qc-err { color: #f87171; }
 .qc-muted { opacity: 0.75; }
-.qc-thinking { display: flex; align-items: center; gap: 10px; font-size: 12px; opacity: 0.85; }
+.qc-thinking { display: flex; align-items: center; gap: 10px; font-size: 12px; color: #d8d1f2; padding: 6px 8px; border-radius: 6px; }
+.qc-thinking.qc-focused, .qc-thinking.gpfocus { background: rgba(139, 92, 246, 0.14); }
+.qc-dots { display: inline-flex; gap: 4px; flex: 0 0 auto; }
+.qc-dots > span { width: 7px; height: 7px; border-radius: 2px; background: ${PURPLE}; animation: qc-pulse 1.2s ease-in-out infinite; }
+.qc-dots > span:nth-child(2) { animation-delay: 0.2s; }
+.qc-dots > span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes qc-pulse { 0%, 80%, 100% { opacity: 0.25; transform: scale(0.8); } 40% { opacity: 1; transform: scale(1); } }
+.qc-error-row { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+.qc-error-row > button { min-width: 0 !important; padding: 6px 10px !important; font-size: 12px !important; }
+
+/* Square numbered badges for marked points (same look in the panel checklist and on the screenshot) */
+.qc-badge { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; min-width: 20px; height: 20px;
+  padding: 0 3px; box-sizing: border-box; border-radius: 2px; background: ${PURPLE}; color: #120e22;
+  font-family: 'Silkscreen', monospace; font-size: 12px; font-weight: 700; line-height: 1; }
+.qc-badge-done { background: #6f6a84; color: #1a1726; }
+
+/* Checklist of marked points under an answer */
+.qc-pts { display: flex; flex-direction: column; gap: 4px; width: 100%; margin-top: 4px; }
+.qc-missable { font-size: 12px; line-height: 1.4; color: #fbbf24; padding: 0 8px 2px; }
+.qc-pts > .qc-pt { display: flex !important; align-items: flex-start !important; gap: 8px; text-align: left !important;
+  padding: 6px 8px !important; min-width: 0 !important; background: rgba(255, 255, 255, 0.04) !important; }
+.qc-pts > .qc-pt.gpfocus { background: rgba(139, 92, 246, 0.24) !important; }
+.qc-pt-text { display: flex; flex-direction: column; min-width: 0; }
+.qc-pt-label { font-size: 13px; font-weight: 600; line-height: 1.3; color: #f4f1ff; }
+.qc-pt-sub { font-size: 12px; line-height: 1.35; color: #b9b2d6; margin-top: 1px; }
+.qc-pt-done .qc-pt-label { opacity: 0.55; text-decoration: line-through; }
+.qc-pt-done .qc-pt-sub { opacity: 0.55; }
+
+/* Bottom row: conversation / new / settings */
+.qc-actions { display: flex; gap: 6px; width: 100%; }
+.qc-actions > * { flex: 1 1 0; min-width: 0 !important; padding: 7px 4px !important; font-size: 12px !important;
+  display: flex !important; align-items: center; justify-content: center; gap: 5px; white-space: nowrap; overflow: hidden; }
+.qc-actions svg { flex: 0 0 auto; }
 
 /* Full-screen pages */
 .qc-page {
@@ -139,14 +177,11 @@ const CSS = `
 .qc-shot { position: relative; display: block; max-width: 100%; border: 1px solid rgba(139, 92, 246, 0.45); overflow: hidden; }
 .qc-shot img { display: block; width: 100%; height: auto; }
 .qc-mk { position: absolute; width: 0; height: 0; }
-.qc-mk-frame { position: absolute; left: -18px; top: -18px; width: 36px; height: 36px; box-sizing: border-box;
+.qc-mk-frame { position: absolute; left: -18px; top: -18px; width: 36px; height: 36px; box-sizing: border-box; border-radius: 2px;
   border: 3px solid ${PURPLE}; box-shadow: 0 0 0 2px rgba(10, 8, 18, 0.9); }
-.qc-mk-num { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 3px;
-  background: ${PURPLE}; color: #120e22; font-family: 'Silkscreen', monospace; font-size: 12px; font-weight: 700; }
 .qc-mk .qc-mk-num { position: absolute; left: -10px; top: -44px; box-shadow: 0 0 0 2px rgba(10, 8, 18, 0.9); }
 .qc-mk-list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 14px; color: #e6e1f7; }
 .qc-mk-list li { display: flex; align-items: center; gap: 6px; }
-.qc-mk-num-inline { position: static; }
 
 /* Tabs: a quiet segmented control; the active tab is marked by an underline, not a filled button. */
 .qc-tabs { display: flex; gap: 2px; width: 100%; padding: 2px; box-sizing: border-box; border-radius: 8px; background: rgba(255, 255, 255, 0.04); }
@@ -202,10 +237,6 @@ const CSS = `
 .qc-site-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; width: 100%; }
 .qc-site-grid > * { min-width: 0 !important; padding: 7px 4px !important; font-size: 12px !important; }
 .qc-link-ext { opacity: 0.6; font-size: 11px; }
-
-/* Follow-up suggestions under an answer */
-.qc-follow { display: flex; flex-direction: column; gap: 6px; width: 100%; }
-.qc-follow > * { min-width: 0 !important; padding: 6px 10px !important; font-size: 12px !important; text-align: left !important; justify-content: flex-start !important; background: rgba(139, 92, 246, 0.14) !important; }
 `;
 
 /** Render once per screen (panel or page). Duplicate style tags are harmless. */

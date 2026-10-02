@@ -6,27 +6,28 @@ import {
   Navigation,
   PanelSection,
   PanelSectionRow,
-  Spinner,
   TextField,
 } from "@decky/ui";
 import { useEffect, useState } from "react";
+import { FaCog, FaComments, FaPlus } from "react-icons/fa";
 import { ask, AskRequest, getQuota, getState, PluginState, Turn } from "../api";
 import { currentGame, useCurrentGame } from "../game";
 import { rememberPlace } from "../qcGuides";
 import { setTab, useBrowser } from "../browser";
 import { aiLanguageName, setLocaleSetting, useT } from "../i18n";
 import { ANSWER_ROUTE, openPage, SETTINGS_ROUTE } from "../routes";
-import { getChat, keepRecentShots, lastAnswer, lastMarkedAnswer, lastQuestion, mergeQuota, resetConversation, setChat, useChat } from "../store";
+import { getChat, keepRecentShots, lastAnswerTurn, lastMarkedAnswer, lastQuestion, mergeQuota, resetConversation, setChat, useChat } from "../store";
 import { PURPLE, SCENE, ThemeStyle } from "../theme";
 import { AnswerBlocks } from "./AnswerBlocks";
 import { Logo } from "./Brand";
 import { BrowserTab } from "./BrowserTab";
+import { PointChecklist } from "./PointChecklist";
 
 const PRESETS = ["stuck", "what", "tips"];
 const MORE = ["boss", "where", "build", "missable"];
 const FOLLOW_UPS = ["follow.2", "follow.1", "follow.3"];
 
-/** Segmented "mana" bar for Pro questions, like the desktop app's header. */
+/** Segmented "mana" bar for the daily questions, like the desktop app's header. */
 function ManaBar({ value, max }: { value: number; max: number }) {
   const filled = max > 0 ? Math.max(0, Math.min(10, Math.ceil((value / max) * 10))) : 0;
   return (
@@ -78,9 +79,15 @@ export function QuickAccessPanel() {
     if (getChat().gameKey !== key) resetConversation(key);
   }, [game?.appId]);
 
+  // A new answer takes focus once (autoFocus only acts when the blocks mount), then the flag is cleared.
+  useEffect(() => {
+    if (chat.freshAnswer) setChat({ freshAnswer: false });
+  }, [chat.freshAnswer]);
+
   const submit = async (question: string) => {
     const q = question.trim();
     if (!q || getChat().busy || !ps) return;
+    setPrompt("");
     const liveGame = currentGame() ?? game;
     const req: AskRequest = {
       question: q,
@@ -92,19 +99,19 @@ export function QuickAccessPanel() {
       game: liveGame,
       language: aiLanguageName(),
     };
-    setChat({ busy: true, pending: q, error: null, notice: null, screenshotNote: null, limitReached: false });
-    setPrompt("");
+    setChat({ busy: true, pending: q, error: null, notice: null, screenshotNote: null, limitReached: false, freshAnswer: false });
     try {
       const res = await ask(req);
+      // `pending` stays set on errors so Retry can send the same question again.
       const patch: Partial<ReturnType<typeof getChat>> = {
         busy: false,
-        pending: null,
         notice: res.notice ?? null,
         screenshotNote:
           res.screenshot === "failed" ? t("answer.shotFailed", { error: res.screenshotError ?? "?" }) : null,
       };
       if (res.quota) patch.quota = mergeQuota(getChat().quota, res.quota);
       if (res.ok && res.limitReached) {
+        patch.pending = null;
         patch.limitReached = true;
         patch.error = res.text ?? t("answer.limit");
       } else if (res.ok && res.text) {
@@ -113,24 +120,191 @@ export function QuickAccessPanel() {
         if (res.shot && res.points?.length) {
           answerTurn.shot = res.shot;
           answerTurn.points = res.points;
+          if (res.title) answerTurn.title = res.title;
         }
+        if (res.place?.name) answerTurn.place = res.place.name;
+        patch.pending = null;
+        patch.freshAnswer = true;
         patch.history = keepRecentShots([...getChat().history, { role: "user", text: q }, answerTurn]);
       } else {
         patch.error = res.error ?? t("answer.error");
       }
       setChat(patch);
     } catch {
-      setChat({ busy: false, pending: null, error: t("backend.down") });
+      setChat({ busy: false, error: t("backend.down") });
     }
   };
 
-  const answer = lastAnswer(chat);
+  const last = lastAnswerTurn(chat);
+  const answer = last?.turn.text ?? null;
   const marked = lastMarkedAnswer(chat);
   const asked = lastQuestion(chat);
   const earlier = Math.max(0, chat.history.filter((turn) => turn.role === "user").length - 1);
   const q = chat.quota;
-  const tierKey = q ? (q.isGuest ? "tier.guest" : q.isPremium ? "tier.premium" : "tier.free") : null;
+  // Answer-first: once there's a question in flight, an answer or a problem, it sits right under the header.
   const showAnswerSection = chat.busy || !!answer || !!chat.error || !!chat.notice || !!chat.screenshotNote;
+  const canRetry = !!chat.error && !chat.busy && !chat.limitReached && !!chat.pending;
+
+  // Status strip: game · place · collected.
+  const points = last?.turn.points ?? [];
+  const collected = points.length ? t("status.collected", { n: (last?.turn.donePoints ?? []).length, m: points.length }) : null;
+  const info = game ? [game.name, last?.turn.place || t("status.placeUnknown"), collected] : [collected];
+  const infoParts = info.filter((s): s is string => !!s);
+
+  const askSection = (
+    <PanelSection title={t("ask.title")}>
+      {!answer && !chat.busy && (
+        <PanelSectionRow>
+          <img className="qc-scene" src={SCENE} alt="" />
+        </PanelSectionRow>
+      )}
+      <PanelSectionRow>
+        <Focusable className="qc-presets" flow-children="horizontal">
+          {PRESETS.map((p) => (
+            <DialogButton key={p} disabled={chat.busy || !ps} onClick={() => submit(t(`preset.${p}.q`))}>
+              {t(`preset.${p}`)}
+            </DialogButton>
+          ))}
+        </Focusable>
+      </PanelSectionRow>
+      <PanelSectionRow>
+        {/* The same quick questions as the desktop app; picking one asks it right away. */}
+        <DropdownItem
+          label={t("more.label")}
+          strDefaultLabel={t("more.pick")}
+          rgOptions={MORE.map((m) => ({ data: t(`more.${m}.q`), label: t(`more.${m}`) }))}
+          selectedOption={null}
+          disabled={chat.busy || !ps}
+          onChange={(opt) => submit(String(opt.data))}
+        />
+      </PanelSectionRow>
+      <PanelSectionRow>
+        <TextField
+          label={answer ? t("ask.followup") : t("ask.type")}
+          value={prompt}
+          disabled={chat.busy}
+          onChange={(e) => setPrompt(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && prompt.trim() && !chat.busy) void submit(prompt);
+          }}
+        />
+      </PanelSectionRow>
+      <PanelSectionRow>
+        <ButtonItem layout="below" disabled={chat.busy || !ps || !prompt.trim()} onClick={() => submit(prompt)}>
+          {chat.busy ? t("ask.sending") : t("ask.button")}
+        </ButtonItem>
+      </PanelSectionRow>
+    </PanelSection>
+  );
+
+  const answerSection = showAnswerSection && (
+    <PanelSection title={t("answer.title")}>
+      {chat.busy && (
+        <PanelSectionRow>
+          <div>
+            {chat.pending && (
+              <div className="qc-asked">
+                <b>{t("answer.asked")}</b> {chat.pending}
+              </div>
+            )}
+            {/* Focus lands here so Steam scrolls it into view, and the D-pad is already on the answer when it comes. */}
+            <Focusable className="qc-thinking" focusClassName="qc-focused" noFocusRing autoFocus>
+              <span className="qc-dots" aria-hidden="true">
+                <span />
+                <span />
+                <span />
+              </span>
+              {t("answer.thinking")}
+            </Focusable>
+          </div>
+        </PanelSectionRow>
+      )}
+      {chat.notice && (
+        <PanelSectionRow>
+          <div className="qc-note qc-warn">{chat.notice}</div>
+        </PanelSectionRow>
+      )}
+      {chat.screenshotNote && (
+        <PanelSectionRow>
+          <div className="qc-note qc-muted">
+            {chat.screenshotNote} {t("answer.withoutShot")}
+          </div>
+        </PanelSectionRow>
+      )}
+      {chat.error && !chat.busy && (
+        <PanelSectionRow>
+          <div className="qc-error-row">
+            {chat.pending && (
+              <div className="qc-asked">
+                <b>{t("answer.asked")}</b> {chat.pending}
+              </div>
+            )}
+            {/* Takes over focus from the thinking row, so Retry is one press down. */}
+            <Focusable
+              className={chat.limitReached ? "qc-block qc-note qc-warn" : "qc-block qc-note qc-err"}
+              focusClassName="qc-focused"
+              noFocusRing
+              autoFocus
+            >
+              {chat.error}
+            </Focusable>
+            {canRetry && <DialogButton onClick={() => submit(chat.pending ?? "")}>{t("ask.retry")}</DialogButton>}
+          </div>
+        </PanelSectionRow>
+      )}
+      {chat.limitReached && (
+        <PanelSectionRow>
+          <ButtonItem layout="below" onClick={() => Navigation.NavigateToExternalWeb("https://questcompendium.com")}>
+            {t("premium.about")}
+          </ButtonItem>
+        </PanelSectionRow>
+      )}
+      {answer && last && !chat.busy && !canRetry && (
+        <>
+          {asked && (
+            <PanelSectionRow>
+              <div className="qc-asked">
+                <b>{t("answer.asked")}</b> {asked}
+              </div>
+            </PanelSectionRow>
+          )}
+          {marked && (
+            <PanelSectionRow>
+              {/* The AI marked spots on the screenshot: they're drawn on it in the full answer. */}
+              <ButtonItem layout="below" onClick={() => openPage(ANSWER_ROUTE)}>
+                📍 {t(marked.points!.length === 1 ? "shot.marked1" : "shot.markedN", { n: marked.points!.length })}
+              </ButtonItem>
+            </PanelSectionRow>
+          )}
+          <PanelSectionRow>
+            {/* The full answer, one focus stop per paragraph: keep pressing down to read it all. */}
+            <div className="qc-answer" key={last.index}>
+              <AnswerBlocks text={answer} autoFocusFirst={chat.freshAnswer} />
+            </div>
+          </PanelSectionRow>
+          {points.length > 0 && (
+            <PanelSectionRow>
+              <PointChecklist turn={last.turn} turnIndex={last.index} />
+            </PanelSectionRow>
+          )}
+          <PanelSectionRow>
+            <Focusable className="qc-presets" flow-children="horizontal">
+              {FOLLOW_UPS.map((key) => (
+                <DialogButton key={key} disabled={!ps} onClick={() => submit(t(key))}>
+                  {t(key)}
+                </DialogButton>
+              ))}
+            </Focusable>
+          </PanelSectionRow>
+          {earlier > 0 && (
+            <PanelSectionRow>
+              <div className="qc-note qc-muted">{t(earlier === 1 ? "answer.earlier1" : "answer.earlierN", { n: earlier })}</div>
+            </PanelSectionRow>
+          )}
+        </>
+      )}
+    </PanelSection>
+  );
 
   return (
     <>
@@ -146,24 +320,22 @@ export function QuickAccessPanel() {
                 <div className="qc-brand-sub">{game ? t("card.askScreen") : t("card.askAnything")}</div>
               </div>
             </div>
-            <div className="qc-chips">
-              {q ? (
-                <>
-                  <span className="qc-chip">
-                    {t("card.questionsLeft", { n: q.left ?? "?" })}
-                    {typeof q.left === "number" && <ManaBar value={q.left} max={q.daily ?? (q.isPremium ? 60 : 10)} />}
-                  </span>
-                  <span className={tierKey === "tier.premium" ? "qc-chip qc-chip-gold" : "qc-chip"}>{tierKey && t(tierKey)}</span>
-                </>
-              ) : (
-                <span className="qc-chip">{t("card.checking")}</span>
-              )}
-              {ps && (
-                <span className="qc-chip">
-                  {t(`mode.${ps.settings.mode}`)}
+          </div>
+        </PanelSectionRow>
+        <PanelSectionRow>
+          <div className="qc-strip">
+            <span className="qc-strip-info">
+              {infoParts.map((part, i) => (
+                <span key={i}>
+                  {i > 0 && <span className="qc-strip-sep">·</span>}
+                  {i === 0 && game ? <b>{part}</b> : part}
                 </span>
-              )}
-            </div>
+              ))}
+            </span>
+            <span className={q?.isPremium ? "qc-chip qc-chip-gold" : "qc-chip"}>
+              {q ? t("status.left", { n: q.left ?? "?" }) : t("card.checking")}
+              {q && typeof q.left === "number" && <ManaBar value={q.left} max={q.daily ?? (q.isPremium ? 60 : 10)} />}
+            </span>
           </div>
         </PanelSectionRow>
         {backendDown && (
@@ -196,148 +368,29 @@ export function QuickAccessPanel() {
         <BrowserTab />
       ) : (
         <>
-          <PanelSection title={t("ask.title")}>
-            {!answer && !chat.busy && (
-              <PanelSectionRow>
-                <img className="qc-scene" src={SCENE} alt="" />
-              </PanelSectionRow>
-            )}
-            <PanelSectionRow>
-              <Focusable className="qc-presets" flow-children="horizontal">
-                {PRESETS.map((p) => (
-                  <DialogButton key={p} disabled={chat.busy || !ps} onClick={() => submit(t(`preset.${p}.q`))}>
-                    {t(`preset.${p}`)}
-                  </DialogButton>
-                ))}
-              </Focusable>
-            </PanelSectionRow>
-            <PanelSectionRow>
-              {/* The same quick questions as the desktop app; picking one asks it right away. */}
-              <DropdownItem
-                label={t("more.label")}
-                strDefaultLabel={t("more.pick")}
-                rgOptions={MORE.map((m) => ({ data: t(`more.${m}.q`), label: t(`more.${m}`) }))}
-                selectedOption={null}
-                disabled={chat.busy || !ps}
-                onChange={(opt) => submit(String(opt.data))}
-              />
-            </PanelSectionRow>
-            <PanelSectionRow>
-              <TextField
-                label={answer ? t("ask.followup") : t("ask.type")}
-                value={prompt}
-                disabled={chat.busy}
-                onChange={(e) => setPrompt(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && prompt.trim() && !chat.busy) void submit(prompt);
-                }}
-              />
-            </PanelSectionRow>
-            <PanelSectionRow>
-              <ButtonItem layout="below" disabled={chat.busy || !ps || !prompt.trim()} onClick={() => submit(prompt)}>
-                {t("ask.button")}
-              </ButtonItem>
-            </PanelSectionRow>
-          </PanelSection>
-
-          {showAnswerSection && (
-            <PanelSection title={t("answer.title")}>
-              {chat.busy && (
-                <PanelSectionRow>
-                  <div>
-                    {chat.pending && (
-                      <div className="qc-asked">
-                        <b>{t("answer.asked")}</b> {chat.pending}
-                      </div>
-                    )}
-                    <div className="qc-thinking">
-                      <Spinner style={{ width: 22, height: 22 }} />
-                      {t("answer.thinking")}
-                    </div>
-                  </div>
-                </PanelSectionRow>
-              )}
-              {chat.notice && (
-                <PanelSectionRow>
-                  <div className="qc-note qc-warn">{chat.notice}</div>
-                </PanelSectionRow>
-              )}
-              {chat.screenshotNote && (
-                <PanelSectionRow>
-                  <div className="qc-note qc-muted">
-                    {chat.screenshotNote} {t("answer.withoutShot")}
-                  </div>
-                </PanelSectionRow>
-              )}
-              {chat.error && (
-                <PanelSectionRow>
-                  <div className={chat.limitReached ? "qc-note qc-warn" : "qc-note qc-err"}>{chat.error}</div>
-                </PanelSectionRow>
-              )}
-              {chat.limitReached && (
-                <PanelSectionRow>
-                  <ButtonItem layout="below" onClick={() => Navigation.NavigateToExternalWeb("https://questcompendium.com")}>
-                    {t("premium.about")}
-                  </ButtonItem>
-                </PanelSectionRow>
-              )}
-              {answer && !chat.busy && (
-                <>
-                  {asked && (
-                    <PanelSectionRow>
-                      <div className="qc-asked">
-                        <b>{t("answer.asked")}</b> {asked}
-                      </div>
-                    </PanelSectionRow>
-                  )}
-                  {marked && (
-                    <PanelSectionRow>
-                      {/* The AI marked spots on the screenshot: they're drawn on it in the full answer. */}
-                      <ButtonItem layout="below" onClick={() => openPage(ANSWER_ROUTE)}>
-                        📍 {t(marked.points!.length === 1 ? "shot.marked1" : "shot.markedN", { n: marked.points!.length })}
-                      </ButtonItem>
-                    </PanelSectionRow>
-                  )}
-                  <PanelSectionRow>
-                    {/* The full answer, one focus stop per paragraph: keep pressing down to read it all. */}
-                    <div className="qc-answer">
-                      <AnswerBlocks text={answer} />
-                    </div>
-                  </PanelSectionRow>
-                  <PanelSectionRow>
-                    <Focusable className="qc-follow" flow-children="vertical">
-                      {FOLLOW_UPS.map((key) => (
-                        <DialogButton key={key} disabled={!ps} onClick={() => submit(t(key))}>
-                          ✦ {t(key)}
-                        </DialogButton>
-                      ))}
-                    </Focusable>
-                  </PanelSectionRow>
-                  {earlier > 0 && (
-                    <PanelSectionRow>
-                      <div className="qc-note qc-muted">{t(earlier === 1 ? "answer.earlier1" : "answer.earlierN", { n: earlier })}</div>
-                    </PanelSectionRow>
-                  )}
-                  <PanelSectionRow>
-                    <ButtonItem layout="below" onClick={() => openPage(ANSWER_ROUTE)}>
-                      {t("conv.open")}
-                    </ButtonItem>
-                  </PanelSectionRow>
-                  <PanelSectionRow>
-                    <ButtonItem layout="below" onClick={() => resetConversation(game?.appId ?? null)}>
-                      {t("conv.new")}
-                    </ButtonItem>
-                  </PanelSectionRow>
-                </>
-              )}
-            </PanelSection>
-          )}
+          {answerSection}
+          {askSection}
 
           <PanelSection>
             <PanelSectionRow>
-              <ButtonItem layout="below" onClick={() => openPage(SETTINGS_ROUTE)}>
-                {t("settings.open")}
-              </ButtonItem>
+              <Focusable className="qc-actions" flow-children="horizontal">
+                {chat.history.length > 0 && (
+                  <>
+                    <DialogButton onClick={() => openPage(ANSWER_ROUTE)}>
+                      <FaComments size={12} />
+                      {t("btn.conversation")}
+                    </DialogButton>
+                    <DialogButton disabled={chat.busy} onClick={() => resetConversation(game?.appId ?? null)}>
+                      <FaPlus size={11} />
+                      {t("btn.new")}
+                    </DialogButton>
+                  </>
+                )}
+                <DialogButton onClick={() => openPage(SETTINGS_ROUTE)}>
+                  <FaCog size={12} />
+                  {t("btn.settings")}
+                </DialogButton>
+              </Focusable>
             </PanelSectionRow>
           </PanelSection>
         </>

@@ -39,7 +39,7 @@ export function AnswerPage() {
             </Focusable>
           ) : (
             <div key={i} className="qc-a">
-              {t.points && t.points.length > 0 && <MarkedShot shot={t.shot} points={t.points} />}
+              {t.points && t.points.length > 0 && <MarkedShot shot={t.shot} points={t.points} done={t.donePoints} />}
               <AnswerBlocks text={t.text} chunk={420} />
             </div>
           ),

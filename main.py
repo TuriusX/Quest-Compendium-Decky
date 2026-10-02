@@ -179,7 +179,7 @@ def _quota_from(user_data: Any) -> Optional[Dict[str, Any]]:
 
 
 def _points_from(data: Any) -> List[Dict[str, Any]]:
-    """Markers the AI placed on the screenshot: up to 5 {x, y, label}, x/y as 0-1 fractions."""
+    """Markers the AI placed on the screenshot: up to 5 {x, y, label, where?, note?, missable?}, x/y as 0-1 fractions."""
     out: List[Dict[str, Any]] = []
     for p in (data.get("points") if isinstance(data, dict) else None) or []:
         try:
@@ -188,7 +188,16 @@ def _points_from(data: Any) -> List[Dict[str, Any]]:
             continue
         label = str(p.get("label") or "").strip()[:40]
         if 0 <= x <= 1 and 0 <= y <= 1 and label:
-            out.append({"x": x, "y": y, "label": label})
+            point: Dict[str, Any] = {"x": x, "y": y, "label": label}
+            where = str(p.get("where") or "").strip()[:100]
+            note = str(p.get("note") or "").strip()[:140]
+            if where:
+                point["where"] = where
+            if note:
+                point["note"] = note
+            if p.get("missable") is True:
+                point["missable"] = True
+            out.append(point)
     return out[:5]
 
 
@@ -570,6 +579,10 @@ class Plugin:
             points = _points_from(data)
             if points and shot_url:
                 result.update(points=points, shot=shot_url)
+                # Short quest name for what the player is doing; the server only sends it with points.
+                title = str(data.get("title") or "").strip()[:60]
+                if title:
+                    result["title"] = title
             # Where the server thinks the player is (the guide uses it to offer "where you are").
             place = data.get("place")
             if isinstance(place, dict) and str(place.get("name") or "").strip():

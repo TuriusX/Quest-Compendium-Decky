@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.9.0
+Matches the desktop app's answer-first layout:
+- **You can see your question being answered.** After you ask, the answer area moves to the top of the panel with
+  "You asked: …" and three pulsing dots, and the controller focus goes there too, so the answer is under your thumb
+  when it lands. The text box clears right away and the button says "Sending…". If something goes wrong, the error
+  shows in the same spot with a **Retry** button.
+- **Status strip.** One compact line under the header: the game, where you are, and how many marked spots you've
+  collected, with your questions left on the right.
+- **Marked spots as a checklist.** Under the answer, each marked spot gets a square numbered badge, its name, and
+  where it is. Press A to tick it off; ticks stay with the conversation. The screenshot uses the same square badges.
+- **Quest title and missables.** Answers with marked spots show a short quest name, plus an amber "Missable: …" line
+  for anything you could still lose for good.
+- **Tidier buttons.** Follow-up questions are a row of chips, and Conversation, New and Settings share one row at the
+  bottom.
+
 ## 0.8.5
 - **Place names in every language.** The guide finds where you are with Japanese, Russian and other non-Latin place
   names too.
