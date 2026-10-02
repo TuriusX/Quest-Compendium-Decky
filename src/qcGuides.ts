@@ -96,7 +96,16 @@ export const lastArea = (key: string) => lsGet(`qc-guide-last:${key}`);
 
 /** Same place, allowing for extra detail ("South Figaro" vs "South Figaro, Relic Shop") and small spelling differences. */
 export function samePlace(a: string, b: string): boolean {
-  const n = (x: string) => x.toLowerCase().replace(/['’]/g, "").replace(/[^a-z0-9,]+/g, " ").trim();
+  // Letters and digits from any script count, so Japanese or Russian names match too (and never shrink to nothing).
+  const n = (x: string) =>
+    x
+      .normalize("NFKC")
+      .replace(/、/g, ",")
+      .toLowerCase()
+      .replace(/['’]/g, "")
+      .replace(/[^\p{L}\p{M}\p{N},]+/gu, " ")
+      .replace(/\s*,\s*/g, ",")
+      .trim();
   const x = n(a), y = n(b);
   return !!x && !!y && (x === y || x.startsWith(`${y},`) || y.startsWith(`${x},`));
 }
