@@ -110,6 +110,28 @@ function Search({ value, onChange, label }: { value: string; onChange: (v: strin
   );
 }
 
+/** Initials for games without art (the same placeholder as the website). */
+const initialsOf = (game: string) =>
+  game
+    .replace(/[™®©]/g, "")
+    .replace(/^(the|a|an)\s+/i, "")
+    .split(/[\s:–—-]+/)
+    .filter((w) => /^[A-Za-z0-9]/.test(w) && !/^(of|the|and|a|an|to|in|on|for)$/i.test(w))
+    .slice(0, 2)
+    .map((w) => w[0].toUpperCase())
+    .join("") || "?";
+
+/** A game's store art (Steam's header shape, 460×215), with a placeholder if there's none or it fails to load. */
+function GameArt({ game, art, className = "" }: { game: string; art?: string; className?: string }) {
+  const [failed, setFailed] = useState(false);
+  return (
+    <div className={`qcgp-art ${className}`}>
+      <div className="qcgp-art-ph">{initialsOf(game)}</div>
+      {art && !failed && <img src={art} alt="" onError={() => setFailed(true)} />}
+    </div>
+  );
+}
+
 function Row({ children }: { children: React.ReactNode }) {
   return <PanelSectionRow>{children}</PanelSectionRow>;
 }
@@ -167,9 +189,12 @@ function AllGames({ ours, full }: { ours: { key: string; game: string } | null; 
       <Row>
         <Focusable className="qcgp-list" flow-children="vertical">
           {games.map((g) => (
-            <DialogButton key={g.key} className="qcgp-row" onClick={() => guideGo({ view: "game", key: g.key, game: g.game })}>
-              <span className="qcgp-row-title">{g.key === ours?.key ? `▶ ${g.game}` : g.game}</span>
-              <span className="qcgp-row-sub">{t("qcg.areas", { n: g.areas })}</span>
+            <DialogButton key={g.key} className="qcgp-row qcgp-row-art" onClick={() => guideGo({ view: "game", key: g.key, game: g.game })}>
+              <GameArt game={g.game} art={g.art} className="qcgp-art-thumb" />
+              <span className="qcgp-row-text">
+                <span className="qcgp-row-title">{g.key === ours?.key ? `▶ ${g.game}` : g.game}</span>
+                <span className="qcgp-row-sub">{t("qcg.areas", { n: g.areas })}</span>
+              </span>
             </DialogButton>
           ))}
         </Focusable>
@@ -180,7 +205,7 @@ function AllGames({ ours, full }: { ours: { key: string; game: string } | null; 
 
 function GameAreas({ gameKey, game, full, gameName }: { gameKey: string; game?: string; full: boolean; gameName?: string }) {
   const t = useT();
-  const s = useLoad<{ game?: string; areas?: QcGuideArea[] }>(() => guideGame(gameKey, getLocale()));
+  const s = useLoad<{ game?: string; art?: string; areas?: QcGuideArea[] }>(() => guideGame(gameKey, getLocale()));
   // The achievement guide, by the guide's key and in the plugin's language (most guides don't have one yet).
   const ach = useLoad<{ guide?: QcAchievementGuide }>(() => guideAchievements(gameKey, getLocale())).data?.guide;
   const name = s.data?.game || game || "";
@@ -201,6 +226,11 @@ function GameAreas({ gameKey, game, full, gameName }: { gameKey: string; game?: 
   return (
     <>
       <TopBar backLabel={t("qcg.all")} full={full} />
+      {name && (
+        <Row>
+          <GameArt game={name} art={s.data?.art} className="qcgp-art-banner" />
+        </Row>
+      )}
       {name && !full && (
         <Row>
           <div className="qcgp-title">{name}</div>

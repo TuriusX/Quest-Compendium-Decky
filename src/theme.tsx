@@ -74,6 +74,14 @@ const CSS = `
 .qcg-done .qcgp-check-text { opacity: 0.55; text-decoration: line-through; }
 .qcgp-nav { padding: 6px 10px !important; min-width: 0 !important; font-size: 13px !important; margin-top: 4px; }
 .qcgp-top { display: flex; justify-content: space-between; gap: 6px; width: 100%; }
+.qcgp-art { position: relative; aspect-ratio: 460 / 215; overflow: hidden; border-radius: 6px; background: #0c0d14; flex-shrink: 0; }
+.qcgp-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.qcgp-art-ph { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-weight: 700; color: rgba(255,255,255,0.8); background: linear-gradient(135deg, rgba(168,127,251,0.35), #1a1530 55%, #0c0d14); font-size: 13px; letter-spacing: 0.04em; }
+.qcgp-art-thumb { width: 72px; }
+.qcgp-art-banner { width: 100%; border: 1px solid rgba(255,255,255,0.1); }
+.qcgp-art-banner .qcgp-art-ph { font-size: 22px; }
+.qcgp-row-art { flex-direction: row !important; align-items: center !important; gap: 10px; }
+.qcgp-row-text { display: flex; flex-direction: column; min-width: 0; }
 .qcgp-fs { flex-shrink: 0; }
 .qcgp-jump { border-left: 3px solid #a87ffb !important; }
 .qcgp-row-line { display: flex; align-items: baseline; gap: 8px; width: 100%; }
