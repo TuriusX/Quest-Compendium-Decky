@@ -141,7 +141,10 @@ export interface QcGuidePage {
   items: QcGuideEntry[]; secrets: QcGuideEntry[]; enemies: QcGuideEntry[]; shops: QcGuideEntry[]; tips: string[];
   /** Structure-specific sections (a calendar page's deadlines, missable events, social links, activities). */
   sections?: { title: string; check: boolean; entries: { id: string; text: string }[] }[];
+  /** Key fights: bosses and set-piece battles in this area, with what it takes to win them. */
+  fights?: QcGuideFight[];
 }
+export interface QcGuideFight { id: string; name: string; enemies?: string; threats?: string; weaknesses?: string; tactics?: string; rewards?: string }
 export const guidesList = callable<[], { ok: boolean; games?: QcGuideGame[]; error?: string }>("guides_list");
 export const guideFind = callable<[game: string, lang?: string], { ok: boolean; key?: string | null; game?: string; areas?: QcGuideArea[]; error?: string }>("guide_find");
 export const guideGame = callable<[key: string, lang?: string], { ok: boolean; key?: string; game?: string; art?: string; areas?: QcGuideArea[]; error?: string }>("guide_game");

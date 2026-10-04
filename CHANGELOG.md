@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.1
+- **Key fights.** Guide pages now have a Key fights section for an area's bosses and big set-piece battles: the
+  enemies, their dangerous abilities, weaknesses and resistances, the tactics and positions that win, and the rewards.
+  It opens by default, above the enemies list. Guides fill it in as they're updated.
+
 ## 0.9.0
 Matches the desktop app's answer-first layout:
 - **You can see your question being answered.** After you ask, the answer area moves to the top of the panel with

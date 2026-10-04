@@ -400,6 +400,27 @@ function AreaPage({ gameKey, slug, game, full }: { gameKey: string; slug: string
           {otherItems.length > 0 && section("items", t("qcg.items"), otherItems.map(itemLine), n(otherItems.map((e) => e.id)), otherItems.length, !missIds.length)}
           {page.secrets.length > 0 &&
             section("secrets", t("qcg.secrets"), page.secrets.map((e) => check(e.id, e.text || "")), n(page.secrets.map((e) => e.id)), page.secrets.length)}
+          {(page.fights || []).length > 0 &&
+            section(
+              "fights",
+              t("qcg.fights"),
+              (page.fights || []).map((f) =>
+                text(
+                  f.id,
+                  <>
+                    <span className="qcg-strong">{f.name}</span>
+                    {f.enemies && <div><span className="qcg-detail">{t("qcg.fightEnemies")}:</span> {f.enemies}</div>}
+                    {f.threats && <div><span className="qcg-detail">{t("qcg.fightThreats")}:</span> {f.threats}</div>}
+                    {f.weaknesses && <div><span className="qcg-detail">{t("qcg.fightWeak")}:</span> {f.weaknesses}</div>}
+                    {f.tactics && <div><span className="qcg-detail">{t("qcg.fightTactics")}:</span> {f.tactics}</div>}
+                    {f.rewards && <div><span className="qcg-detail">{t("qcg.fightRewards")}:</span> {f.rewards}</div>}
+                  </>,
+                ),
+              ),
+              undefined,
+              undefined,
+              true,
+            )}
           {page.enemies.length > 0 &&
             section(
               "enemies",
