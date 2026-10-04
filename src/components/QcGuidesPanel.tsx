@@ -366,7 +366,9 @@ function AreaPage({ gameKey, slug, game, full }: { gameKey: string; slug: string
   const otherSec = (page.sections || []).filter((x) => !missSec.includes(x));
   const missIds = [...missItems.map((e) => e.id), ...missSec.flatMap((x) => x.entries.map((e) => e.id))];
   const n = (ids: string[]) => ids.filter((id) => done.has(id)).length;
-  const itemLine = (e: QcGuideEntry) => check(e.id, e.name || "", e.where);
+  // Where, then the exact final step and what locks a missable out.
+  const itemLine = (e: QcGuideEntry) =>
+    check(e.id, e.name || "", [e.where, e.how && `${t("qcg.how")}: ${e.how}`, e.lockout && `${t("qcg.lockout")}: ${e.lockout}`].filter(Boolean).join(" · "));
 
   return (
     <>

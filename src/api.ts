@@ -135,7 +135,13 @@ export const testScreenshot = callable<[], ScreenshotTest>("test_screenshot");
 // ---- Quest Compendium guides (drawn natively in the plugin) ----
 export interface QcGuideGame { key: string; game: string; areas: number; art?: string }
 export interface QcGuideArea { slug: string; name: string; story: string; group?: string; total?: number; search?: string }
-export interface QcGuideEntry { id: string; name?: string; text?: string; where?: string; weakness?: string; steal?: string; sells?: string; notes?: string; missable?: boolean }
+export interface QcGuideEntry {
+  id: string; name?: string; text?: string; where?: string; weakness?: string; steal?: string; sells?: string; notes?: string; missable?: boolean;
+  /** The exact final step (the action or check that gets it). */
+  how?: string;
+  /** Missable because: what locks it out. */
+  lockout?: string;
+}
 export interface QcGuidePage {
   key: string; slug: string; name: string; story: string; overview: string;
   items: QcGuideEntry[]; secrets: QcGuideEntry[]; enemies: QcGuideEntry[]; shops: QcGuideEntry[]; tips: string[];
