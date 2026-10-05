@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.10.0
+Catches up with the desktop app:
+- **Quest log under every answer.** In-game answers now end with a short quest name and 1 to 4 steps: things to do,
+  choices (labelled), and warnings in amber, each with the sentence from the answer it comes from. Press A to tick a
+  step off; ticks stay with the conversation. The full answer page shows each answer's quest log too.
+- **Battle plan.** When the screenshot shows a fight (turn order, End Turn, initiative, enemy health bars), the steps
+  become a Battle plan: this turn's action, the kill order and the key tactic.
+- **Combat markers.** In a fight, markers cover every important enemy (up to 8) plus the spots the plan uses. The top
+  2 or 3 targets are numbered in kill order: red badges, a stronger frame on the screenshot, and "Target 1" in the list.
+- **Next turn.** Under a Battle plan, Next turn takes a fresh screenshot and asks what whoever is acting now should
+  do, even with screenshots turned off. Its answer replaces the plan.
+- **Story beats.** The status strip shows where you are in the story next to the place, as a short phrase
+  ("Exploring the crash site of the Nautiloid").
+- **How and Missable because.** Guide items show the exact final step to get them (How) and, for missables, what
+  locks them out (Missable because).
+
 ## 0.9.1
 - **Key fights.** Guide pages now have a Key fights section for an area's bosses and big set-piece battles: the
   enemies, their dangerous abilities, weaknesses and resistances, the tactics and positions that win, and the rewards.
