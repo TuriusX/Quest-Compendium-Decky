@@ -33,6 +33,16 @@ export interface ShotPoint {
   note?: string;
   /** The player can lose it for good by moving on. */
   missable?: boolean;
+  /** A fight: kill order of the top 2-3 targets (1 = first), drawn stronger. */
+  rank?: number;
+}
+
+/** One quest-log takeaway from an answer: a step to take, a choice to make, or a warning. */
+export interface QuestStep {
+  kind: "step" | "choice" | "warning";
+  text: string;
+  /** The sentence of the answer it comes from. */
+  detail?: string;
 }
 
 export interface PluginState {
@@ -50,10 +60,18 @@ export interface Turn {
   /** Answers only: the screenshot the answer is about, with the spots the AI marked on it. */
   shot?: string;
   points?: ShotPoint[];
-  /** Answers only: short quest name for what the player is doing (comes with points). */
+  /** Answers only: short quest name for what the player is doing. */
   title?: string;
+  /** Answers only: the quest log's 1-4 steps (in a fight, the battle plan). */
+  steps?: QuestStep[];
+  /** Answers only: indexes of the steps the player has ticked off. */
+  doneSteps?: number[];
+  /** Answers only: the screenshot showed a fight (the steps are the battle plan, markers rank the targets). */
+  combat?: boolean;
   /** Answers only: where the server thought the player was. */
   place?: string;
+  /** Answers only: where in the story the player is (a short quest-log phrase). */
+  story?: string;
   /** Answers only: indexes of the points the player has ticked off. */
   donePoints?: number[];
 }
@@ -82,13 +100,19 @@ export interface AskResult {
   quota?: Quota | null;
   points?: ShotPoint[];
   shot?: string;
-  /** Short quest name for what the player is doing (only with points). */
+  /** Short quest name for what the player is doing. */
   title?: string;
+  /** The quest log's steps (in a fight, the battle plan). */
+  steps?: QuestStep[];
+  /** The screenshot showed a fight. */
+  combat?: boolean;
+  /** The fight a combat answer was about. */
+  fight?: string;
   screenshot?: "attached" | "failed" | "off";
   screenshotError?: string | null;
   notice?: string | null;
   /** Where the server thinks the player is, when it could tell. */
-  place?: { name: string };
+  place?: { name: string; story?: string };
 }
 
 export interface QuotaResult {

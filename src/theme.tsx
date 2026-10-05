@@ -84,6 +84,14 @@ const CSS = `
 .qc-pt-sub { font-size: 12px; line-height: 1.35; color: #b9b2d6; margin-top: 1px; }
 .qc-pt-done .qc-pt-label { opacity: 0.55; text-decoration: line-through; }
 .qc-pt-done .qc-pt-sub { opacity: 0.55; }
+/* The quest log: section label, warnings in amber, a fight's top targets in red, Next turn */
+.qc-log-sec { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #b9b2d6; padding: 2px 8px 0; }
+.qc-log-battle { color: #f87171; }
+.qc-badge-warn { background: #fbbf24; color: #1a1726; }
+.qc-pts > .qc-step-warn .qc-pt-label { color: #fbbf24; }
+.qc-badge-rank { background: #ef4444; color: #fff; }
+.qc-pts > .qc-next-turn { display: flex !important; flex-direction: column !important; align-items: flex-start !important;
+  text-align: left !important; padding: 6px 8px !important; margin-top: 2px; }
 
 /* Bottom row: conversation / new / settings */
 .qc-actions { display: flex; gap: 6px; width: 100%; }
@@ -180,6 +188,9 @@ const CSS = `
 .qc-mk-frame { position: absolute; left: -18px; top: -18px; width: 36px; height: 36px; box-sizing: border-box; border-radius: 2px;
   border: 3px solid ${PURPLE}; box-shadow: 0 0 0 2px rgba(10, 8, 18, 0.9); }
 .qc-mk .qc-mk-num { position: absolute; left: -10px; top: -44px; box-shadow: 0 0 0 2px rgba(10, 8, 18, 0.9); }
+.qc-mk-rank .qc-mk-frame { left: -22px; top: -22px; width: 44px; height: 44px; border: 4px solid #ef4444;
+  box-shadow: 0 0 0 2px rgba(10, 8, 18, 0.9), 0 0 12px rgba(239, 68, 68, 0.75); }
+.qc-mk-rank .qc-mk-num { top: -50px; }
 .qc-mk-list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 14px; color: #e6e1f7; }
 .qc-mk-list li { display: flex; align-items: center; gap: 6px; }
 

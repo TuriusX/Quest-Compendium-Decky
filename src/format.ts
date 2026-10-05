@@ -110,3 +110,14 @@ export function inlineSegments(text: string): { bold: boolean; text: string }[] 
     .map((p, i) => ({ bold: i % 2 === 1, text: p.replace(/\*\*/g, "") }))
     .filter((p) => p.text.length > 0);
 }
+
+/**
+ * A story beat as a short quest-log phrase: "The player is exploring the crash site of the Nautiloid." becomes
+ * "Exploring the crash site of the Nautiloid" (same as the desktop app's storyPhrase).
+ */
+export function storyPhrase(story: string | null | undefined): string {
+  let t = String(story ?? '').trim();
+  const stripped = t.replace(/^(the\s+)?(player|party|you)(\s+(is|are|has|have|was|were)|['’](s|re|ve))?\s+(currently\s+|now\s+|just\s+|still\s+)*/i, '');
+  if (stripped !== t && stripped) t = stripped.charAt(0).toUpperCase() + stripped.slice(1);
+  return t.replace(/\.$/, '').trim();
+}

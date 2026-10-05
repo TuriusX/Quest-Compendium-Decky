@@ -179,7 +179,8 @@ def _quota_from(user_data: Any) -> Optional[Dict[str, Any]]:
 
 
 def _points_from(data: Any) -> List[Dict[str, Any]]:
-    """Markers the AI placed on the screenshot: up to 5 {x, y, label, where?, note?, missable?}, x/y as 0-1 fractions."""
+    """Markers the AI placed on the screenshot: up to 8 in a fight (5 otherwise) {x, y, label, where?, note?, missable?,
+    rank?}, x/y as 0-1 fractions. rank is a fight's kill order (1 = first) for its top 2-3 targets."""
     out: List[Dict[str, Any]] = []
     for p in (data.get("points") if isinstance(data, dict) else None) or []:
         try:
@@ -197,8 +198,32 @@ def _points_from(data: Any) -> List[Dict[str, Any]]:
                 point["note"] = note
             if p.get("missable") is True:
                 point["missable"] = True
+            rank = _to_int(p.get("rank"))
+            if rank and 1 <= rank <= 3:
+                point["rank"] = rank
             out.append(point)
-    return out[:5]
+    return out[:8 if isinstance(data, dict) and data.get("combat") is True else 5]
+
+
+STEP_KINDS = ("step", "choice", "warning")
+
+
+def _steps_from(data: Any) -> List[Dict[str, Any]]:
+    """The answer's quest-log takeaways: up to 4 {kind: step|choice|warning, text, detail?}, most important first.
+    In a fight they're the battle plan (this turn's action, kill order, key tactic)."""
+    out: List[Dict[str, Any]] = []
+    for st in (data.get("steps") if isinstance(data, dict) else None) or []:
+        if not isinstance(st, dict):
+            continue
+        text = str(st.get("text") or "").strip()[:200]
+        if not text:
+            continue
+        step: Dict[str, Any] = {"kind": st.get("kind") if st.get("kind") in STEP_KINDS else "step", "text": text}
+        detail = str(st.get("detail") or "").strip()[:400]
+        if detail:
+            step["detail"] = detail
+        out.append(step)
+    return out[:4]
 
 
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
@@ -579,14 +604,26 @@ class Plugin:
             points = _points_from(data)
             if points and shot_url:
                 result.update(points=points, shot=shot_url)
-                # Short quest name for what the player is doing; the server only sends it with points.
-                title = str(data.get("title") or "").strip()[:60]
-                if title:
-                    result["title"] = title
-            # Where the server thinks the player is (the guide uses it to offer "where you are").
+            # Short quest name for what the player is doing (the quest log's title).
+            title = str(data.get("title") or "").strip()[:60]
+            if title:
+                result["title"] = title
+            # The quest log's steps; in a fight they're the battle plan.
+            steps = _steps_from(data)
+            if steps:
+                result["steps"] = steps
+            if data.get("combat") is True:
+                result["combat"] = True
+                fight = str(data.get("fight") or "").strip()[:80]
+                if fight:
+                    result["fight"] = fight
+            # Where the server thinks the player is (the guide uses it to offer "where you are"), and the story beat.
             place = data.get("place")
             if isinstance(place, dict) and str(place.get("name") or "").strip():
                 result["place"] = {"name": str(place.get("name")).strip()[:80]}
+                story = str(place.get("story") or "").strip()[:120]
+                if story:
+                    result["place"]["story"] = story
         elif status == 429:
             result.update(ok=True, limitReached=True, text=data.get("text") or "Daily limit reached.")
         else:

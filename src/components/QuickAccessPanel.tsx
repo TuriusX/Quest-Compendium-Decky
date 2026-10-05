@@ -22,6 +22,8 @@ import { AnswerBlocks } from "./AnswerBlocks";
 import { Logo } from "./Brand";
 import { BrowserTab } from "./BrowserTab";
 import { PointChecklist } from "./PointChecklist";
+import { QuestLog } from "./QuestLog";
+import { storyPhrase } from "../format";
 
 const PRESETS = ["stuck", "what", "tips"];
 const MORE = ["boss", "where", "build", "missable"];
@@ -84,7 +86,8 @@ export function QuickAccessPanel() {
     if (chat.freshAnswer) setChat({ freshAnswer: false });
   }, [chat.freshAnswer]);
 
-  const submit = async (question: string) => {
+  /** opts.shot: always take a screenshot (Next turn needs the fight as it is now), even with screenshots off. */
+  const submit = async (question: string, opts: { shot?: boolean } = {}) => {
     const q = question.trim();
     if (!q || getChat().busy || !ps) return;
     setPrompt("");
@@ -93,7 +96,7 @@ export function QuickAccessPanel() {
       question: q,
       mode: ps.settings.mode,
       // A screenshot is only useful while a game is actually running.
-      includeScreenshot: ps.settings.include_screenshot && ps.tools.gamescopectl && liveGame !== null,
+      includeScreenshot: (opts.shot || ps.settings.include_screenshot) && ps.tools.gamescopectl && liveGame !== null,
       // Only the words go back to the server (not the screenshots kept for the answer page).
       history: getChat().history.map(({ role, text }) => ({ role, text })),
       game: liveGame,
@@ -120,9 +123,13 @@ export function QuickAccessPanel() {
         if (res.shot && res.points?.length) {
           answerTurn.shot = res.shot;
           answerTurn.points = res.points;
-          if (res.title) answerTurn.title = res.title;
         }
+        // The quest log: its title and steps (in a fight, the battle plan).
+        if (res.title) answerTurn.title = res.title;
+        if (res.steps?.length) answerTurn.steps = res.steps;
+        if (res.combat) answerTurn.combat = true;
         if (res.place?.name) answerTurn.place = res.place.name;
+        if (res.place?.story) answerTurn.story = storyPhrase(res.place.story);
         patch.pending = null;
         patch.freshAnswer = true;
         patch.history = keepRecentShots([...getChat().history, { role: "user", text: q }, answerTurn]);
@@ -145,10 +152,13 @@ export function QuickAccessPanel() {
   const showAnswerSection = chat.busy || !!answer || !!chat.error || !!chat.notice || !!chat.screenshotNote;
   const canRetry = !!chat.error && !chat.busy && !chat.limitReached && !!chat.pending;
 
-  // Status strip: game · place · collected.
+  // Status strip: game · place · story beat · collected.
   const points = last?.turn.points ?? [];
   const collected = points.length ? t("status.collected", { n: (last?.turn.donePoints ?? []).length, m: points.length }) : null;
-  const info = game ? [game.name, last?.turn.place || t("status.placeUnknown"), collected] : [collected];
+  const info = game ? [game.name, last?.turn.place || t("status.placeUnknown"), last?.turn.place ? last?.turn.story : null, collected] : [collected];
+  // Next turn (a fight): a fresh screenshot and a short question for whoever acts now; its answer replaces the plan.
+  const canNextTurn = !!ps?.tools.gamescopectl && !!game;
+  const nextTurn = () => submit(t("log.nextTurnQ"), { shot: true });
   const infoParts = info.filter((s): s is string => !!s);
 
   const askSection = (
@@ -282,6 +292,16 @@ export function QuickAccessPanel() {
               <AnswerBlocks text={answer} autoFocusFirst={chat.freshAnswer} />
             </div>
           </PanelSectionRow>
+          {(last.turn.steps?.length || last.turn.title) && (
+            <PanelSectionRow>
+              <QuestLog
+                turn={last.turn}
+                turnIndex={last.index}
+                onNextTurn={canNextTurn ? nextTurn : undefined}
+                nextTurnDisabled={chat.busy || !ps}
+              />
+            </PanelSectionRow>
+          )}
           {points.length > 0 && (
             <PanelSectionRow>
               <PointChecklist turn={last.turn} turnIndex={last.index} />

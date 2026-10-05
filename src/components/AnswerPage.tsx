@@ -5,6 +5,7 @@ import { resetConversation, useChat } from "../store";
 import { ThemeStyle } from "../theme";
 import { AnswerBlocks } from "./AnswerBlocks";
 import { MarkedShot } from "./MarkedShot";
+import { QuestLog } from "./QuestLog";
 import { PageHeader } from "./Brand";
 
 /** Full-screen reader: the whole conversation for the current game, as a scrolling chat. */
@@ -41,6 +42,8 @@ export function AnswerPage() {
             <div key={i} className="qc-a">
               {t.points && t.points.length > 0 && <MarkedShot shot={t.shot} points={t.points} done={t.donePoints} />}
               <AnswerBlocks text={t.text} chunk={420} />
+              {/* The answer's quest log (steps, or a fight's battle plan); ticks are shared with the panel. */}
+              <QuestLog turn={t} turnIndex={i} />
             </div>
           ),
         )}

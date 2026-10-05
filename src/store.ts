@@ -57,6 +57,18 @@ export function togglePoint(turnIndex: number, point: number): void {
   setChat({ history });
 }
 
+/** Tick a quest-log step off (or back on) in one answer; the ticks stay with the conversation. */
+export function toggleStep(turnIndex: number, step: number): void {
+  const turn = state.history[turnIndex];
+  if (!turn || turn.role !== "assistant") return;
+  const done = new Set(turn.doneSteps ?? []);
+  if (done.has(step)) done.delete(step);
+  else done.add(step);
+  const history = [...state.history];
+  history[turnIndex] = { ...turn, doneSteps: [...done].sort((a, b) => a - b) };
+  setChat({ history });
+}
+
 export function useChat(): ChatState {
   const [snapshot, setSnapshot] = useState<ChatState>(state);
   useEffect(() => {

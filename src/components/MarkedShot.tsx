@@ -9,8 +9,9 @@ import { useT } from "../i18n";
  */
 export function MarkedShot({ shot, points, done = [] }: { shot?: string; points: ShotPoint[]; done?: number[] }) {
   const t = useT();
+  // A fight's top targets (kill order) get a red badge and a stronger frame.
   const badge = (i: number, extra = "") => (
-    <span className={`qc-badge${extra}${done.includes(i) ? " qc-badge-done" : ""}`}>{done.includes(i) ? "✓" : i + 1}</span>
+    <span className={`qc-badge${extra}${done.includes(i) ? " qc-badge-done" : points[i].rank ? " qc-badge-rank" : ""}`}>{done.includes(i) ? "✓" : i + 1}</span>
   );
   return (
     <Focusable className="qc-shot-wrap" focusClassName="qc-focused" noFocusRing>
@@ -18,7 +19,7 @@ export function MarkedShot({ shot, points, done = [] }: { shot?: string; points:
         <div className="qc-shot">
           <img src={shot} alt={t("shot.alt")} />
           {points.map((p, i) => (
-            <span key={i} className="qc-mk" style={{ left: `${p.x * 100}%`, top: `${p.y * 100}%` }}>
+            <span key={i} className={p.rank ? "qc-mk qc-mk-rank" : "qc-mk"} style={{ left: `${p.x * 100}%`, top: `${p.y * 100}%` }}>
               <span className="qc-mk-frame" />
               {badge(i, " qc-mk-num")}
             </span>
