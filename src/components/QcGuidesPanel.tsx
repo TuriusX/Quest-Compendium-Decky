@@ -378,6 +378,19 @@ function AreaPage({ gameKey, slug, game, full }: { gameKey: string; slug: string
           <div className="qcgp-title">{page.name}</div>
           {page.story && <div className="qcgp-row-sub">{page.story}</div>}
           {page.overview && text("overview", page.overview)}
+          {/* The summary box: what this place is and how to get there. */}
+          {page.info &&
+            ([
+              ["qcg.infoRegion", page.info.region],
+              ["qcg.infoLevels", page.info.levels],
+              ["qcg.infoWay", page.info.directions ? `${page.info.directions}${page.info.coords ? ` (${page.info.coords})` : ""}` : page.info.coords],
+              ["qcg.infoConnected", page.info.connected?.join(", ")],
+              ["qcg.infoQuests", page.info.quests?.join(" · ")],
+              ["qcg.infoServices", page.info.services?.join(" · ")],
+              ["qcg.infoEnemies", page.info.enemyTypes?.join(" · ")],
+            ] as const).map(([k, v]) =>
+              v ? text(k, <><span className="qcg-detail">{t(k)}:</span> {v}</>) : null,
+            )}
 
           {missIds.length > 0 && (
             <div className="qcgp-miss">

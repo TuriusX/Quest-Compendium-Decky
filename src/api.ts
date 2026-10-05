@@ -173,6 +173,8 @@ export interface QcGuidePage {
   sections?: { title: string; check: boolean; entries: { id: string; text: string }[] }[];
   /** Key fights: bosses and set-piece battles in this area, with what it takes to win them. */
   fights?: QcGuideFight[];
+  /** The summary box and the way here. */
+  info?: { region?: string; levels?: string; quests?: string[]; services?: string[]; enemyTypes?: string[]; directions?: string; connected?: string[]; coords?: string };
 }
 export interface QcGuideFight { id: string; name: string; enemies?: string; threats?: string; weaknesses?: string; tactics?: string; rewards?: string }
 export const guidesList = callable<[], { ok: boolean; games?: QcGuideGame[]; error?: string }>("guides_list");
