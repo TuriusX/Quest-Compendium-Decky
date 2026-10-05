@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.10.1
+- **Area summaries.** Guide pages open with a summary box: the region, level range, quests, services and people,
+  enemy types, how to get there from a nearby place, which areas it connects to, and map coordinates when the game
+  shows them. It appears as each guide is updated.
+
 ## 0.10.0
 Catches up with the desktop app:
 - **Quest log under every answer.** In-game answers now end with a short quest name and 1 to 4 steps: things to do,
