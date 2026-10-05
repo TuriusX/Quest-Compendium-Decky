@@ -69,6 +69,24 @@ export function toggleStep(turnIndex: number, step: number): void {
   setChat({ history });
 }
 
+/** An answer was reported: remembered on it, and an offensive or harmful one is folded away. */
+export function markReported(turnIndex: number, reason: NonNullable<Turn["reported"]>): void {
+  const turn = state.history[turnIndex];
+  if (!turn || turn.role !== "assistant") return;
+  const history = [...state.history];
+  history[turnIndex] = { ...turn, reported: reason, ...(reason === "harmful" ? { collapsed: true } : {}) };
+  setChat({ history });
+}
+
+/** "Show anyway" on an answer hidden after a report. */
+export function showReported(turnIndex: number): void {
+  const turn = state.history[turnIndex];
+  if (!turn || !turn.collapsed) return;
+  const history = [...state.history];
+  history[turnIndex] = { ...turn, collapsed: false };
+  setChat({ history });
+}
+
 export function useChat(): ChatState {
   const [snapshot, setSnapshot] = useState<ChatState>(state);
   useEffect(() => {

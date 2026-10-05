@@ -74,7 +74,13 @@ export interface Turn {
   story?: string;
   /** Answers only: indexes of the points the player has ticked off. */
   donePoints?: number[];
+  /** Answers only: the player reported it (Report this answer), and why. */
+  reported?: ReportReason;
+  /** Answers only: hidden after an "offensive or harmful" report, until "Show anyway". */
+  collapsed?: boolean;
 }
+
+export type ReportReason = "harmful" | "wrong" | "other";
 
 export interface GameInfo {
   name: string;
@@ -155,6 +161,11 @@ export const pollLink = callable<[], LinkPoll>("poll_link");
 export const cancelLink = callable<[], boolean>("cancel_link");
 export const unlink = callable<[], boolean>("unlink");
 export const testScreenshot = callable<[], ScreenshotTest>("test_screenshot");
+/** Report an AI answer for review (Microsoft Store / Steam policy on generated content). */
+export const reportAnswer = callable<
+  [report: { reason: ReportReason; comment: string; question: string; answer: string; game: string; place: string; messageId: string }],
+  { ok: boolean; error?: string }
+>("report_answer");
 
 // ---- Quest Compendium guides (drawn natively in the plugin) ----
 export interface QcGuideGame { key: string; game: string; areas: number; art?: string }

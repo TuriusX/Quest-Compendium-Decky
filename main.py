@@ -710,6 +710,35 @@ class Plugin:
             return {"ok": True, "status": status, "summary": data.get("summary") or "", "results": data["results"]}
         return {"ok": False, "status": status, "error": data.get("error") or f"Search failed (HTTP {status})."}
 
+    async def report_answer(self, report: Dict[str, Any]) -> Dict[str, Any]:
+        """Report an AI answer (offensive or harmful / wrong or misleading / other), saved on the server for review."""
+        r = report if isinstance(report, dict) else {}
+        reason = str(r.get("reason") or "")
+        if reason not in ("harmful", "wrong", "other"):
+            return {"ok": False, "error": "Pick a reason."}
+        body = {
+            "reason": reason,
+            "comment": str(r.get("comment") or "")[:1000],
+            "question": str(r.get("question") or "")[:4000],
+            "answer": str(r.get("answer") or "")[:12000],
+            "game": str(r.get("game") or "")[:160],
+            "place": str(r.get("place") or "")[:160],
+            "messageId": str(r.get("messageId") or "")[:80],
+            "appVersion": str(decky.DECKY_PLUGIN_VERSION),
+            "client": "deck",
+        }
+        token, is_guest, notice = await self._bearer()
+        if token is None:
+            return {"ok": False, "error": notice}
+        status, data = await self._http("POST", "/api/report-answer", body=body, token=token)
+        if status == 401 and not is_guest:
+            token, is_guest, _ = await self._bearer(force_refresh=True)
+            if token is not None:
+                status, data = await self._http("POST", "/api/report-answer", body=body, token=token)
+        if status == 200 and data.get("ok"):
+            return {"ok": True}
+        return {"ok": False, "error": data.get("error") or f"Could not send the report (HTTP {status})."}
+
     @staticmethod
     def _public_url_error(url: str) -> Optional[str]:
         """Only public http(s) addresses may be fetched (no file://, localhost or local-network hosts)."""

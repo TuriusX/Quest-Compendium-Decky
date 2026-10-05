@@ -19,6 +19,7 @@ import { ANSWER_ROUTE, openPage, SETTINGS_ROUTE } from "../routes";
 import { getChat, keepRecentShots, lastAnswerTurn, lastMarkedAnswer, lastQuestion, mergeQuota, resetConversation, setChat, useChat } from "../store";
 import { PURPLE, SCENE, ThemeStyle } from "../theme";
 import { AnswerBlocks } from "./AnswerBlocks";
+import { ReportButton, ReportedNote } from "./ReportAnswer";
 import { Logo } from "./Brand";
 import { BrowserTab } from "./BrowserTab";
 import { PointChecklist } from "./PointChecklist";
@@ -288,10 +289,19 @@ export function QuickAccessPanel() {
           )}
           <PanelSectionRow>
             {/* The full answer, one focus stop per paragraph: keep pressing down to read it all. */}
-            <div className="qc-answer" key={last.index}>
-              <AnswerBlocks text={answer} autoFocusFirst={chat.freshAnswer} />
-            </div>
+            {last.turn.collapsed ? (
+              <ReportedNote turnIndex={last.index} />
+            ) : (
+              <div className="qc-answer" key={last.index}>
+                <AnswerBlocks text={answer} autoFocusFirst={chat.freshAnswer} />
+              </div>
+            )}
           </PanelSectionRow>
+          {!last.turn.collapsed && (
+            <PanelSectionRow>
+              <ReportButton info={{ turn: last.turn, turnIndex: last.index, question: asked ?? "", game: game?.name ?? "" }} />
+            </PanelSectionRow>
+          )}
           {(last.turn.steps?.length || last.turn.title) && (
             <PanelSectionRow>
               <QuestLog

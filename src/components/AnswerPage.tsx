@@ -7,6 +7,7 @@ import { AnswerBlocks } from "./AnswerBlocks";
 import { MarkedShot } from "./MarkedShot";
 import { QuestLog } from "./QuestLog";
 import { PageHeader } from "./Brand";
+import { ReportButton, ReportedNote } from "./ReportAnswer";
 
 /** Full-screen reader: the whole conversation for the current game, as a scrolling chat. */
 export function AnswerPage() {
@@ -40,10 +41,19 @@ export function AnswerPage() {
             </Focusable>
           ) : (
             <div key={i} className="qc-a">
-              {t.points && t.points.length > 0 && <MarkedShot shot={t.shot} points={t.points} done={t.donePoints} />}
-              <AnswerBlocks text={t.text} chunk={420} />
-              {/* The answer's quest log (steps, or a fight's battle plan); ticks are shared with the panel. */}
-              <QuestLog turn={t} turnIndex={i} />
+              {t.collapsed ? (
+                <ReportedNote turnIndex={i} />
+              ) : (
+                <>
+                  {t.points && t.points.length > 0 && <MarkedShot shot={t.shot} points={t.points} done={t.donePoints} />}
+                  <AnswerBlocks text={t.text} chunk={420} />
+                  {/* The answer's quest log (steps, or a fight's battle plan); ticks are shared with the panel. */}
+                  <QuestLog turn={t} turnIndex={i} />
+                  <div style={{ marginTop: 8 }}>
+                    <ReportButton info={{ turn: t, turnIndex: i, question: turns.slice(0, i).reverse().find((x) => x.role === "user")?.text ?? "", game: game?.name ?? "" }} />
+                  </div>
+                </>
+              )}
             </div>
           ),
         )}
