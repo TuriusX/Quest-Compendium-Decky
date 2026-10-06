@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.11.0
+Catches up with the desktop app:
+- **New quick questions.** The buttons are now "What should I do next?", "I'm stuck. How do I get past this?",
+  "Anything missable here?" and "Help me with this fight", and the More questions pull-down has "What's the best
+  choice here?", "Will I miss anything if I leave?", "Is this worth keeping or using?" and "Just a hint, please, no
+  spoilers". Each asks for exactly that kind of answer, the same as on the desktop, and the hint questions give a
+  gentle nudge without spoiling the solution.
+- **New follow-ups.** Under an answer: "What's after that?", "Show me where on screen" (when the answer was about a
+  screenshot and one can be taken now; it marks the spots on a fresh one) and "Just a hint instead". "Explain that
+  more simply" is gone. All in the desktop app's wording, in every language.
+- **Report this answer.** A flag button under every answer opens a short form: offensive or harmful, wrong or
+  misleading, or something else, with an optional comment. An answer reported as offensive or harmful is hidden right
+  away, with "Show anyway".
+- **Missables you can find.** Missable items in guides say where they are starting from something you can find (a
+  waypoint, a named character, a landmark or map coordinates) down to the exact container, alongside How and Missable
+  because. The area summary box (0.10.1), with directions from a nearby place, fills in as each guide is updated.
+
 ## 0.10.1
 - **Area summaries.** Guide pages open with a summary box: the region, level range, quests, services and people,
   enemy types, how to get there from a nearby place, which areas it connects to, and map coordinates when the game

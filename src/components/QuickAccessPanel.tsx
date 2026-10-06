@@ -25,10 +25,7 @@ import { BrowserTab } from "./BrowserTab";
 import { PointChecklist } from "./PointChecklist";
 import { QuestLog } from "./QuestLog";
 import { storyPhrase } from "../format";
-
-const PRESETS = ["stuck", "what", "tips"];
-const MORE = ["boss", "where", "build", "missable"];
-const FOLLOW_UPS = ["follow.2", "follow.1", "follow.3"];
+import { QUICK_MAIN, QUICK_MORE, QUICK_FOLLOW, type QuickId } from "../quick";
 
 /** Segmented "mana" bar for the daily questions, like the desktop app's header. */
 function ManaBar({ value, max }: { value: number; max: number }) {
@@ -87,8 +84,11 @@ export function QuickAccessPanel() {
     if (chat.freshAnswer) setChat({ freshAnswer: false });
   }, [chat.freshAnswer]);
 
-  /** opts.shot: always take a screenshot (Next turn needs the fight as it is now), even with screenshots off. */
-  const submit = async (question: string, opts: { shot?: boolean } = {}) => {
+  /**
+   * opts.shot: always take a screenshot (Next turn needs the fight as it is now), even with screenshots off.
+   * opts.quick: a quick question's id (its label is the question; the server adds what it asks for).
+   */
+  const submit = async (question: string, opts: { shot?: boolean; quick?: QuickId } = {}) => {
     const q = question.trim();
     if (!q || getChat().busy || !ps) return;
     setPrompt("");
@@ -102,6 +102,7 @@ export function QuickAccessPanel() {
       history: getChat().history.map(({ role, text }) => ({ role, text })),
       game: liveGame,
       language: aiLanguageName(),
+      ...(opts.quick ? { quick: opts.quick } : {}),
     };
     setChat({ busy: true, pending: q, error: null, notice: null, screenshotNote: null, limitReached: false, freshAnswer: false });
     try {
@@ -121,6 +122,7 @@ export function QuickAccessPanel() {
       } else if (res.ok && res.text) {
         if (res.place?.name && liveGame?.name) rememberPlace(liveGame.name, res.place.name);
         const answerTurn: Turn = { role: "assistant", text: res.text };
+        if (res.screenshot === "attached") answerTurn.sawShot = true;
         if (res.shot && res.points?.length) {
           answerTurn.shot = res.shot;
           answerTurn.points = res.points;
@@ -160,6 +162,9 @@ export function QuickAccessPanel() {
   // Next turn (a fight): a fresh screenshot and a short question for whoever acts now; its answer replaces the plan.
   const canNextTurn = !!ps?.tools.gamescopectl && !!game;
   const nextTurn = () => submit(t("log.nextTurnQ"), { shot: true });
+  const askQuick = (id: QuickId) => submit(t(`quick.${id}`), { quick: id, ...(id === "where" ? { shot: true } : {}) });
+  // "Show me where on screen": markers need an answer about a screenshot, and a fresh screenshot of the game now.
+  const followUps = QUICK_FOLLOW.filter((id) => id !== "where" || (canNextTurn && !!last?.turn.sawShot));
   const infoParts = info.filter((s): s is string => !!s);
 
   const askSection = (
@@ -171,9 +176,9 @@ export function QuickAccessPanel() {
       )}
       <PanelSectionRow>
         <Focusable className="qc-presets" flow-children="horizontal">
-          {PRESETS.map((p) => (
-            <DialogButton key={p} disabled={chat.busy || !ps} onClick={() => submit(t(`preset.${p}.q`))}>
-              {t(`preset.${p}`)}
+          {QUICK_MAIN.map((id) => (
+            <DialogButton key={id} disabled={chat.busy || !ps} onClick={() => askQuick(id)}>
+              {t(`quick.${id}`)}
             </DialogButton>
           ))}
         </Focusable>
@@ -183,10 +188,10 @@ export function QuickAccessPanel() {
         <DropdownItem
           label={t("more.label")}
           strDefaultLabel={t("more.pick")}
-          rgOptions={MORE.map((m) => ({ data: t(`more.${m}.q`), label: t(`more.${m}`) }))}
+          rgOptions={QUICK_MORE.map((id) => ({ data: id, label: t(`quick.${id}`) }))}
           selectedOption={null}
           disabled={chat.busy || !ps}
-          onChange={(opt) => submit(String(opt.data))}
+          onChange={(opt) => askQuick(opt.data as QuickId)}
         />
       </PanelSectionRow>
       <PanelSectionRow>
@@ -319,9 +324,9 @@ export function QuickAccessPanel() {
           )}
           <PanelSectionRow>
             <Focusable className="qc-presets" flow-children="horizontal">
-              {FOLLOW_UPS.map((key) => (
-                <DialogButton key={key} disabled={!ps} onClick={() => submit(t(key))}>
-                  {t(key)}
+              {followUps.map((id) => (
+                <DialogButton key={id} disabled={!ps} onClick={() => askQuick(id)}>
+                  {t(`quick.${id}`)}
                 </DialogButton>
               ))}
             </Focusable>

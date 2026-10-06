@@ -74,6 +74,8 @@ export interface Turn {
   story?: string;
   /** Answers only: indexes of the points the player has ticked off. */
   donePoints?: number[];
+  /** Answers only: the question went with a screenshot ("Show me where on screen" is offered). */
+  sawShot?: boolean;
   /** Answers only: the player reported it (Report this answer), and why. */
   reported?: ReportReason;
   /** Answers only: hidden after an "offensive or harmful" report, until "Show anyway". */
@@ -95,6 +97,8 @@ export interface AskRequest {
   game: GameInfo | null;
   /** Language the AI should answer in ("English", "Spanish", "Brazilian Portuguese"). */
   language?: string;
+  /** A quick question's id (src/quick.ts): the server adds what it asks for. */
+  quick?: string;
 }
 
 export interface AskResult {

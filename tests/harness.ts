@@ -75,7 +75,7 @@ app.get('/api/user/status', requireAuth, (req, res) => {
 app.post('/api/chat', requireAuth, (req, res) => {
   const u = (req as any).user;
   const isGuest = !!u.isGuest;
-  const { question, history = [], imageBase64, aiMode = 'standard', preferredModel = 'pro', activeGame, isGameRunningLocally, language } = req.body;
+  const { question, history = [], imageBase64, aiMode = 'standard', preferredModel = 'pro', activeGame, isGameRunningLocally, language, quick } = req.body;
   if (!question && !imageBase64) return res.status(400).json({ error: 'Question or image is required' });
   if (imageBase64 && !/^data:(image\/[a-zA-Z+]+);base64,(.+)$/.test(imageBase64)) {
     return res.status(500).json({ error: 'bad image data URL' });
@@ -85,7 +85,7 @@ app.post('/api/chat', requireAuth, (req, res) => {
   if (q[key] <= 0) return res.status(429).json({ text: 'Daily limit reached.', modelUsed: 'Limit Reached' });
   q[key] -= 1;
   res.json({
-    text: `echo|mode=${aiMode}|model=${preferredModel}|image=${imageBase64 ? imageBase64.split(';')[0].slice(5) : 'none'}|game=${activeGame?.name ?? 'none'}|running=${!!isGameRunningLocally}|hist=${history.length}|lang=${language}|uid=${u.uid}`,
+    text: `echo|mode=${aiMode}|model=${preferredModel}|image=${imageBase64 ? imageBase64.split(';')[0].slice(5) : 'none'}|game=${activeGame?.name ?? 'none'}|running=${!!isGameRunningLocally}|hist=${history.length}|lang=${language}|quick=${quick ?? 'none'}|uid=${u.uid}`,
     modelUsed: preferredModel,
     userData: { isPremium: !isGuest, proQueriesAvailable: q.pro, flashQueriesAvailable: q.flash, isGuest },
   });

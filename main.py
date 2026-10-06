@@ -57,6 +57,8 @@ VALID_MODES = ("standard", "minmax", "roleplay")
 VALID_MODELS = ("pro", "flash")
 VALID_LOCALES = ("auto", "en", "es", "pt", "de", "fr", "ru", "ja", "ko", "zh")
 # The language names the server puts in the AI's instructions ("Respond entirely in ...").
+# The quick questions' ids (src/quick.ts); the server adds what each one asks for.
+QUICK_IDS = ("next", "stuck", "missable", "fight", "choice", "leave", "keep", "hint", "after", "where", "hintInstead")
 AI_LANGUAGES = ("English", "Spanish", "Brazilian Portuguese", "German", "French", "Russian", "Japanese", "Korean", "Simplified Chinese")
 MAX_GUIDE_SITES = 12
 DOMAIN_RE = re.compile(r"^[a-z0-9-]+(\.[a-z0-9-]+)+$")
@@ -555,6 +557,8 @@ class Plugin:
             # The panel resolves the language (including "auto" = Steam's language) and sends it along.
             "language": req.get("language") if req.get("language") in AI_LANGUAGES else (s.get("language") or "English"),
         }
+        if req.get("quick") in QUICK_IDS:
+            payload["quick"] = req["quick"]
         game = req.get("game")
         if isinstance(game, dict) and game.get("name"):
             active: Dict[str, Any] = {"name": str(game["name"])[:200]}

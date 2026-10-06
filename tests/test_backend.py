@@ -51,20 +51,20 @@ async def run():
     check("guest quota 5/5", q["ok"] and q["quota"]["pro"] == 5 and q["quota"]["isGuest"], q)
 
     # ---- asking as a guest, no screenshot ----
-    r = await p.ask({"question": "Where next?", "mode": "roleplay", "model": "pro", "includeScreenshot": False,
+    r = await p.ask({"question": "Where next?", "mode": "roleplay", "model": "pro", "includeScreenshot": False, "quick": "hint",
                      "game": {"name": "Elden Ring", "appId": 1245620},
                      "history": [{"role": "user", "text": "hi"}, {"role": "assistant", "text": "hello"}]})
     t = r.get("text", "")
     check("guest ask works; fields reach server", r["ok"] and "mode=roleplay" in t and "game=Elden Ring" in t
-          and "running=true" in t and "image=none" in t and "hist=2" in t and "lang=English" in t, r)
+          and "running=true" in t and "image=none" in t and "hist=2" in t and "lang=English" in t and "quick=hint" in t, r)
     check("guest quota decremented and returned", r["quota"]["pro"] == 4 and r["quota"]["isGuest"], r)
 
     # ---- screenshot path: slow two-stage write + real ffmpeg -> JPEG ----
     before = set(glob.glob("/tmp/qc-*"))
     t0 = time.time()
-    r = await p.ask({"question": "What is this?", "includeScreenshot": True})
+    r = await p.ask({"question": "What is this?", "includeScreenshot": True, "quick": "explainSimply"})
     check("screenshot attached as JPEG via ffmpeg (paused write NOT mistaken for done)",
-          r["ok"] and r["screenshot"] == "attached" and "image=image/jpeg" in r["text"], r)
+          r["ok"] and r["screenshot"] == "attached" and "image=image/jpeg" in r["text"] and "quick=none" in r["text"], r)
     check("screenshot temp files cleaned up", set(glob.glob("/tmp/qc-*")) == before)
     test = await p.test_screenshot()
     check("test_screenshot reports size, does not return the image", test["ok"] and test["bytes"] > 1000 and "b64" not in test, test)
