@@ -20,6 +20,7 @@ import { getChat, keepRecentShots, lastAnswerTurn, lastMarkedAnswer, lastQuestio
 import { PURPLE, SCENE, ThemeStyle } from "../theme";
 import { AnswerBlocks } from "./AnswerBlocks";
 import { ReportButton, ReportedNote } from "./ReportAnswer";
+import { VoteButtons } from "./VoteButtons";
 import { Logo } from "./Brand";
 import { BrowserTab } from "./BrowserTab";
 import { PointChecklist } from "./PointChecklist";
@@ -123,6 +124,8 @@ export function QuickAccessPanel() {
         if (res.place?.name && liveGame?.name) rememberPlace(liveGame.name, res.place.name);
         const answerTurn: Turn = { role: "assistant", text: res.text };
         if (res.screenshot === "attached") answerTurn.sawShot = true;
+        if (res.qtype) answerTurn.qtype = res.qtype;
+        if (res.modelUsed) answerTurn.model = res.modelUsed;
         if (res.shot && res.points?.length) {
           answerTurn.shot = res.shot;
           answerTurn.points = res.points;
@@ -304,7 +307,10 @@ export function QuickAccessPanel() {
           </PanelSectionRow>
           {!last.turn.collapsed && (
             <PanelSectionRow>
-              <ReportButton info={{ turn: last.turn, turnIndex: last.index, question: asked ?? "", game: game?.name ?? "" }} />
+              <Focusable style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "flex-start" }} flow-children="horizontal">
+                <VoteButtons info={{ turn: last.turn, turnIndex: last.index, question: asked ?? "", game: game?.name ?? "" }} />
+                <ReportButton info={{ turn: last.turn, turnIndex: last.index, question: asked ?? "", game: game?.name ?? "" }} />
+              </Focusable>
             </PanelSectionRow>
           )}
           {(last.turn.steps?.length || last.turn.title) && (

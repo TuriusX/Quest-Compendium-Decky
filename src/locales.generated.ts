@@ -5,6 +5,14 @@
  */
 export const GENERATED: Record<string, Record<string, string>> = {
   de: {
+    "vote.up": "Gute Antwort",
+    "vote.down": "Keine gute Antwort",
+    "vote.whatWrong": "Was hat nicht gestimmt?",
+    "vote.reason.place": "Falscher Ort",
+    "vote.reason.info": "Falsche Info",
+    "vote.reason.marker": "Marker ungenau",
+    "vote.reason.unhelpful": "Nicht hilfreich",
+    "vote.skip": "Überspringen",
     "quick.next": "Was soll ich als Nächstes tun?",
     "quick.stuck": "Ich hänge fest. Wie komme ich hier weiter?",
     "quick.missable": "Kann man hier etwas verpassen?",
@@ -257,6 +265,14 @@ export const GENERATED: Record<string, Record<string, string>> = {
     "report.showAnyway": "Mostrar de todos modos"
   },
   fr: {
+    "vote.up": "Bonne réponse",
+    "vote.down": "Pas terrible",
+    "vote.whatWrong": "Quel était le problème ?",
+    "vote.reason.place": "Mauvais endroit",
+    "vote.reason.info": "Mauvaise info",
+    "vote.reason.marker": "Marqueur décalé",
+    "vote.reason.unhelpful": "Pas utile",
+    "vote.skip": "Passer",
     "quick.next": "Que dois-je faire ensuite ?",
     "quick.stuck": "Je bloque ici. Comment passer ça ?",
     "quick.missable": "Des trucs à ne pas rater ici ?",
@@ -493,6 +509,14 @@ export const GENERATED: Record<string, Record<string, string>> = {
     "browser.backendDown": "Le backend du plugin ne répond pas."
   },
   ja: {
+    "vote.up": "わかりやすい",
+    "vote.down": "わかりにくい",
+    "vote.whatWrong": "問題点は何でしたか？",
+    "vote.reason.place": "場所が違う",
+    "vote.reason.info": "情報が違う",
+    "vote.reason.marker": "マーカーがズレている",
+    "vote.reason.unhelpful": "役に立たなかった",
+    "vote.skip": "スキップ",
     "quick.next": "次は何をすればいい？",
     "quick.stuck": "詰まった。どうやって進めばいい？",
     "quick.missable": "ここで取り返しのつかない要素はある？",
@@ -729,6 +753,14 @@ export const GENERATED: Record<string, Record<string, string>> = {
     "browser.backendDown": "プラグインのバックエンドが応答していません。"
   },
   ko: {
+    "vote.up": "도움이 됐어요",
+    "vote.down": "아쉬워요",
+    "vote.whatWrong": "어떤 점이 아쉬웠나요?",
+    "vote.reason.place": "위치가 틀림",
+    "vote.reason.info": "정보가 틀림",
+    "vote.reason.marker": "마커 위치 어긋남",
+    "vote.reason.unhelpful": "도움이 안 됨",
+    "vote.skip": "건너뛰기",
     "quick.next": "다음엔 뭘 해야 해?",
     "quick.stuck": "막혔어. 어떻게 넘어가야 해?",
     "quick.missable": "여기서 놓칠 만한 거 있어?",
@@ -981,6 +1013,14 @@ export const GENERATED: Record<string, Record<string, string>> = {
     "report.showAnyway": "Mostrar mesmo assim"
   },
   ru: {
+    "vote.up": "Хороший ответ",
+    "vote.down": "Плохой ответ",
+    "vote.whatWrong": "Что пошло не так?",
+    "vote.reason.place": "Не то место",
+    "vote.reason.info": "Неверная инфа",
+    "vote.reason.marker": "Метка не там",
+    "vote.reason.unhelpful": "Не помогло",
+    "vote.skip": "Пропустить",
     "quick.next": "Что делать дальше?",
     "quick.stuck": "Не могу продвинуться. Как это пройти?",
     "quick.missable": "Здесь можно что-то пропустить?",
@@ -1217,6 +1257,14 @@ export const GENERATED: Record<string, Record<string, string>> = {
     "browser.backendDown": "Бэкенд плагина не отвечает."
   },
   zh: {
+    "vote.up": "回答不错",
+    "vote.down": "回答不好",
+    "vote.whatWrong": "哪里有问题？",
+    "vote.reason.place": "地点错误",
+    "vote.reason.info": "信息错误",
+    "vote.reason.marker": "标记偏了",
+    "vote.reason.unhelpful": "没有帮助",
+    "vote.skip": "跳过",
     "quick.next": "接下来该做什么？",
     "quick.stuck": "我卡关了，这关怎么过？",
     "quick.missable": "这里有什么容易错过的吗？",

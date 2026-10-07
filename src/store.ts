@@ -78,6 +78,15 @@ export function markReported(turnIndex: number, reason: NonNullable<Turn["report
   setChat({ history });
 }
 
+/** The player's 👍 / 👎 on an answer (undefined: taken back), and a 👎's reason. */
+export function markVote(turnIndex: number, vote: Turn["vote"], reason?: string): void {
+  const turn = state.history[turnIndex];
+  if (!turn || turn.role !== "assistant") return;
+  const history = [...state.history];
+  history[turnIndex] = { ...turn, vote, voteReason: vote === "down" ? reason : undefined };
+  setChat({ history });
+}
+
 /** "Show anyway" on an answer hidden after a report. */
 export function showReported(turnIndex: number): void {
   const turn = state.history[turnIndex];

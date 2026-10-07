@@ -78,6 +78,12 @@ export interface Turn {
   sawShot?: boolean;
   /** Answers only: the player reported it (Report this answer), and why. */
   reported?: ReportReason;
+  /** Answers only: the kind of question it answers and the model that wrote it (sent with a 👍 / 👎). */
+  qtype?: string;
+  model?: string;
+  /** Answers only: the player's 👍 / 👎, and what was wrong (a 👎's optional reason). */
+  vote?: "up" | "down";
+  voteReason?: string;
   /** Answers only: hidden after an "offensive or harmful" report, until "Show anyway". */
   collapsed?: boolean;
 }
@@ -107,6 +113,8 @@ export interface AskResult {
   text?: string;
   limitReached?: boolean;
   modelUsed?: string;
+  /** The kind of question (location, puzzle, fight, choice, missable, general). */
+  qtype?: string;
   quota?: Quota | null;
   points?: ShotPoint[];
   shot?: string;
@@ -166,6 +174,11 @@ export const cancelLink = callable<[], boolean>("cancel_link");
 export const unlink = callable<[], boolean>("unlink");
 export const testScreenshot = callable<[], ScreenshotTest>("test_screenshot");
 /** Report an AI answer for review (Microsoft Store / Steam policy on generated content). */
+/** 👍 / 👎 on an AI answer (or "none": taken back), for the answer-quality numbers. */
+export const answerFeedback = callable<
+  [fb: { messageId: string; vote: "up" | "down" | "none"; reason: string; qtype: string; model: string; game: string; markers: boolean; question: string; answer: string }],
+  { ok: boolean; error?: string }
+>("answer_feedback");
 export const reportAnswer = callable<
   [report: { reason: ReportReason; comment: string; question: string; answer: string; game: string; place: string; messageId: string }],
   { ok: boolean; error?: string }

@@ -8,6 +8,7 @@ import { MarkedShot } from "./MarkedShot";
 import { QuestLog } from "./QuestLog";
 import { PageHeader } from "./Brand";
 import { ReportButton, ReportedNote } from "./ReportAnswer";
+import { VoteButtons } from "./VoteButtons";
 
 /** Full-screen reader: the whole conversation for the current game, as a scrolling chat. */
 export function AnswerPage() {
@@ -49,9 +50,10 @@ export function AnswerPage() {
                   <AnswerBlocks text={t.text} chunk={420} />
                   {/* The answer's quest log (steps, or a fight's battle plan); ticks are shared with the panel. */}
                   <QuestLog turn={t} turnIndex={i} />
-                  <div style={{ marginTop: 8 }}>
+                  <Focusable style={{ marginTop: 8, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "flex-start" }} flow-children="horizontal">
+                    <VoteButtons info={{ turn: t, turnIndex: i, question: turns.slice(0, i).reverse().find((x) => x.role === "user")?.text ?? "", game: game?.name ?? "" }} />
                     <ReportButton info={{ turn: t, turnIndex: i, question: turns.slice(0, i).reverse().find((x) => x.role === "user")?.text ?? "", game: game?.name ?? "" }} />
-                  </div>
+                  </Focusable>
                 </>
               )}
             </div>

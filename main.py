@@ -604,6 +604,9 @@ class Plugin:
                 modelUsed=data.get("modelUsed"),
                 quota=_quota_from(data.get("userData")),
             )
+            # The kind of question (sent back with a thumbs up / down for the answer-quality numbers).
+            if str(data.get("qtype") or "") in ("location", "puzzle", "fight", "choice", "missable", "general"):
+                result["qtype"] = data["qtype"]
             # Markers on the screenshot: the answer page shows the screenshot with them drawn on.
             points = _points_from(data)
             if points and shot_url:
@@ -713,6 +716,36 @@ class Plugin:
         if status == 200 and isinstance(data.get("results"), list):
             return {"ok": True, "status": status, "summary": data.get("summary") or "", "results": data["results"]}
         return {"ok": False, "status": status, "error": data.get("error") or f"Search failed (HTTP {status})."}
+
+    async def answer_feedback(self, fb: Dict[str, Any]) -> Dict[str, Any]:
+        """A thumbs up / down on an AI answer (or "none" to take it back), for the answer-quality numbers."""
+        f = fb if isinstance(fb, dict) else {}
+        vote = str(f.get("vote") or "")
+        if vote not in ("up", "down", "none"):
+            return {"ok": False, "error": "Vote up or down."}
+        body = {
+            "messageId": str(f.get("messageId") or "")[:80],
+            "vote": vote,
+            "reason": str(f.get("reason") or "")[:20],
+            "qtype": str(f.get("qtype") or "")[:20],
+            "model": str(f.get("model") or "")[:80],
+            "game": str(f.get("game") or "")[:160],
+            "markers": f.get("markers") is True,
+            "question": str(f.get("question") or "")[:1000],
+            "answer": str(f.get("answer") or "")[:6000],
+            "client": "deck",
+        }
+        token, is_guest, notice = await self._bearer()
+        if token is None:
+            return {"ok": False, "error": notice}
+        status, data = await self._http("POST", "/api/answer-feedback", body=body, token=token)
+        if status == 401 and not is_guest:
+            token, is_guest, _ = await self._bearer(force_refresh=True)
+            if token is not None:
+                status, data = await self._http("POST", "/api/answer-feedback", body=body, token=token)
+        if status == 200 and data.get("ok"):
+            return {"ok": True}
+        return {"ok": False, "error": data.get("error") or f"Could not send the vote (HTTP {status})."}
 
     async def report_answer(self, report: Dict[str, Any]) -> Dict[str, Any]:
         """Report an AI answer (offensive or harmful / wrong or misleading / other), saved on the server for review."""
