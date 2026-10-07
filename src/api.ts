@@ -50,7 +50,7 @@ export interface PluginState {
   email: string | null;
   relinkNeeded: boolean;
   settings: Settings;
-  tools: { gamescopectl: boolean; ffmpeg: boolean };
+  tools: { gamescopectl: boolean; ffmpeg: boolean; recorder?: boolean };
   version: string;
 }
 
@@ -105,6 +105,8 @@ export interface AskRequest {
   language?: string;
   /** A quick question's id (src/quick.ts): the server adds what it asks for. */
   quick?: string;
+  /** Hold to talk: the recorded question (stopRecording), a data URL. */
+  audio?: string;
 }
 
 export interface AskResult {
@@ -174,6 +176,9 @@ export const cancelLink = callable<[], boolean>("cancel_link");
 export const unlink = callable<[], boolean>("unlink");
 export const testScreenshot = callable<[], ScreenshotTest>("test_screenshot");
 /** Report an AI answer for review (Microsoft Store / Steam policy on generated content). */
+/** Hold to talk: record from the Deck's microphone (pw-record), then stop and get it back as a data URL. */
+export const startRecording = callable<[], { ok: boolean; error?: string }>("start_recording");
+export const stopRecording = callable<[], { ok: boolean; audio?: string; error?: string }>("stop_recording");
 /** 👍 / 👎 on an AI answer (or "none": taken back), for the answer-quality numbers. */
 export const answerFeedback = callable<
   [fb: { messageId: string; vote: "up" | "down" | "none"; reason: string; qtype: string; model: string; game: string; markers: boolean; question: string; answer: string }],

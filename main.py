@@ -19,6 +19,9 @@ import pwd
 import secrets
 import re
 import shutil
+import signal
+import tempfile
+import uuid
 import ipaddress
 from urllib.parse import quote, urlsplit
 import ssl
@@ -40,6 +43,8 @@ SHORT_TIMEOUT_S = 20
 TOKEN_REFRESH_MARGIN_S = 120  # refresh Firebase ID tokens this long before they expire
 
 MAX_QUESTION_CHARS = 2000
+# Hold to talk: a recorded voice question (16 kHz mono WAV, under a minute) as a data URL.
+MAX_AUDIO_CHARS = 3_000_000
 MAX_HISTORY_TURNS = 10
 MAX_HISTORY_CHARS = 4000
 MAX_IMAGE_BYTES = 6 * 1024 * 1024
@@ -486,6 +491,8 @@ class Plugin:
             },
             "tools": {
                 "gamescopectl": bool(_which("gamescopectl", env)),
+                # Hold to talk records from the microphone with one of these.
+                "recorder": bool(_which("pw-record", env) or _which("arecord", env)),
                 "ffmpeg": bool(_which("ffmpeg", env)),
             },
             "version": decky.DECKY_PLUGIN_VERSION,
@@ -559,6 +566,10 @@ class Plugin:
         }
         if req.get("quick") in QUICK_IDS:
             payload["quick"] = req["quick"]
+        # Hold to talk: the recorded question (stop_recording), sent as audio like the desktop app's voice questions.
+        audio = req.get("audio")
+        if isinstance(audio, str) and audio.startswith("data:audio/") and len(audio) <= MAX_AUDIO_CHARS:
+            payload["audioBase64"] = audio
         game = req.get("game")
         if isinstance(game, dict) and game.get("name"):
             active: Dict[str, Any] = {"name": str(game["name"])[:200]}
@@ -716,6 +727,70 @@ class Plugin:
         if status == 200 and isinstance(data.get("results"), list):
             return {"ok": True, "status": status, "summary": data.get("summary") or "", "results": data["results"]}
         return {"ok": False, "status": status, "error": data.get("error") or f"Search failed (HTTP {status})."}
+
+    # ---- hold to talk (the Deck's microphone, through PipeWire's pw-record, or arecord) ------------------------
+
+    async def start_recording(self) -> Dict[str, Any]:
+        """Start recording from the default microphone (stopped by stop_recording, or after a minute)."""
+        await self._stop_recorder()
+        env = _clean_env()
+        path = os.path.join(tempfile.gettempdir(), f"qc-voice-{uuid.uuid4().hex}.wav")
+        pw = _which("pw-record", env)
+        ar = _which("arecord", env)
+        if pw:
+            cmd = [pw, "--rate", "16000", "--channels", "1", "--format", "s16", path]
+        elif ar:
+            cmd = [ar, "-q", "-f", "S16_LE", "-r", "16000", "-c", "1", "-d", "60", path]
+        else:
+            return {"ok": False, "error": "No recorder found (pw-record or arecord)."}
+        try:
+            proc = await asyncio.create_subprocess_exec(*cmd, stdout=DEVNULL, stderr=PIPE, env=env)
+        except Exception as e:  # noqa: BLE001
+            return {"ok": False, "error": f"Could not start the microphone: {e}"}
+        self._recorder = {"proc": proc, "path": path, "started": time.time()}
+        # Never record for more than a minute.
+        asyncio.get_event_loop().call_later(60, lambda: asyncio.ensure_future(self._stop_recorder()))
+        return {"ok": True}
+
+    async def _stop_recorder(self) -> Optional[str]:
+        rec = getattr(self, "_recorder", None)
+        self._recorder = None
+        if not rec:
+            return None
+        proc = rec["proc"]
+        if proc.returncode is None:
+            try:
+                proc.send_signal(signal.SIGINT)
+                await asyncio.wait_for(proc.wait(), timeout=3)
+            except Exception:  # noqa: BLE001
+                try:
+                    proc.kill()
+                except Exception:  # noqa: BLE001
+                    pass
+        return rec["path"]
+
+    async def stop_recording(self) -> Dict[str, Any]:
+        """Stop recording and return it as a data URL (audio/wav), ready for ask() as `audio`."""
+        path = await self._stop_recorder()
+        if not path:
+            return {"ok": False, "error": "Not recording."}
+        try:
+            with open(path, "rb") as f:
+                data = f.read()
+        except OSError as e:
+            return {"ok": False, "error": f"No recording ({e.strerror})."}
+        finally:
+            try:
+                os.remove(path)
+            except OSError:
+                pass
+        # A WAV header alone (44 bytes) or a fraction of a second: nothing was said.
+        if len(data) < 16000:
+            return {"ok": False, "error": "Too short: hold the button while you speak."}
+        b64 = base64.b64encode(data).decode("ascii")
+        if len(b64) > MAX_AUDIO_CHARS:
+            return {"ok": False, "error": "Too long: keep voice questions under a minute."}
+        return {"ok": True, "audio": f"data:audio/wav;base64,{b64}"}
 
     async def answer_feedback(self, fb: Dict[str, Any]) -> Dict[str, Any]:
         """A thumbs up / down on an AI answer (or "none" to take it back), for the answer-quality numbers."""

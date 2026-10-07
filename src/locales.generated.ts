@@ -5,6 +5,10 @@
  */
 export const GENERATED: Record<string, Record<string, string>> = {
   de: {
+    "talk.button": "Halten zum Sprechen",
+    "talk.listening": "Zuhören… Loslassen zum Senden",
+    "talk.voice": "Sprachnachricht",
+    "talk.failed": "Das Mikrofon konnte nicht verwendet werden.",
     "vote.up": "Gute Antwort",
     "vote.down": "Keine gute Antwort",
     "vote.whatWrong": "Was hat nicht gestimmt?",
@@ -265,6 +269,10 @@ export const GENERATED: Record<string, Record<string, string>> = {
     "report.showAnyway": "Mostrar de todos modos"
   },
   fr: {
+    "talk.button": "Maintenir pour parler",
+    "talk.listening": "Écoute en cours… relâche pour envoyer",
+    "talk.voice": "Message vocal",
+    "talk.failed": "Impossible d'utiliser le micro.",
     "vote.up": "Bonne réponse",
     "vote.down": "Pas terrible",
     "vote.whatWrong": "Quel était le problème ?",
@@ -509,6 +517,10 @@ export const GENERATED: Record<string, Record<string, string>> = {
     "browser.backendDown": "Le backend du plugin ne répond pas."
   },
   ja: {
+    "talk.button": "長押しで話す",
+    "talk.listening": "聞き取り中… 離して送信",
+    "talk.voice": "音声メッセージ",
+    "talk.failed": "マイクを使用できませんでした。",
     "vote.up": "わかりやすい",
     "vote.down": "わかりにくい",
     "vote.whatWrong": "問題点は何でしたか？",
@@ -753,6 +765,10 @@ export const GENERATED: Record<string, Record<string, string>> = {
     "browser.backendDown": "プラグインのバックエンドが応答していません。"
   },
   ko: {
+    "talk.button": "누른 상태로 말하기",
+    "talk.listening": "듣는 중… 손을 떼면 전송됩니다",
+    "talk.voice": "음성 메시지",
+    "talk.failed": "마이크를 사용할 수 없습니다.",
     "vote.up": "도움이 됐어요",
     "vote.down": "아쉬워요",
     "vote.whatWrong": "어떤 점이 아쉬웠나요?",
@@ -1013,6 +1029,10 @@ export const GENERATED: Record<string, Record<string, string>> = {
     "report.showAnyway": "Mostrar mesmo assim"
   },
   ru: {
+    "talk.button": "Удерживать для речи",
+    "talk.listening": "Слушаю… отпустите для отправки",
+    "talk.voice": "Голосовое сообщение",
+    "talk.failed": "Не удалось использовать микрофон.",
     "vote.up": "Хороший ответ",
     "vote.down": "Плохой ответ",
     "vote.whatWrong": "Что пошло не так?",
@@ -1257,6 +1277,10 @@ export const GENERATED: Record<string, Record<string, string>> = {
     "browser.backendDown": "Бэкенд плагина не отвечает."
   },
   zh: {
+    "talk.button": "按住说话",
+    "talk.listening": "正在倾听… 松开发送",
+    "talk.voice": "语音消息",
+    "talk.failed": "无法使用麦克风。",
     "vote.up": "回答不错",
     "vote.down": "回答不好",
     "vote.whatWrong": "哪里有问题？",

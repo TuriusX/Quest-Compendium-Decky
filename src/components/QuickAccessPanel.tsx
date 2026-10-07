@@ -8,7 +8,7 @@ import {
   PanelSectionRow,
   TextField,
 } from "@decky/ui";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FaCog, FaComments, FaPlus } from "react-icons/fa";
 import { ask, AskRequest, getQuota, getState, PluginState, Turn } from "../api";
 import { currentGame, useCurrentGame } from "../game";
@@ -27,6 +27,8 @@ import { PointChecklist } from "./PointChecklist";
 import { QuestLog } from "./QuestLog";
 import { storyPhrase } from "../format";
 import { QUICK_MAIN, QUICK_MORE, QUICK_FOLLOW, type QuickId } from "../quick";
+import { startRecording, stopRecording } from "../api";
+import { GamepadButton } from "@decky/ui";
 
 /** Segmented "mana" bar for the daily questions, like the desktop app's header. */
 function ManaBar({ value, max }: { value: number; max: number }) {
@@ -88,8 +90,9 @@ export function QuickAccessPanel() {
   /**
    * opts.shot: always take a screenshot (Next turn needs the fight as it is now), even with screenshots off.
    * opts.quick: a quick question's id (its label is the question; the server adds what it asks for).
+   * opts.audio: hold to talk's recording (the question is spoken; a screenshot goes with it).
    */
-  const submit = async (question: string, opts: { shot?: boolean; quick?: QuickId } = {}) => {
+  const submit = async (question: string, opts: { shot?: boolean; quick?: QuickId; audio?: string } = {}) => {
     const q = question.trim();
     if (!q || getChat().busy || !ps) return;
     setPrompt("");
@@ -104,6 +107,7 @@ export function QuickAccessPanel() {
       game: liveGame,
       language: aiLanguageName(),
       ...(opts.quick ? { quick: opts.quick } : {}),
+      ...(opts.audio ? { audio: opts.audio } : {}),
     };
     setChat({ busy: true, pending: q, error: null, notice: null, screenshotNote: null, limitReached: false, freshAnswer: false });
     try {
@@ -165,6 +169,26 @@ export function QuickAccessPanel() {
   // Next turn (a fight): a fresh screenshot and a short question for whoever acts now; its answer replaces the plan.
   const canNextTurn = !!ps?.tools.gamescopectl && !!game;
   const nextTurn = () => submit(t("log.nextTurnQ"), { shot: true });
+  // Hold to talk: hold A on the button to speak, let go to send (with a screenshot); a touch tap starts and stops.
+  const [talking, setTalking] = useState(false);
+  const [talkError, setTalkError] = useState<string | null>(null);
+  // Steam also sends a click when A comes back up: a click right after a gamepad press isn't a touch tap.
+  const lastPadAt = useRef(0);
+  const talkStart = async () => {
+    if (talking || chat.busy || !ps) return;
+    setTalkError(null);
+    const r = await startRecording().catch((e) => ({ ok: false, error: String(e?.message || e) }));
+    if (r.ok) setTalking(true);
+    else setTalkError(r.error || t("talk.failed"));
+  };
+  const talkEnd = async () => {
+    if (!talking) return;
+    setTalking(false);
+    const r: { ok: boolean; audio?: string; error?: string } = await stopRecording().catch((e) => ({ ok: false, error: String(e?.message || e) }));
+    if (r.ok && r.audio) void submit(t("talk.voice"), { audio: r.audio, shot: true });
+    else setTalkError(r.error || t("talk.failed"));
+  };
+  const canTalk = !!ps?.tools.recorder;
   const askQuick = (id: QuickId) => submit(t(`quick.${id}`), { quick: id, ...(id === "where" ? { shot: true } : {}) });
   // "Show me where on screen": markers need an answer about a screenshot, and a fresh screenshot of the game now.
   const followUps = QUICK_FOLLOW.filter((id) => id !== "where" || (canNextTurn && !!last?.turn.sawShot));
@@ -197,6 +221,24 @@ export function QuickAccessPanel() {
           onChange={(opt) => askQuick(opt.data as QuickId)}
         />
       </PanelSectionRow>
+      {canTalk && (
+        <PanelSectionRow>
+          <DialogButton
+            disabled={chat.busy || !ps}
+            onButtonDown={(e: any) => { if (e?.detail?.button === GamepadButton.OK) { lastPadAt.current = Date.now(); void talkStart(); } }}
+            onButtonUp={(e: any) => { if (e?.detail?.button === GamepadButton.OK) { lastPadAt.current = Date.now(); void talkEnd(); } }}
+            onClick={() => {
+              if (Date.now() - lastPadAt.current < 800) return;
+              if (talking) void talkEnd();
+              else void talkStart();
+            }}
+            style={talking ? { outline: "2px solid #a87ffb" } : undefined}
+          >
+            {talking ? t("talk.listening") : t("talk.button")}
+          </DialogButton>
+          {talkError && <div className="qc-note qc-muted" style={{ marginTop: 4 }}>{talkError}</div>}
+        </PanelSectionRow>
+      )}
       <PanelSectionRow>
         <TextField
           label={answer ? t("ask.followup") : t("ask.type")}
