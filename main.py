@@ -178,16 +178,22 @@ def _to_int(value: Any) -> Optional[int]:
 
 
 def _quota_from(user_data: Any) -> Optional[Dict[str, Any]]:
-    """One daily question allowance (since app v0.3). `daily` is only in account-status replies."""
+    """The day's questions: Pro and Fast left (the player picks one next to Send), each one's daily allowance, and when
+    the day resets (ms). `left`/`daily` are the older single count (the Fast questions)."""
     if not isinstance(user_data, dict):
         return None
     left = user_data.get("questionsAvailable", user_data.get("flashQueriesAvailable"))
-    return {
+    out: Dict[str, Any] = {
         "left": _to_int(left),
         "daily": _to_int(user_data.get("dailyQuestions")),
         "isPremium": user_data.get("isPremium") is True,
         "isGuest": user_data.get("isGuest") is True,
     }
+    for key, src in (("pro", "proQueriesAvailable"), ("fast", "flashQueriesAvailable"), ("dailyPro", "dailyPro"), ("dailyFast", "dailyFlash"), ("resetAt", "resetAt")):
+        v = _to_int(user_data.get(src))
+        if v is not None:
+            out[key] = max(0, v)
+    return out
 
 
 def _points_from(data: Any) -> List[Dict[str, Any]]:
@@ -359,6 +365,9 @@ class Plugin:
         headers = {"User-Agent": f"QuestCompendiumDeck/{decky.DECKY_PLUGIN_VERSION}"}
         if token:
             headers["Authorization"] = f"Bearer {token}"
+        # The Deck's time zone (from the panel), so the day's questions reset at local midnight.
+        if getattr(self, "_tz", ""):
+            headers["x-qc-tz"] = self._tz
         try:
             timeout = aiohttp.ClientTimeout(total=timeout_s)
             connector = aiohttp.TCPConnector(ssl=self._ssl)
@@ -526,7 +535,13 @@ class Plugin:
         self._save()
         return True
 
-    async def get_quota(self) -> Dict[str, Any]:
+    def _remember_tz(self, tz: Any) -> None:
+        tz = str(tz or "").strip()
+        if tz and len(tz) <= 64 and all(c.isalnum() or c in "/_+-" for c in tz):
+            self._tz = tz
+
+    async def get_quota(self, tz: str = "") -> Dict[str, Any]:
+        self._remember_tz(tz)
         token, _, notice = await self._bearer()
         if token is None:
             return {"ok": False, "error": notice}
@@ -568,7 +583,12 @@ class Plugin:
             "aiMode": mode,
             # The panel resolves the language (including "auto" = Steam's language) and sends it along.
             "language": req.get("language") if req.get("language") in AI_LANGUAGES else (s.get("language") or "English"),
+            # Pro or Fast, picked next to Send (when it's used up today, the server answers with the other one).
+            "answerModel": "fast" if req.get("answerModel") in ("fast", "flash") else "pro",
         }
+        self._remember_tz(req.get("timeZone"))
+        if getattr(self, "_tz", ""):
+            payload["timeZone"] = self._tz
         if req.get("quick") in QUICK_IDS:
             payload["quick"] = req["quick"]
         # Hold to talk: the recorded question (stop_recording), sent as audio like the desktop app's voice questions.
@@ -620,6 +640,11 @@ class Plugin:
                 modelUsed=data.get("modelUsed"),
                 quota=_quota_from(data.get("userData")),
             )
+            # Which model answered; switched = the picked one was used up and the other answered.
+            if data.get("answeredWith") in ("pro", "fast"):
+                result["answeredWith"] = data["answeredWith"]
+                if data.get("switched") is True:
+                    result["switched"] = True
             # The kind of question (sent back with a thumbs up / down for the answer-quality numbers).
             if str(data.get("qtype") or "") in ("location", "puzzle", "fight", "choice", "missable", "general"):
                 result["qtype"] = data["qtype"]
@@ -649,6 +674,9 @@ class Plugin:
                     result["place"]["story"] = story
         elif status == 429:
             result.update(ok=True, limitReached=True, text=data.get("text") or "Daily limit reached.")
+            q = _quota_from(data.get("userData"))
+            if q:
+                result["quota"] = q
         else:
             result.update(ok=False, error=data.get("error") or f"Server error ({status}).")
         return result

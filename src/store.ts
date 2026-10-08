@@ -128,9 +128,15 @@ export function lastQuestion(chat: ChatState): string | null {
   return null;
 }
 
-/** Answers from the chat endpoint don't include the daily allowance; keep the one from the last status check. */
+/** Answers from the chat endpoint may not include the daily allowances or the reset; keep the last status check's. */
 export function mergeQuota(prev: Quota | null, next: Quota): Quota {
-  return { ...next, daily: next.daily ?? prev?.daily ?? null };
+  return {
+    ...next,
+    daily: next.daily ?? prev?.daily ?? null,
+    ...(next.dailyPro ?? prev?.dailyPro) !== undefined ? { dailyPro: next.dailyPro ?? prev?.dailyPro } : {},
+    ...(next.dailyFast ?? prev?.dailyFast) !== undefined ? { dailyFast: next.dailyFast ?? prev?.dailyFast } : {},
+    ...(next.resetAt ?? prev?.resetAt) !== undefined ? { resetAt: next.resetAt ?? prev?.resetAt } : {},
+  };
 }
 
 /** Screenshots are big: keep them only on the latest few answers (older answers keep their text and markers list). */

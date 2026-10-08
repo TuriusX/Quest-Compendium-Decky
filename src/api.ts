@@ -16,11 +16,21 @@ export interface Settings {
 
 /** One daily question allowance (since app v0.3). `daily` comes with account-status checks only. */
 export interface Quota {
+  /** The older single count (the Fast questions left). */
   left: number | null;
   daily: number | null;
   isPremium: boolean;
   isGuest: boolean;
+  /** Pro and Fast questions left today (the switch next to Send), each one's daily allowance, and the reset (ms). */
+  pro?: number;
+  fast?: number;
+  dailyPro?: number;
+  dailyFast?: number;
+  resetAt?: number;
 }
+
+/** The player's pick next to Send: Pro (the best answers) or Fast (quicker answers). */
+export type AnswerModel = "pro" | "fast";
 
 /** A spot the AI marked on the screenshot (0-1 fractions from the top-left). */
 export interface ShotPoint {
@@ -103,6 +113,10 @@ export interface AskRequest {
   game: GameInfo | null;
   /** Language the AI should answer in ("English", "Spanish", "Brazilian Portuguese"). */
   language?: string;
+  /** Pro or Fast; when it's used up today, the server answers with the other one. */
+  answerModel?: AnswerModel;
+  /** The Deck's time zone, so the day's questions reset at local midnight. */
+  timeZone?: string;
   /** A quick question's id (src/quick.ts): the server adds what it asks for. */
   quick?: string;
   /** Hold to talk: the recorded question (stopRecording), a data URL. */
@@ -114,6 +128,9 @@ export interface AskResult {
   error?: string;
   text?: string;
   limitReached?: boolean;
+  /** Which model answered, and whether that's the other one (the picked one was used up). */
+  answeredWith?: AnswerModel;
+  switched?: boolean;
   modelUsed?: string;
   /** The kind of question (location, puzzle, fight, choice, missable, general). */
   qtype?: string;
@@ -168,7 +185,7 @@ export interface ScreenshotTest {
 // Each callable maps to a public `async def` on the Python `Plugin` class.
 export const getState = callable<[], PluginState>("get_state");
 export const saveSettings = callable<[patch: Partial<Settings>], boolean>("save_settings");
-export const getQuota = callable<[], QuotaResult>("get_quota");
+export const getQuota = callable<[tz?: string], QuotaResult>("get_quota");
 export const ask = callable<[req: AskRequest], AskResult>("ask");
 export const startLink = callable<[], LinkStart>("start_link");
 export const pollLink = callable<[], LinkPoll>("poll_link");

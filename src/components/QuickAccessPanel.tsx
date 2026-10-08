@@ -10,7 +10,9 @@ import {
 } from "@decky/ui";
 import { useEffect, useRef, useState } from "react";
 import { FaCog, FaComments, FaPlus } from "react-icons/fa";
-import { ask, AskRequest, getQuota, getState, PluginState, Turn } from "../api";
+import { ask, AskRequest, AnswerModel, getQuota, getState, PluginState, saveSettings, Turn } from "../api";
+import { balancesOf, deviceTimeZone, modelOf, settingOf, startingModel } from "../answerModel";
+import { ModelToggle } from "./ModelToggle";
 import { currentGame, useCurrentGame } from "../game";
 import { rememberPlace } from "../qcGuides";
 import { setTab, useBrowser } from "../browser";
@@ -50,6 +52,10 @@ export function QuickAccessPanel() {
   const [ps, setPs] = useState<PluginState | null>(null);
   const [prompt, setPrompt] = useState("");
   const [backendDown, setBackendDown] = useState(false);
+  // Pro / Fast next to Send: the saved pick when it has questions left, else the other one (with a short note).
+  const [answerModel, setAnswerModel] = useState<AnswerModel>("pro");
+  const [modelNote, setModelNote] = useState("");
+  const noteTimer = useRef<number | undefined>(undefined);
 
   const refreshState = async () => {
     try {
@@ -64,7 +70,7 @@ export function QuickAccessPanel() {
 
   const refreshQuota = async () => {
     try {
-      const res = await getQuota();
+      const res = await getQuota(deviceTimeZone());
       if (res.ok && res.quota) setChat({ quota: mergeQuota(getChat().quota, res.quota) });
     } catch {
       /* quota display is best-effort */
@@ -75,6 +81,39 @@ export function QuickAccessPanel() {
     void refreshState();
     void refreshQuota();
   }, []);
+
+  const noteSwitch = (to: AnswerModel) => {
+    setModelNote(t(to === "fast" ? "model.switchedToFast" : "model.switchedToPro"));
+    window.clearTimeout(noteTimer.current);
+    noteTimer.current = window.setTimeout(() => setModelNote(""), 5000);
+  };
+  const chooseModel = (m: AnswerModel) => {
+    setAnswerModel(m);
+    setModelNote("");
+    if (ps) setPs({ ...ps, settings: { ...ps.settings, model: settingOf(m) } });
+    void saveSettings({ model: settingOf(m) }).catch(() => {});
+  };
+  // Start with the saved pick once the settings are in.
+  const savedModel = modelOf(ps?.settings.model);
+  useEffect(() => {
+    if (ps) setAnswerModel(startingModel(savedModel, getChat().quota));
+  }, [ps?.settings.model]);
+  // New counts (an answer or a status check): back to the saved pick when it has questions again (a new day), or off a
+  // pick that just ran out, saying so.
+  const bal = balancesOf(chat.quota);
+  useEffect(() => {
+    if (!ps || bal.pro === null || bal.fast === null) return;
+    const left = (m: AnswerModel) => (m === "pro" ? bal.pro : bal.fast) as number;
+    if (answerModel !== savedModel && left(savedModel) > 0) {
+      setAnswerModel(savedModel);
+      return;
+    }
+    const other: AnswerModel = answerModel === "pro" ? "fast" : "pro";
+    if (left(answerModel) === 0 && left(other) > 0) {
+      setAnswerModel(other);
+      noteSwitch(other);
+    }
+  }, [bal.pro, bal.fast]);
 
   // A new game means a new conversation.
   useEffect(() => {
@@ -106,6 +145,8 @@ export function QuickAccessPanel() {
       history: getChat().history.map(({ role, text }) => ({ role, text })),
       game: liveGame,
       language: aiLanguageName(),
+      answerModel,
+      timeZone: deviceTimeZone(),
       ...(opts.quick ? { quick: opts.quick } : {}),
       ...(opts.audio ? { audio: opts.audio } : {}),
     };
@@ -120,6 +161,11 @@ export function QuickAccessPanel() {
           res.screenshot === "failed" ? t("answer.shotFailed", { error: res.screenshotError ?? "?" }) : null,
       };
       if (res.quota) patch.quota = mergeQuota(getChat().quota, res.quota);
+      // The picked model was used up today and the other one answered: follow it, and say so.
+      if (res.switched && res.answeredWith && res.answeredWith !== answerModel) {
+        setAnswerModel(res.answeredWith);
+        noteSwitch(res.answeredWith);
+      }
       if (res.ok && res.limitReached) {
         patch.pending = null;
         patch.limitReached = true;
@@ -249,6 +295,11 @@ export function QuickAccessPanel() {
             if (e.key === "Enter" && prompt.trim() && !chat.busy) void submit(prompt);
           }}
         />
+      </PanelSectionRow>
+      <PanelSectionRow>
+        {/* Pro / Fast for the next question, with the questions left of each (as in the desktop app). */}
+        <ModelToggle value={answerModel} onChange={chooseModel} pro={bal.pro} fast={bal.fast} disabled={chat.busy || !ps} />
+        {modelNote && <div className="qc-note qc-muted" style={{ marginTop: 4 }}>{modelNote}</div>}
       </PanelSectionRow>
       <PanelSectionRow>
         <ButtonItem layout="below" disabled={chat.busy || !ps || !prompt.trim()} onClick={() => submit(prompt)}>
@@ -416,8 +467,16 @@ export function QuickAccessPanel() {
               ))}
             </span>
             <span className={q?.isPremium ? "qc-chip qc-chip-gold" : "qc-chip"}>
-              {q ? t("status.left", { n: q.left ?? "?" }) : t("card.checking")}
-              {q && typeof q.left === "number" && <ManaBar value={q.left} max={q.daily ?? (q.isPremium ? 60 : 10)} />}
+              {/* Both counts when the server sends them (Pro / Fast), else the older single count. */}
+              {!q ? t("card.checking") : bal.pro !== null && bal.fast !== null ? t("status.models", { pro: bal.pro, fast: bal.fast }) : t("status.left", { n: q.left ?? "?" })}
+              {q && bal.pro !== null && bal.fast !== null ? (
+                <ManaBar
+                  value={answerModel === "pro" ? bal.pro : bal.fast}
+                  max={Math.max(answerModel === "pro" ? bal.pro : bal.fast, (answerModel === "pro" ? q.dailyPro : q.dailyFast) ?? 1)}
+                />
+              ) : (
+                q && typeof q.left === "number" && <ManaBar value={q.left} max={q.daily ?? (q.isPremium ? 60 : 10)} />
+              )}
             </span>
           </div>
         </PanelSectionRow>

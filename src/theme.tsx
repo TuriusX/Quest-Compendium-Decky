@@ -84,6 +84,14 @@ const CSS = `
 .qc-pt-sub { font-size: 12px; line-height: 1.35; color: #b9b2d6; margin-top: 1px; }
 .qc-pt-done .qc-pt-label { opacity: 0.55; text-decoration: line-through; }
 .qc-pt-done .qc-pt-sub { opacity: 0.55; }
+/* Pro / Fast next to Send, each with the questions left */
+.qc-model { display: flex; gap: 4px; width: 100%; }
+.qc-model > .qc-model-opt { flex: 1 1 0 !important; min-width: 0 !important; display: flex !important; align-items: center !important;
+  justify-content: center !important; gap: 6px; padding: 6px 8px !important; font-size: 13px !important; opacity: 0.75; }
+.qc-model > .qc-model-on { opacity: 1; background: rgba(139, 92, 246, 0.32) !important; box-shadow: inset 0 0 0 1px rgba(167, 139, 250, 0.7); }
+.qc-model > .qc-model-empty { opacity: 0.45; }
+.qc-model-n { font-family: 'Silkscreen', monospace; font-size: 12px; color: #c4b5fd; }
+.qc-model-on .qc-model-n { color: #fde68a; }
 /* The quest log: section label, warnings in amber, a fight's top targets in red, Next turn */
 .qc-log-sec { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #b9b2d6; padding: 2px 8px 0; }
 .qc-log-battle { color: #f87171; }
