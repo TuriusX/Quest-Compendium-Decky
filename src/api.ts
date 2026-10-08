@@ -229,7 +229,14 @@ export interface QcGuidePage {
 export interface QcGuideFight { id: string; name: string; enemies?: string; threats?: string; weaknesses?: string; tactics?: string; rewards?: string }
 export const guidesList = callable<[], { ok: boolean; games?: QcGuideGame[]; source?: "index" | "server"; error?: string }>("guides_list");
 export const guideFind = callable<[game: string, lang?: string], { ok: boolean; key?: string | null; game?: string; areas?: QcGuideArea[]; error?: string }>("guide_find");
-export const guideGame = callable<[key: string, lang?: string], { ok: boolean; key?: string; game?: string; art?: string; areas?: QcGuideArea[]; error?: string }>("guide_game");
+export const guideGame = callable<[key: string, lang?: string], { ok: boolean; key?: string; game?: string; art?: string; areas?: QcGuideArea[]; entities?: QcEntityRef[]; error?: string }>("guide_game");
+/** One of the guide's entity pages, as the area list sends it (the compendium). */
+export interface QcEntityRef { slug: string; name: string; type: string; region?: string; line?: string }
+export interface QcEntity {
+  slug: string; name: string; type: string; overview?: string;
+  summary?: { region?: string; where?: string; gettingThere?: string; shops?: { name: string; what?: string }[]; services?: string[]; places?: { name: string; what?: string }[]; collectibles?: { name: string; where?: string }[]; quests?: { name: string; kind?: string; chapter?: string }[]; notes?: string[] };
+}
+export const guideEntity = callable<[key: string, slug: string], { ok: boolean; entity?: QcEntity; error?: string }>("guide_entity");
 export const guideArea = callable<[key: string, slug: string, lang?: string], { ok: boolean; page?: QcGuidePage; error?: string }>("guide_area");
 /** One achievement in a guide's achievement guide (name and tips in the guide's language; englishName is Steam's). */
 export interface QcAchievementTip {

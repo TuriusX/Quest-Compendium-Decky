@@ -5,6 +5,11 @@
  */
 export const GENERATED: Record<string, Record<string, string>> = {
   de: {
+    "qcg.compendium": "Kompendium",
+    "qcg.entWhere": "Wo",
+    "qcg.entThere": "Was gibt's hier",
+    "qcg.entCollectibles": "Sammelobjekte",
+    "qcg.inThisPage": "In diesem Kapitel",
     "card.questionsLeft": "Noch {n} Fragen",
     "shot.marked1": "1 Stelle auf deinem Screenshot markiert: ansehen",
     "shot.markedN": "{n} Stellen auf deinem Screenshot markiert: ansehen",
@@ -283,6 +288,11 @@ export const GENERATED: Record<string, Record<string, string>> = {
     "report.showAnyway": "Mostrar de todos modos"
   },
   fr: {
+    "qcg.compendium": "Compendium",
+    "qcg.entWhere": "Où",
+    "qcg.entThere": "Ce qui s'y trouve",
+    "qcg.entCollectibles": "Objets à collectionner",
+    "qcg.inThisPage": "Dans ce chapitre",
     "card.questionsLeft": "{n} questions restantes",
     "shot.marked1": "1 élément indiqué sur ta capture : voir",
     "shot.markedN": "{n} éléments indiqués sur ta capture : voir",
@@ -545,6 +555,11 @@ export const GENERATED: Record<string, Record<string, string>> = {
     "browser.backendDown": "Le backend du plugin ne répond pas."
   },
   ja: {
+    "qcg.compendium": "図鑑",
+    "qcg.entWhere": "場所",
+    "qcg.entThere": "出現・獲得アイテム",
+    "qcg.entCollectibles": "収集物",
+    "qcg.inThisPage": "この章の内容",
     "card.questionsLeft": "残り{n}問",
     "shot.marked1": "スクショに1か所マークあり: 確認する",
     "shot.markedN": "スクショに{n}か所マークあり: 確認する",
@@ -807,6 +822,11 @@ export const GENERATED: Record<string, Record<string, string>> = {
     "browser.backendDown": "プラグインのバックエンドが応答していません。"
   },
   ko: {
+    "qcg.compendium": "도감",
+    "qcg.entWhere": "위치",
+    "qcg.entThere": "발견 항목",
+    "qcg.entCollectibles": "수집품",
+    "qcg.inThisPage": "이 챕터의 내용",
     "card.questionsLeft": "남은 질문 {n}개",
     "shot.marked1": "스크린샷에 1곳 표시됨: 확인하기",
     "shot.markedN": "스크린샷에 {n}곳 표시됨: 확인하기",
@@ -1085,6 +1105,11 @@ export const GENERATED: Record<string, Record<string, string>> = {
     "report.showAnyway": "Mostrar mesmo assim"
   },
   ru: {
+    "qcg.compendium": "Компендиум",
+    "qcg.entWhere": "Где найти",
+    "qcg.entThere": "Что там есть",
+    "qcg.entCollectibles": "Коллекционки",
+    "qcg.inThisPage": "В этой главе",
     "card.questionsLeft": "Осталось вопросов: {n}",
     "shot.marked1": "На скриншоте отмечено 1 место: глянуть",
     "shot.markedN": "На скриншоте отмечено мест: {n}: глянуть",
@@ -1347,6 +1372,11 @@ export const GENERATED: Record<string, Record<string, string>> = {
     "browser.backendDown": "Бэкенд плагина не отвечает."
   },
   zh: {
+    "qcg.compendium": "图鉴",
+    "qcg.entWhere": "位置",
+    "qcg.entThere": "此处内容",
+    "qcg.entCollectibles": "收集品",
+    "qcg.inThisPage": "本章导览",
     "card.questionsLeft": "剩余 {n} 个提问机会",
     "shot.marked1": "截图上有 1 处标记：点击查看",
     "shot.markedN": "截图上有 {n} 处标记：点击查看",

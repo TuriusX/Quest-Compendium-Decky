@@ -3,10 +3,13 @@ import { useEffect, useState } from "react";
 import {
   guideAchievements,
   guideArea,
+  guideEntity,
   guideGame,
   guidesList,
   type QcAchievementGuide,
   type QcAchievementTip,
+  type QcEntity,
+  type QcEntityRef,
   type QcGuideArea,
   type QcGuideEntry,
   type QcGuidePage,
@@ -28,6 +31,7 @@ import {
   useGuideView,
   writeDone,
 } from "../qcGuides";
+import { mentionedEntities } from "../entityLinks";
 import { cachedIndex, normalizeGames, orderGuides, recentGuides, rememberGuideOpened, saveIndex, saveSort, savedSort, type GuideSort } from "../guideIndex";
 
 /**
@@ -81,6 +85,7 @@ function GuideViews({ full, ours, gameName }: { full: boolean; ours: { key: stri
   if (v.view === "game") return <GameAreas key={v.key} gameKey={v.key} game={v.game} full={full} gameName={gameName} />;
   if (v.view === "area") return <AreaPage key={`${v.key}/${v.slug}`} gameKey={v.key} slug={v.slug} game={v.game} full={full} />;
   if (v.view === "achievements") return <AchievementsPage key={`${v.key}/achievements`} gameKey={v.key} game={v.game} full={full} />;
+  if (v.view === "entity") return <EntityPage key={`${v.key}/e/${v.slug}`} gameKey={v.key} slug={v.slug} game={v.game} full={full} />;
   return <AllGames ours={ours} full={full} />;
 }
 
@@ -252,7 +257,7 @@ function AllGames({ ours, full }: { ours: { key: string; game: string } | null; 
 
 function GameAreas({ gameKey, game, full, gameName }: { gameKey: string; game?: string; full: boolean; gameName?: string }) {
   const t = useT();
-  const s = useLoad<{ game?: string; art?: string; areas?: QcGuideArea[] }>(() => guideGame(gameKey, getLocale()));
+  const s = useLoad<{ game?: string; art?: string; areas?: QcGuideArea[]; entities?: QcEntityRef[] }>(() => guideGame(gameKey, getLocale()));
   // The achievement guide, by the guide's key and in the plugin's language (most guides don't have one yet).
   const ach = useLoad<{ guide?: QcAchievementGuide }>(() => guideAchievements(gameKey, getLocale())).data?.guide;
   const name = s.data?.game || game || "";
@@ -303,6 +308,19 @@ function GameAreas({ gameKey, game, full, gameName }: { gameKey: string; game?: 
           </Focusable>
         </Row>
       )}
+      {!needle && !!s.data?.entities?.length && (
+        <Row>
+          <Focusable className="qcgp-list" flow-children="vertical">
+            <div className="qcgp-section">{t("qcg.compendium")}</div>
+            {s.data.entities.map((e) => (
+              <DialogButton key={e.slug} className="qcgp-row" onClick={() => guideGo({ view: "entity", key: gameKey, slug: e.slug, game: name })}>
+                <span className="qcgp-row-title">{e.name}</span>
+                <span className="qcgp-row-sub">{e.type}{e.region ? ` · ${e.region}` : ""}</span>
+              </DialogButton>
+            ))}
+          </Focusable>
+        </Row>
+      )}
       <Row>
         <Focusable className="qcgp-list" flow-children="vertical">
           {!needle && ach && (
@@ -339,7 +357,7 @@ function GameAreas({ gameKey, game, full, gameName }: { gameKey: string; game?: 
 function AreaPage({ gameKey, slug, game, full }: { gameKey: string; slug: string; game?: string; full: boolean }) {
   const t = useT();
   const s = useLoad<{ page?: QcGuidePage }>(() => guideArea(gameKey, slug, getLocale()));
-  const order = useLoad<{ areas?: QcGuideArea[] }>(() => guideGame(gameKey, getLocale()));
+  const order = useLoad<{ areas?: QcGuideArea[]; entities?: QcEntityRef[] }>(() => guideGame(gameKey, getLocale()));
   const [done, setDone] = useState<Set<string>>(() => readDone(gameKey, slug));
   const [openSec, setOpenSec] = useState<Set<string>>(new Set());
   useEffect(() => rememberArea(gameKey, slug), [gameKey, slug]);
@@ -515,6 +533,21 @@ function AreaPage({ gameKey, slug, game, full }: { gameKey: string; slug: string
             )}
           {page.tips.length > 0 && section("tips", t("qcg.tips"), page.tips.map((tip, i) => text(`tip${i}`, <>• {tip}</>)))}
 
+          {(() => {
+            // The guide's entity pages this page mentions: one button each ("In this chapter").
+            const text = [page.overview, page.story, ...page.items.map((e) => `${e.name} ${e.where || ""}`), ...page.tips, ...(page.sections || []).flatMap((x) => x.entries.map((e) => e.text))].join(" ");
+            const here = mentionedEntities(text, order.data?.entities || []);
+            return here.length ? (
+              <>
+                <div className="qcgp-section">{t("qcg.inThisPage")}</div>
+                {here.map((e) => (
+                  <DialogButton key={e.slug} className="qcgp-nav" onClick={() => guideGo({ view: "entity", key: gameKey, slug: e.slug, game })}>
+                    {e.name} <span className="qcg-detail">· {e.type}</span>
+                  </DialogButton>
+                ))}
+              </>
+            ) : null;
+          })()}
           {prev && (
             <DialogButton className="qcgp-nav" onClick={() => go(prev)}>
               ◀ {prev.name}
@@ -525,6 +558,51 @@ function AreaPage({ gameKey, slug, game, full }: { gameKey: string; slug: string
               {next.name} ▶
             </DialogButton>
           )}
+        </Focusable>
+      </Row>
+    </>
+  );
+}
+
+// ---- Entity pages (the compendium) ----
+function EntityPage({ gameKey, slug, game, full }: { gameKey: string; slug: string; game?: string; full: boolean }) {
+  const t = useT();
+  const s = useLoad<{ entity?: QcEntity }>(() => guideEntity(gameKey, slug));
+  const e = s.data?.entity;
+  const text = (k: string | number, children: React.ReactNode) => (
+    <Focusable key={k} className="qcgp-text" focusClassName="qc-focused" noFocusRing>
+      {children}
+    </Focusable>
+  );
+  if (!e) {
+    return (
+      <>
+        <TopBar backLabel={game || t("qcg.title")} full={full} />
+        <Status loading={s.loading} error={s.error} />
+      </>
+    );
+  }
+  const sm = e.summary || {};
+  const line = (label: string, v?: string) => (v ? text(label, <><span className="qcg-detail">{label}:</span> {v}</>) : null);
+  const named = (label: string, xs?: { name: string; what?: string; where?: string }[]) =>
+    xs?.length ? text(label, <><span className="qcg-detail">{label}:</span> {xs.map((x) => `${x.name}${x.what || x.where ? ` (${x.what || x.where})` : ""}`).join(" · ")}</>) : null;
+  return (
+    <>
+      <TopBar backLabel={game || t("qcg.title")} full={full} />
+      <Row>
+        <Focusable flow-children="vertical" className="qcgp-area">
+          <div className="qcgp-row-sub">{e.type}</div>
+          <div className="qcgp-title">{e.name}</div>
+          {e.overview && text("overview", e.overview)}
+          {line(t("qcg.infoRegion"), sm.region)}
+          {line(t("qcg.entWhere"), sm.where)}
+          {line(t("qcg.infoWay"), sm.gettingThere)}
+          {named(t("qcg.shops"), sm.shops)}
+          {line(t("qcg.infoServices"), sm.services?.join(" · "))}
+          {named(t("qcg.entThere"), sm.places)}
+          {named(t("qcg.entCollectibles"), sm.collectibles)}
+          {sm.quests?.length ? text("quests", <><span className="qcg-detail">{t("qcg.infoQuests")}:</span> {sm.quests.map((q) => `${q.name}${q.chapter ? ` (${q.chapter})` : ""}`).join(" · ")}</>) : null}
+          {(sm.notes || []).map((n, i) => text(`n${i}`, <>• {n}</>))}
         </Focusable>
       </Row>
     </>

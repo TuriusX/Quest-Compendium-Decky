@@ -974,6 +974,14 @@ class Plugin:
             return {"ok": True, "page": data}
         return {"ok": False, "error": data.get("error") or f"Page unavailable (HTTP {status})."}
 
+    async def guide_entity(self, key: str, slug: str) -> Dict[str, Any]:
+        """One of a guide's entity pages (the compendium: a place, character or collectible)."""
+        path = f"/api/guides/{quote(str(key or '')[:120], safe='')}/entity/{quote(str(slug or '')[:120], safe='')}"
+        status, data = await self._guide_http(path)
+        if status == 200 and data.get("name"):
+            return {"ok": True, "entity": data}
+        return {"ok": False, "error": data.get("error") or f"Page unavailable (HTTP {status})."}
+
     async def guide_achievements(self, key: str, lang: str = "") -> Dict[str, Any]:
         """A guide's achievement guide (Steam's list with tips, plus a roadmap), in the plugin's language."""
         q = self._guide_lang(lang)

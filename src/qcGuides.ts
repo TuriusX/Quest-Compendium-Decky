@@ -13,7 +13,8 @@ export type GuideView =
   | { view: "games" }
   | { view: "game"; key: string; game?: string }
   | { view: "area"; key: string; slug: string; game?: string }
-  | { view: "achievements"; key: string; game?: string };
+  | { view: "achievements"; key: string; game?: string }
+  | { view: "entity"; key: string; slug: string; game?: string };
 
 let stack: GuideView[] = [{ view: "games" }];
 let touched = false; // the player has moved around the guide themselves
