@@ -5,6 +5,8 @@
  */
 export const GENERATED: Record<string, Record<string, string>> = {
   de: {
+    "qcg.comingSoon": "Demnächst verfügbar",
+    "qcg.comingSoonNote": "Ausgegraute Einträge folgen bald.",
     "qcg.compendium": "Kompendium",
     "qcg.entWhere": "Wo",
     "qcg.entThere": "Was gibt's hier",
@@ -288,6 +290,8 @@ export const GENERATED: Record<string, Record<string, string>> = {
     "report.showAnyway": "Mostrar de todos modos"
   },
   fr: {
+    "qcg.comingSoon": "Bientôt disponible",
+    "qcg.comingSoonNote": "Les entrées grisées seront bientôt disponibles.",
     "qcg.compendium": "Compendium",
     "qcg.entWhere": "Où",
     "qcg.entThere": "Ce qui s'y trouve",
@@ -555,6 +559,8 @@ export const GENERATED: Record<string, Record<string, string>> = {
     "browser.backendDown": "Le backend du plugin ne répond pas."
   },
   ja: {
+    "qcg.comingSoon": "近日公開",
+    "qcg.comingSoonNote": "グレーアウトされている項目は近日公開予定です。",
     "qcg.compendium": "図鑑",
     "qcg.entWhere": "場所",
     "qcg.entThere": "出現・獲得アイテム",
@@ -822,6 +828,8 @@ export const GENERATED: Record<string, Record<string, string>> = {
     "browser.backendDown": "プラグインのバックエンドが応答していません。"
   },
   ko: {
+    "qcg.comingSoon": "출시 예정",
+    "qcg.comingSoonNote": "비활성화된 항목은 곧 출시될 예정입니다.",
     "qcg.compendium": "도감",
     "qcg.entWhere": "위치",
     "qcg.entThere": "발견 항목",
@@ -1105,6 +1113,8 @@ export const GENERATED: Record<string, Record<string, string>> = {
     "report.showAnyway": "Mostrar mesmo assim"
   },
   ru: {
+    "qcg.comingSoon": "Скоро появится",
+    "qcg.comingSoonNote": "Серые пункты появятся в скором времени.",
     "qcg.compendium": "Компендиум",
     "qcg.entWhere": "Где найти",
     "qcg.entThere": "Что там есть",
@@ -1372,6 +1382,8 @@ export const GENERATED: Record<string, Record<string, string>> = {
     "browser.backendDown": "Бэкенд плагина не отвечает."
   },
   zh: {
+    "qcg.comingSoon": "敬请期待",
+    "qcg.comingSoonNote": "变灰的条目即将推出。",
     "qcg.compendium": "图鉴",
     "qcg.entWhere": "位置",
     "qcg.entThere": "此处内容",

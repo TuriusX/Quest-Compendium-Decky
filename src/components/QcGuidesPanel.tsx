@@ -10,6 +10,7 @@ import {
   type QcAchievementTip,
   type QcEntity,
   type QcEntityRef,
+  type QcCompendiumType,
   type QcGuideArea,
   type QcGuideEntry,
   type QcGuidePage,
@@ -257,14 +258,16 @@ function AllGames({ ours, full }: { ours: { key: string; game: string } | null; 
 
 function GameAreas({ gameKey, game, full, gameName }: { gameKey: string; game?: string; full: boolean; gameName?: string }) {
   const t = useT();
-  const s = useLoad<{ game?: string; art?: string; areas?: QcGuideArea[]; entities?: QcEntityRef[] }>(() => guideGame(gameKey, getLocale()));
+  const s = useLoad<{ game?: string; art?: string; areas?: QcGuideArea[]; entities?: QcEntityRef[]; compendium?: QcCompendiumType[] }>(() => guideGame(gameKey, getLocale()));
   // The achievement guide, by the guide's key and in the plugin's language (most guides don't have one yet).
   const ach = useLoad<{ guide?: QcAchievementGuide }>(() => guideAchievements(gameKey, getLocale())).data?.guide;
   const name = s.data?.game || game || "";
   const [q, setQ] = useState("");
   const needle = fold(q.trim());
   // Search by area name, story note, or anything on the page (items, secrets, enemies).
-  const areas = (s.data?.areas || []).filter((a) => !needle || fold(`${a.name} ${a.story} ${a.search || ""}`).includes(needle));
+  const loose = (x: string) => fold(x).replace(/['\u2019]/g, "");
+  const areas = (s.data?.areas || []).filter((a) => !needle || loose(`${a.name} ${a.story} ${a.search || ""}`).includes(loose(needle)));
+  const entHits = needle ? (s.data?.entities || []).filter((e) => loose(e.name).includes(loose(needle))) : [];
   const open = (a: QcGuideArea) => guideGo({ view: "area", key: gameKey, slug: a.slug, game: name });
   // "Continue" (the last page opened) and "Where you are" (the place from the latest answer), when they match a page.
   const cont = areas.find((a) => a.slug === lastArea(gameKey));
@@ -308,15 +311,34 @@ function GameAreas({ gameKey, game, full, gameName }: { gameKey: string; game?: 
           </Focusable>
         </Row>
       )}
-      {!needle && !!s.data?.entities?.length && (
+      {entHits.length > 0 && (
         <Row>
           <Focusable className="qcgp-list" flow-children="vertical">
-            <div className="qcgp-section">{t("qcg.compendium")}</div>
-            {s.data.entities.map((e) => (
+            {entHits.map((e) => (
               <DialogButton key={e.slug} className="qcgp-row" onClick={() => guideGo({ view: "entity", key: gameKey, slug: e.slug, game: name })}>
                 <span className="qcgp-row-title">{e.name}</span>
                 <span className="qcgp-row-sub">{e.type}{e.region ? ` · ${e.region}` : ""}</span>
               </DialogButton>
+            ))}
+          </Focusable>
+        </Row>
+      )}
+      {!needle && !!s.data?.compendium?.length && (
+        <Row>
+          <Focusable className="qcgp-list" flow-children="vertical">
+            <div className="qcgp-section">{t("qcg.compendium")}</div>
+            {s.data.compendium.some((c) => c.soon.length) && <div className="qcgp-row-sub">{t("qcg.comingSoonNote")}</div>}
+            {s.data.compendium.map((c) => (
+              <div key={c.type} className="qcgp-list">
+                <div className="qcgp-row-sub">{c.type}</div>
+                {c.built.map((e) => (
+                  <DialogButton key={e.slug} className="qcgp-row" onClick={() => guideGo({ view: "entity", key: gameKey, slug: e.slug, game: name })}>
+                    <span className="qcgp-row-title">{e.name}</span>
+                  </DialogButton>
+                ))}
+                {/* Coming soon: muted text, not focusable (the D-pad skips it). */}
+                {c.soon.length > 0 && <div className="qcgp-row-sub qc-muted" style={{ opacity: 0.55 }}>{t("qcg.comingSoon")}: {c.soon.join(", ")}</div>}
+              </div>
             ))}
           </Focusable>
         </Row>

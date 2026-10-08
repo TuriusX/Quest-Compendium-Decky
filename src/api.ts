@@ -229,7 +229,9 @@ export interface QcGuidePage {
 export interface QcGuideFight { id: string; name: string; enemies?: string; threats?: string; weaknesses?: string; tactics?: string; rewards?: string }
 export const guidesList = callable<[], { ok: boolean; games?: QcGuideGame[]; source?: "index" | "server"; error?: string }>("guides_list");
 export const guideFind = callable<[game: string, lang?: string], { ok: boolean; key?: string | null; game?: string; areas?: QcGuideArea[]; error?: string }>("guide_find");
-export const guideGame = callable<[key: string, lang?: string], { ok: boolean; key?: string; game?: string; art?: string; areas?: QcGuideArea[]; entities?: QcEntityRef[]; error?: string }>("guide_game");
+export const guideGame = callable<[key: string, lang?: string], { ok: boolean; key?: string; game?: string; art?: string; areas?: QcGuideArea[]; entities?: QcEntityRef[]; compendium?: QcCompendiumType[]; error?: string }>("guide_game");
+/** The compendium by type: built entity pages and the type's other known entities ("coming soon"). */
+export interface QcCompendiumType { type: string; built: { slug: string; name: string }[]; soon: string[] }
 /** One of the guide's entity pages, as the area list sends it (the compendium). */
 export interface QcEntityRef { slug: string; name: string; type: string; region?: string; line?: string }
 export interface QcEntity {
