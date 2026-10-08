@@ -239,6 +239,7 @@ export interface QcEntity {
   summary?: { region?: string; where?: string; gettingThere?: string; shops?: { name: string; what?: string }[]; services?: string[]; places?: { name: string; what?: string }[]; collectibles?: { name: string; where?: string }[]; quests?: { name: string; kind?: string; chapter?: string }[]; notes?: string[] };
 }
 export const guideEntity = callable<[key: string, slug: string], { ok: boolean; entity?: QcEntity; error?: string }>("guide_entity");
+export const guideSearchIndex = callable<[key: string, lang?: string], { ok: boolean; index?: { l: string; k: string; c: string; h: string; p?: number; e?: number }[]; error?: string }>("guide_search_index");
 export const guideArea = callable<[key: string, slug: string, lang?: string], { ok: boolean; page?: QcGuidePage; error?: string }>("guide_area");
 /** One achievement in a guide's achievement guide (name and tips in the guide's language; englishName is Steam's). */
 export interface QcAchievementTip {

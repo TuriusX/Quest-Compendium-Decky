@@ -974,6 +974,25 @@ class Plugin:
             return {"ok": True, "page": data}
         return {"ok": False, "error": data.get("error") or f"Page unavailable (HTTP {status})."}
 
+    async def guide_search_index(self, key: str, lang: str = "") -> Dict[str, Any]:
+        """A guide's search index from the website (guides/{key}/search.json, in the plugin's language when translated)."""
+        lang = str(lang or "").lower()
+        prefix = f"{lang}/" if lang in ("es", "pt", "de", "fr", "ru", "ja", "ko", "zh") else ""
+        base = getattr(self, "guide_index_url", GUIDE_INDEX_URL).rsplit("/guides/", 1)[0]
+        for url in [f"{base}/{prefix}guides/{quote(str(key or '')[:120], safe='')}/search.json", f"{base}/guides/{quote(str(key or '')[:120], safe='')}/search.json"]:
+            try:
+                timeout = aiohttp.ClientTimeout(total=GUIDE_INDEX_TIMEOUT_S)
+                connector = aiohttp.TCPConnector(ssl=self._ssl)
+                async with aiohttp.ClientSession(timeout=timeout, connector=connector) as session:
+                    async with session.get(url, headers={"User-Agent": f"QuestCompendiumDeck/{decky.DECKY_PLUGIN_VERSION}"}) as resp:
+                        if resp.status == 200:
+                            data = await resp.json(content_type=None)
+                            if isinstance(data, list):
+                                return {"ok": True, "index": data}
+            except (asyncio.TimeoutError, aiohttp.ClientError, ValueError) as e:
+                decky.logger.warning(f"Guide search index: {type(e).__name__}: {str(e)[:160]}")
+        return {"ok": False, "error": "The guide's search couldn't be loaded."}
+
     async def guide_entity(self, key: str, slug: str) -> Dict[str, Any]:
         """One of a guide's entity pages (the compendium: a place, character or collectible)."""
         path = f"/api/guides/{quote(str(key or '')[:120], safe='')}/entity/{quote(str(slug or '')[:120], safe='')}"

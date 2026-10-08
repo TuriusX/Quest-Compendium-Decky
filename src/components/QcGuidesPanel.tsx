@@ -33,6 +33,7 @@ import {
   writeDone,
 } from "../qcGuides";
 import { mentionedEntities } from "../entityLinks";
+import { GuideSearch, hitTarget, type SearchHit } from "../guideSearch";
 import { cachedIndex, normalizeGames, orderGuides, recentGuides, rememberGuideOpened, saveIndex, saveSort, savedSort, type GuideSort } from "../guideIndex";
 
 /**
@@ -84,7 +85,7 @@ export function QcGuidesFullPage() {
 function GuideViews({ full, ours, gameName }: { full: boolean; ours: { key: string; game: string } | null; gameName?: string }) {
   const v = useGuideView();
   if (v.view === "game") return <GameAreas key={v.key} gameKey={v.key} game={v.game} full={full} gameName={gameName} />;
-  if (v.view === "area") return <AreaPage key={`${v.key}/${v.slug}`} gameKey={v.key} slug={v.slug} game={v.game} full={full} />;
+  if (v.view === "area") return <AreaPage key={`${v.key}/${v.slug}/${v.focus || ""}`} gameKey={v.key} slug={v.slug} game={v.game} full={full} focus={v.focus} />;
   if (v.view === "achievements") return <AchievementsPage key={`${v.key}/achievements`} gameKey={v.key} game={v.game} full={full} />;
   if (v.view === "entity") return <EntityPage key={`${v.key}/e/${v.slug}`} gameKey={v.key} slug={v.slug} game={v.game} full={full} />;
   return <AllGames ours={ours} full={full} />;
@@ -256,6 +257,14 @@ function AllGames({ ours, full }: { ours: { key: string; game: string } | null; 
   );
 }
 
+/** A guide search result: its entity page, or its page at the exact entry. */
+function openHit(hit: SearchHit, game?: string) {
+  const to = hitTarget(hit);
+  if (!to) return;
+  if (to.entity) guideGo({ view: "entity", key: to.key, slug: to.slug, game });
+  else guideGo({ view: "area", key: to.key, slug: to.slug, game, ...(to.focus ? { focus: to.focus } : {}) });
+}
+
 function GameAreas({ gameKey, game, full, gameName }: { gameKey: string; game?: string; full: boolean; gameName?: string }) {
   const t = useT();
   const s = useLoad<{ game?: string; art?: string; areas?: QcGuideArea[]; entities?: QcEntityRef[]; compendium?: QcCompendiumType[] }>(() => guideGame(gameKey, getLocale()));
@@ -264,10 +273,9 @@ function GameAreas({ gameKey, game, full, gameName }: { gameKey: string; game?: 
   const name = s.data?.game || game || "";
   const [q, setQ] = useState("");
   const needle = fold(q.trim());
-  // Search by area name, story note, or anything on the page (items, secrets, enemies).
-  const loose = (x: string) => fold(x).replace(/['\u2019]/g, "");
-  const areas = (s.data?.areas || []).filter((a) => !needle || loose(`${a.name} ${a.story} ${a.search || ""}`).includes(loose(needle)));
-  const entHits = needle ? (s.data?.entities || []).filter((e) => loose(e.name).includes(loose(needle))) : [];
+  // With a query, the guide-wide results replace the lists (GuideSearch); empty, they're back.
+  const areas = needle ? [] : s.data?.areas || [];
+  const entHits: QcEntityRef[] = [];
   const open = (a: QcGuideArea) => guideGo({ view: "area", key: gameKey, slug: a.slug, game: name });
   // "Continue" (the last page opened) and "Where you are" (the place from the latest answer), when they match a page.
   const cont = areas.find((a) => a.slug === lastArea(gameKey));
@@ -292,7 +300,7 @@ function GameAreas({ gameKey, game, full, gameName }: { gameKey: string; game?: 
         </Row>
       )}
       <Status loading={s.loading} error={s.error} />
-      <Search value={q} onChange={setQ} label={t("qcg.searchAreas")} />
+      <GuideSearch gameKey={gameKey} value={q} onChange={setQ} onPick={(hit) => openHit(hit, name)} />
       {!needle && (here || cont) && (
         <Row>
           <Focusable className="qcgp-list" flow-children="vertical">
@@ -376,8 +384,18 @@ function GameAreas({ gameKey, game, full, gameName }: { gameKey: string; game?: 
   );
 }
 
-function AreaPage({ gameKey, slug, game, full }: { gameKey: string; slug: string; game?: string; full: boolean }) {
+function AreaPage({ gameKey, slug, game, full, focus }: { gameKey: string; slug: string; game?: string; full: boolean; focus?: string }) {
   const t = useT();
+  const [q, setQ] = useState("");
+  // A search result's entry: every section open, scrolled to and focused.
+  useEffect(() => {
+    if (!focus) return;
+    const tm = setTimeout(() => {
+      const el = document.getElementById(`qcgp-e-${focus}`);
+      if (el) { el.scrollIntoView({ block: "center" }); (el.querySelector("button, [tabindex]") as HTMLElement | null)?.focus?.(); }
+    }, 400);
+    return () => clearTimeout(tm);
+  });
   const s = useLoad<{ page?: QcGuidePage }>(() => guideArea(gameKey, slug, getLocale()));
   const order = useLoad<{ areas?: QcGuideArea[]; entities?: QcEntityRef[] }>(() => guideGame(gameKey, getLocale()));
   const [done, setDone] = useState<Set<string>>(() => readDone(gameKey, slug));
@@ -409,7 +427,8 @@ function AreaPage({ gameKey, slug, game, full }: { gameKey: string; slug: string
   };
 
   const check = (id: string, label: string, detail?: string, tag?: string) => (
-    <DialogButton key={id} className={`qcgp-check ${done.has(id) ? "qcg-done" : ""}`} onClick={() => toggle(id)}>
+    <div key={id} id={`qcgp-e-${id}`}>
+    <DialogButton className={`qcgp-check ${done.has(id) ? "qcg-done" : ""} ${focus && (id === focus || id.split("+").includes(focus)) ? "qcgp-hit" : ""}`} onClick={() => toggle(id)}>
       <span className="qcg-box">{done.has(id) ? "☑" : "☐"}</span>
       <span className="qcgp-check-text">
         <span className="qcg-strong">{label}</span>
@@ -417,6 +436,7 @@ function AreaPage({ gameKey, slug, game, full }: { gameKey: string; slug: string
         {detail && <span className="qcg-detail">: {detail}</span>}
       </span>
     </DialogButton>
+    </div>
   );
   const text = (key: string | number, children: React.ReactNode) => (
     <Focusable key={key} className="qcgp-text" focusClassName="qc-focused" noFocusRing>
@@ -425,7 +445,7 @@ function AreaPage({ gameKey, slug, game, full }: { gameKey: string; slug: string
   );
   /** A section you open when you want it; the header shows its progress. */
   const section = (k: string, title: string, body: React.ReactNode, count?: number, total?: number, startOpen = false) => {
-    const isOpen = openSec.has(k) !== startOpen; // startOpen sections flip the other way
+    const isOpen = !!focus || openSec.has(k) !== startOpen; // startOpen sections flip the other way; a search result opens them all
     return (
       <div key={k} className="qcgp-area">
         <DialogButton className="qcgp-sechead" onClick={() => flip(k)}>
@@ -460,6 +480,7 @@ function AreaPage({ gameKey, slug, game, full }: { gameKey: string; slug: string
   return (
     <>
       <TopBar backLabel={game || t("qcg.title")} full={full} />
+      <GuideSearch gameKey={gameKey} value={q} onChange={setQ} onPick={(hit) => { setQ(""); openHit(hit, game); }} />
       <Row>
         <Focusable flow-children="vertical" className="qcgp-area">
           <div className="qcgp-title">{page.name}</div>

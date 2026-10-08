@@ -145,6 +145,8 @@ const CSS = `
 .qcgp-sort > * { flex: 1 1 0; min-width: 0 !important; padding: 4px 8px !important; font-size: 12px !important; }
 .qcgp-sort .qcgp-on { background: rgba(168, 127, 251, 0.35) !important; color: #fff !important; }
 .qcgp-checked { color: #6ee7b7; }
+/* A search result's entry: highlighted where the guide opened. */
+.qcgp-hit { box-shadow: 0 0 0 2px #a87ffb !important; background: rgba(168, 127, 251, 0.18) !important; }
 .qcgp-jump { border-left: 3px solid #a87ffb !important; }
 .qcgp-row-line { display: flex; align-items: baseline; gap: 8px; width: 100%; }
 .qcgp-progress { margin-left: auto; font-size: 12px; font-weight: 700; color: #a87ffb; flex-shrink: 0; }

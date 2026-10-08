@@ -6,6 +6,7 @@
 export const GENERATED: Record<string, Record<string, string>> = {
   de: {
     "qcg.comingSoon": "Demnächst verfügbar",
+    "qcg.searchAll": "Alles in diesem Guide durchsuchen: Orte, Kapitel, Items…",
     "qcg.comingSoonNote": "Ausgegraute Einträge folgen bald.",
     "qcg.compendium": "Kompendium",
     "qcg.entWhere": "Wo",
@@ -291,6 +292,7 @@ export const GENERATED: Record<string, Record<string, string>> = {
   },
   fr: {
     "qcg.comingSoon": "Bientôt disponible",
+    "qcg.searchAll": "Chercher dans tout le guide : lieux, chapitres, objets…",
     "qcg.comingSoonNote": "Les entrées grisées seront bientôt disponibles.",
     "qcg.compendium": "Compendium",
     "qcg.entWhere": "Où",
@@ -560,6 +562,7 @@ export const GENERATED: Record<string, Record<string, string>> = {
   },
   ja: {
     "qcg.comingSoon": "近日公開",
+    "qcg.searchAll": "このガイド内をすべて検索：場所、チャプター、アイテム…",
     "qcg.comingSoonNote": "グレーアウトされている項目は近日公開予定です。",
     "qcg.compendium": "図鑑",
     "qcg.entWhere": "場所",
@@ -829,6 +832,7 @@ export const GENERATED: Record<string, Record<string, string>> = {
   },
   ko: {
     "qcg.comingSoon": "출시 예정",
+    "qcg.searchAll": "이 가이드의 모든 항목 검색: 장소, 챕터, 아이템…",
     "qcg.comingSoonNote": "비활성화된 항목은 곧 출시될 예정입니다.",
     "qcg.compendium": "도감",
     "qcg.entWhere": "위치",
@@ -1114,6 +1118,7 @@ export const GENERATED: Record<string, Record<string, string>> = {
   },
   ru: {
     "qcg.comingSoon": "Скоро появится",
+    "qcg.searchAll": "Поиск по всему руководству: локации, главы, предметы…",
     "qcg.comingSoonNote": "Серые пункты появятся в скором времени.",
     "qcg.compendium": "Компендиум",
     "qcg.entWhere": "Где найти",
@@ -1383,6 +1388,7 @@ export const GENERATED: Record<string, Record<string, string>> = {
   },
   zh: {
     "qcg.comingSoon": "敬请期待",
+    "qcg.searchAll": "搜索本攻略中的所有内容：地点、章节、物品…",
     "qcg.comingSoonNote": "变灰的条目即将推出。",
     "qcg.compendium": "图鉴",
     "qcg.entWhere": "位置",

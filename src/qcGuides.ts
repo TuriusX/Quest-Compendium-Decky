@@ -12,7 +12,7 @@ export const QC_GUIDES_ROUTE = "/quest-compendium/qc-guides";
 export type GuideView =
   | { view: "games" }
   | { view: "game"; key: string; game?: string }
-  | { view: "area"; key: string; slug: string; game?: string }
+  | { view: "area"; key: string; slug: string; game?: string; focus?: string }
   | { view: "achievements"; key: string; game?: string }
   | { view: "entity"; key: string; slug: string; game?: string };
 
