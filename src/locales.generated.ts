@@ -5,6 +5,12 @@
  */
 export const GENERATED: Record<string, Record<string, string>> = {
   de: {
+    "qcg.sortAZ": "A–Z",
+    "qcg.sortPopular": "Beliebt",
+    "qcg.loadFailed": "Guides konnten nicht geladen werden. Prüfe deine Verbindung und versuche es erneut.",
+    "qcg.retry": "Erneut versuchen",
+    "qcg.checkedGuide": "Mit Quellen abgeglichen",
+    "qcg.noMatches": "Keine Treffer für diese Suche.",
     "talk.button": "Halten zum Sprechen",
     "talk.listening": "Zuhören… Loslassen zum Senden",
     "talk.voice": "Sprachnachricht",
@@ -269,6 +275,12 @@ export const GENERATED: Record<string, Record<string, string>> = {
     "report.showAnyway": "Mostrar de todos modos"
   },
   fr: {
+    "qcg.sortAZ": "A–Z",
+    "qcg.sortPopular": "Populaires",
+    "qcg.loadFailed": "Impossible de charger les guides. Vérifie ta connexion et réessaie.",
+    "qcg.retry": "Réessayer",
+    "qcg.checkedGuide": "Vérifié avec les sources",
+    "qcg.noMatches": "Aucun résultat pour cette recherche.",
     "talk.button": "Maintenir pour parler",
     "talk.listening": "Écoute en cours… relâche pour envoyer",
     "talk.voice": "Message vocal",
@@ -517,6 +529,12 @@ export const GENERATED: Record<string, Record<string, string>> = {
     "browser.backendDown": "Le backend du plugin ne répond pas."
   },
   ja: {
+    "qcg.sortAZ": "A–Z順",
+    "qcg.sortPopular": "人気順",
+    "qcg.loadFailed": "ガイドを読み込めませんでした。接続を確認してもう一度お試しください。",
+    "qcg.retry": "再試行",
+    "qcg.checkedGuide": "情報ソース確認済み",
+    "qcg.noMatches": "一致する結果が見つかりません。",
     "talk.button": "長押しで話す",
     "talk.listening": "聞き取り中… 離して送信",
     "talk.voice": "音声メッセージ",
@@ -765,6 +783,12 @@ export const GENERATED: Record<string, Record<string, string>> = {
     "browser.backendDown": "プラグインのバックエンドが応答していません。"
   },
   ko: {
+    "qcg.sortAZ": "가나다순",
+    "qcg.sortPopular": "인기순",
+    "qcg.loadFailed": "가이드를 불러오지 못했습니다. 네트워크 연결을 확인하고 다시 시도해 주세요.",
+    "qcg.retry": "다시 시도",
+    "qcg.checkedGuide": "출처 대조 완료",
+    "qcg.noMatches": "검색 결과가 없어요.",
     "talk.button": "누른 상태로 말하기",
     "talk.listening": "듣는 중… 손을 떼면 전송됩니다",
     "talk.voice": "음성 메시지",
@@ -1029,6 +1053,12 @@ export const GENERATED: Record<string, Record<string, string>> = {
     "report.showAnyway": "Mostrar mesmo assim"
   },
   ru: {
+    "qcg.sortAZ": "А–Я",
+    "qcg.sortPopular": "Популярные",
+    "qcg.loadFailed": "Не удалось загрузить гайды. Проверьте соединение и попробуйте снова.",
+    "qcg.retry": "Повторить",
+    "qcg.checkedGuide": "Сверено с источниками",
+    "qcg.noMatches": "Ничего не нашлось.",
     "talk.button": "Удерживать для речи",
     "talk.listening": "Слушаю… отпустите для отправки",
     "talk.voice": "Голосовое сообщение",
@@ -1277,6 +1307,12 @@ export const GENERATED: Record<string, Record<string, string>> = {
     "browser.backendDown": "Бэкенд плагина не отвечает."
   },
   zh: {
+    "qcg.sortAZ": "A–Z",
+    "qcg.sortPopular": "热门",
+    "qcg.loadFailed": "攻略加载失败。请检查网络连接后重试。",
+    "qcg.retry": "重试",
+    "qcg.checkedGuide": "已对照来源核实",
+    "qcg.noMatches": "没有找到匹配的内容。",
     "talk.button": "按住说话",
     "talk.listening": "正在倾听… 松开发送",
     "talk.voice": "语音消息",

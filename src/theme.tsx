@@ -119,7 +119,11 @@ const CSS = `
 .qcgp-check-text { font-size: 13px; line-height: 1.4; }
 .qcg-done .qcgp-check-text { opacity: 0.55; text-decoration: line-through; }
 .qcgp-nav { padding: 6px 10px !important; min-width: 0 !important; font-size: 13px !important; margin-top: 4px; }
-.qcgp-top { display: flex; justify-content: space-between; gap: 6px; width: 100%; }
+.qcgp-top { display: flex; align-items: stretch; gap: 6px; width: 100%; }
+.qcgp-top-end { justify-content: flex-end; }
+/* Back with the game's name takes the row; a long name is cut to one line with "…". */
+.qcgp-top > .qcgp-back:not(.qcgp-fs) { flex: 1 1 0; width: auto !important; overflow: hidden; }
+.qcgp-back-label { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .qcgp-art { position: relative; aspect-ratio: 460 / 215; overflow: hidden; border-radius: 6px; background: #0c0d14; flex-shrink: 0; }
 .qcgp-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .qcgp-art-ph { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-weight: 700; color: rgba(255,255,255,0.8); background: linear-gradient(135deg, rgba(168,127,251,0.35), #1a1530 55%, #0c0d14); font-size: 13px; letter-spacing: 0.04em; }
@@ -128,7 +132,11 @@ const CSS = `
 .qcgp-art-banner .qcgp-art-ph { font-size: 22px; }
 .qcgp-row-art { flex-direction: row !important; align-items: center !important; gap: 10px; }
 .qcgp-row-text { display: flex; flex-direction: column; min-width: 0; }
-.qcgp-fs { flex-shrink: 0; }
+.qcgp-fs { flex: 0 0 40px; width: 40px !important; min-width: 40px !important; padding: 6px 0 !important; text-align: center !important; font-size: 16px !important; }
+.qcgp-sort { display: flex; gap: 6px; width: 100%; }
+.qcgp-sort > * { flex: 1 1 0; min-width: 0 !important; padding: 4px 8px !important; font-size: 12px !important; }
+.qcgp-sort .qcgp-on { background: rgba(168, 127, 251, 0.35) !important; color: #fff !important; }
+.qcgp-checked { color: #6ee7b7; }
 .qcgp-jump { border-left: 3px solid #a87ffb !important; }
 .qcgp-row-line { display: flex; align-items: baseline; gap: 8px; width: 100%; }
 .qcgp-progress { margin-left: auto; font-size: 12px; font-weight: 700; color: #a87ffb; flex-shrink: 0; }

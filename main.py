@@ -40,6 +40,11 @@ DEFAULT_API_BASE = "https://quest-compendium-890629309063.us-east1.run.app"
 
 CHAT_TIMEOUT_S = 120          # vision + thinking can take a while
 SHORT_TIMEOUT_S = 20
+# Guides: the list comes from the website's small index (published with the site), the server's list is the fallback;
+# a guide's pages come from the server. Longer timeouts than other calls, each tried twice.
+GUIDE_INDEX_URL = "https://questcompendium.com/guides/index.json"
+GUIDE_INDEX_TIMEOUT_S = 30
+GUIDE_TIMEOUT_S = 45
 TOKEN_REFRESH_MARGIN_S = 120  # refresh Firebase ID tokens this long before they expire
 
 MAX_QUESTION_CHARS = 2000
@@ -870,11 +875,41 @@ class Plugin:
 
     # ---- Quest Compendium guides (shown natively in the plugin, no browser) ---------------------
 
+    async def _guide_http(self, path: str) -> Tuple[int, Dict[str, Any]]:
+        """A guide call to the server: a longer timeout than other calls, and one more try if it got no response."""
+        status, data = await self._http("GET", path, timeout_s=GUIDE_TIMEOUT_S)
+        if status == 0:
+            status, data = await self._http("GET", path, timeout_s=GUIDE_TIMEOUT_S)
+        return status, data
+
+    async def _fetch_index(self, url: str) -> Optional[list]:
+        """The website's guide index (guides/index.json), or None if it couldn't be read."""
+        try:
+            timeout = aiohttp.ClientTimeout(total=GUIDE_INDEX_TIMEOUT_S)
+            connector = aiohttp.TCPConnector(ssl=self._ssl)
+            headers = {"User-Agent": f"QuestCompendiumDeck/{decky.DECKY_PLUGIN_VERSION}"}
+            async with aiohttp.ClientSession(timeout=timeout, connector=connector) as session:
+                async with session.get(url, headers=headers) as resp:
+                    if resp.status != 200:
+                        return None
+                    data = await resp.json(content_type=None)
+                    games = data.get("games") if isinstance(data, dict) else None
+                    return games if isinstance(games, list) and games else None
+        except (asyncio.TimeoutError, aiohttp.ClientError, ValueError) as e:
+            decky.logger.warning(f"Guide index: {type(e).__name__}: {str(e)[:160]}")
+            return None
+
     async def guides_list(self) -> Dict[str, Any]:
-        """Games that have a Quest Compendium guide."""
-        status, data = await self._http("GET", "/api/guides")
+        """Games that have a Quest Compendium guide: the website's small index first (tried twice), else the server's
+        list (tried twice). Only what the list needs: key, name, cover, page count, checked pages, players."""
+        url = getattr(self, "guide_index_url", GUIDE_INDEX_URL)
+        for _ in range(2):
+            games = await self._fetch_index(url)
+            if games:
+                return {"ok": True, "games": games, "source": "index"}
+        status, data = await self._guide_http("/api/guides")
         if status == 200 and isinstance(data.get("games"), list):
-            return {"ok": True, "games": data["games"]}
+            return {"ok": True, "games": data["games"], "source": "server"}
         return {"ok": False, "error": data.get("error") or f"Guides are unavailable (HTTP {status})."}
 
     @staticmethod
@@ -889,7 +924,7 @@ class Plugin:
         if not name:
             return {"ok": True, "key": None}
         q = self._guide_lang(lang)
-        status, data = await self._http("GET", f"/api/guides/find?game={quote(name)}" + (f"&{q}" if q else ""))
+        status, data = await self._guide_http(f"/api/guides/find?game={quote(name)}" + (f"&{q}" if q else ""))
         if status == 200:
             return {"ok": True, **data}
         return {"ok": False, "error": data.get("error") or f"Guides are unavailable (HTTP {status})."}
@@ -897,7 +932,7 @@ class Plugin:
     async def guide_game(self, key: str, lang: str = "") -> Dict[str, Any]:
         """One game's guide areas, in story order."""
         q = self._guide_lang(lang)
-        status, data = await self._http("GET", f"/api/guides/{quote(str(key or '')[:120], safe='')}" + (f"?{q}" if q else ""))
+        status, data = await self._guide_http(f"/api/guides/{quote(str(key or '')[:120], safe='')}" + (f"?{q}" if q else ""))
         if status == 200 and isinstance(data.get("areas"), list):
             return {"ok": True, **data}
         return {"ok": False, "error": data.get("error") or f"Guide unavailable (HTTP {status})."}
@@ -906,7 +941,7 @@ class Plugin:
         """One guide page."""
         q = self._guide_lang(lang)
         path = f"/api/guides/{quote(str(key or '')[:120], safe='')}/{quote(str(slug or '')[:120], safe='')}" + (f"?{q}" if q else "")
-        status, data = await self._http("GET", path)
+        status, data = await self._guide_http(path)
         if status == 200 and data.get("name"):
             return {"ok": True, "page": data}
         return {"ok": False, "error": data.get("error") or f"Page unavailable (HTTP {status})."}
@@ -915,7 +950,7 @@ class Plugin:
         """A guide's achievement guide (Steam's list with tips, plus a roadmap), in the plugin's language."""
         q = self._guide_lang(lang)
         path = f"/api/guides/{quote(str(key or '')[:120], safe='')}/achievements" + (f"?{q}" if q else "")
-        status, data = await self._http("GET", path)
+        status, data = await self._guide_http(path)
         if status == 200 and isinstance(data.get("list"), list) and data["list"]:
             return {"ok": True, "guide": data}
         return {"ok": False, "error": data.get("error") or f"No achievement guide (HTTP {status})."}

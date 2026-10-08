@@ -190,7 +190,7 @@ export const reportAnswer = callable<
 >("report_answer");
 
 // ---- Quest Compendium guides (drawn natively in the plugin) ----
-export interface QcGuideGame { key: string; game: string; areas: number; art?: string }
+export interface QcGuideGame { key: string; game: string; areas: number; art?: string; checked?: number; players?: number }
 export interface QcGuideArea { slug: string; name: string; story: string; group?: string; total?: number; search?: string }
 export interface QcGuideEntry {
   id: string; name?: string; text?: string; where?: string; weakness?: string; steal?: string; sells?: string; notes?: string; missable?: boolean;
@@ -210,7 +210,7 @@ export interface QcGuidePage {
   info?: { region?: string; levels?: string; quests?: string[]; services?: string[]; enemyTypes?: string[]; directions?: string; connected?: string[]; coords?: string };
 }
 export interface QcGuideFight { id: string; name: string; enemies?: string; threats?: string; weaknesses?: string; tactics?: string; rewards?: string }
-export const guidesList = callable<[], { ok: boolean; games?: QcGuideGame[]; error?: string }>("guides_list");
+export const guidesList = callable<[], { ok: boolean; games?: QcGuideGame[]; source?: "index" | "server"; error?: string }>("guides_list");
 export const guideFind = callable<[game: string, lang?: string], { ok: boolean; key?: string | null; game?: string; areas?: QcGuideArea[]; error?: string }>("guide_find");
 export const guideGame = callable<[key: string, lang?: string], { ok: boolean; key?: string; game?: string; art?: string; areas?: QcGuideArea[]; error?: string }>("guide_game");
 export const guideArea = callable<[key: string, slug: string, lang?: string], { ok: boolean; page?: QcGuidePage; error?: string }>("guide_area");

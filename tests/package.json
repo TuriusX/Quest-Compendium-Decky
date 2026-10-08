@@ -2,7 +2,7 @@
   "name": "quest-compendium-decky-tests",
   "private": true,
   "type": "module",
-  "scripts": { "test": "python3 test_backend.py && python3 test_tls.py" },
+  "scripts": { "test": "python3 test_backend.py && python3 test_tls.py && python3 test_guides.py && npx -y tsx guideIndex.test.ts" },
   "devDependencies": {
     "@types/express": "^4.17.21",
     "@types/node": "^22.0.0",

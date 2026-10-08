@@ -9,7 +9,6 @@ import {
   type QcAchievementTip,
   type QcGuideArea,
   type QcGuideEntry,
-  type QcGuideGame,
   type QcGuidePage,
 } from "../api";
 import { getLocale, useT } from "../i18n";
@@ -29,6 +28,7 @@ import {
   useGuideView,
   writeDone,
 } from "../qcGuides";
+import { cachedIndex, normalizeGames, orderGuides, recentGuides, rememberGuideOpened, saveIndex, saveSort, savedSort, type GuideSort } from "../guideIndex";
 
 /**
  * Quest Compendium guides, right inside the plugin's Quick Access panel (with a button to open the same guide full
@@ -99,7 +99,6 @@ function useLoad<T>(load: () => Promise<{ ok: boolean; error?: string } & T>) {
 }
 
 const fold = (x: string) => x.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-const sortName = (n: string) => n.replace(/^(the|a|an)\s+/i, "").toLowerCase();
 
 /** A search box (opens the Deck's keyboard). */
 function Search({ value, onChange, label }: { value: string; onChange: (v: string) => void; label: string }) {
@@ -146,54 +145,102 @@ function Status({ loading, error }: { loading: boolean; error?: string }) {
   );
 }
 
-/** Back (in the panel only; the full-screen page has its own) and "Full screen". */
+/**
+ * Back (in the panel only; the full-screen page has its own) with the game's name on one line ("…" when it's long),
+ * and Full screen as a compact button at the end of the same row. Left / right moves between them on the D-pad.
+ */
 function TopBar({ backLabel, full }: { backLabel?: string; full: boolean }) {
   const t = useT();
   if (full) return null;
   return (
     <Row>
-      <Focusable className="qcgp-top" flow-children="horizontal">
-        {backLabel ? (
+      <Focusable className={`qcgp-top ${backLabel ? "" : "qcgp-top-end"}`} flow-children="horizontal">
+        {backLabel && (
           <DialogButton className="qcgp-back" onClick={() => guideBack()}>
-            ◀ {backLabel}
+            <span className="qcgp-back-label">◀ {backLabel}</span>
           </DialogButton>
-        ) : (
-          <span />
         )}
-        <DialogButton className="qcgp-back qcgp-fs" onClick={() => openPage(QC_GUIDES_ROUTE)}>
-          ⛶ {t("qcg.fullscreen")}
+        <DialogButton className="qcgp-back qcgp-fs" onClick={() => openPage(QC_GUIDES_ROUTE)} aria-label={t("qcg.fullscreen")}>
+          ⛶
         </DialogButton>
       </Focusable>
     </Row>
   );
 }
 
+/**
+ * All guides: the list kept on the Deck shows at once and refreshes in the background (the website's small index;
+ * the server's list if that fails). The running game's guide first, then recently opened ones, then A–Z or popular.
+ */
 function AllGames({ ours, full }: { ours: { key: string; game: string } | null; full: boolean }) {
   const t = useT();
-  const s = useLoad<{ games?: QcGuideGame[] }>(() => guidesList());
+  const [games, setGames] = useState(() => cachedIndex());
+  const [state, setState] = useState<{ loading: boolean; error?: string }>({ loading: true });
+  const [n, setN] = useState(0);
   const [q, setQ] = useState("");
-  const games = (s.data?.games || [])
-    .slice()
-    .sort((a, b) => (a.key === ours?.key ? -1 : b.key === ours?.key ? 1 : sortName(a.game).localeCompare(sortName(b.game))))
-    .filter((g) => !q.trim() || fold(g.game).includes(fold(q.trim())));
+  const [sort, setSort] = useState<GuideSort>(() => savedSort());
+  useEffect(() => {
+    let alive = true;
+    setState({ loading: true });
+    guidesList()
+      .then((r) => {
+        if (!alive) return;
+        const list = r.ok ? normalizeGames(r.games) : [];
+        if (list.length) {
+          setGames(list);
+          saveIndex(list);
+          setState({ loading: false });
+        } else setState({ loading: false, error: r.error || t("qcg.loadFailed") });
+      })
+      .catch((e) => alive && setState({ loading: false, error: String(e?.message || e) }));
+    return () => {
+      alive = false;
+    };
+  }, [n]);
+  const pickSort = (v: GuideSort) => {
+    setSort(v);
+    saveSort(v);
+  };
+  const open = (key: string, game: string) => {
+    rememberGuideOpened(key);
+    guideGo({ view: "game", key, game });
+  };
+  const list = orderGuides(games || [], { current: ours?.key, recent: recentGuides(), sort, q });
   return (
     <>
       <TopBar full={full} />
       <Search value={q} onChange={setQ} label={t("qcg.searchGames")} />
-      <Status loading={s.loading} error={s.error} />
-      {!s.loading && !s.error && !games.length && (
+      {games && (
         <Row>
-          <div className="qc-note qc-muted">{t("qcg.none")}</div>
+          <Focusable className="qcgp-sort" flow-children="horizontal">
+            <DialogButton className={sort === "az" ? "qcgp-on" : ""} onClick={() => pickSort("az")}>{t("qcg.sortAZ")}</DialogButton>
+            <DialogButton className={sort === "popular" ? "qcgp-on" : ""} onClick={() => pickSort("popular")}>{t("qcg.sortPopular")}</DialogButton>
+          </Focusable>
+        </Row>
+      )}
+      {/* Nothing kept yet: say it's loading, or what went wrong with a Retry (no dead end). */}
+      {!games && <Status loading={state.loading} error={state.error ? t("qcg.loadFailed") : undefined} />}
+      {!games && !state.loading && state.error && (
+        <Row>
+          <DialogButton onClick={() => setN((x) => x + 1)}>{t("qcg.retry")}</DialogButton>
+        </Row>
+      )}
+      {games && !list.length && (
+        <Row>
+          <div className="qc-note qc-muted">{q.trim() ? t("qcg.noMatches") : t("qcg.none")}</div>
         </Row>
       )}
       <Row>
         <Focusable className="qcgp-list" flow-children="vertical">
-          {games.map((g) => (
-            <DialogButton key={g.key} className="qcgp-row qcgp-row-art" onClick={() => guideGo({ view: "game", key: g.key, game: g.game })}>
+          {list.map((g) => (
+            <DialogButton key={g.key} className="qcgp-row qcgp-row-art" onClick={() => open(g.key, g.game)}>
               <GameArt game={g.game} art={g.art} className="qcgp-art-thumb" />
               <span className="qcgp-row-text">
                 <span className="qcgp-row-title">{g.key === ours?.key ? `▶ ${g.game}` : g.game}</span>
-                <span className="qcgp-row-sub">{t("qcg.areas", { n: g.areas })}</span>
+                <span className="qcgp-row-sub">
+                  {t("qcg.areas", { n: g.areas })}
+                  {g.checked && g.checked >= g.areas ? <span className="qcgp-checked"> · ✓ {t("qcg.checkedGuide")}</span> : null}
+                </span>
               </span>
             </DialogButton>
           ))}
