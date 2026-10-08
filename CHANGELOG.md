@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.12.0
+- **Guides open fast.** The guide list now comes from a small index published with the website (name, cover, page
+  count, whether it's checked against sources), so it no longer waits on the server and "The server took too long to
+  respond" is gone from the first load. The list is kept on the Deck and shows straight away, refreshing in the
+  background. If it can't load, Retry tries again instead of leaving a dead end; guide pages get longer timeouts with
+  one automatic retry, and a guide's pages load only when you open it.
+- **Your guides first.** The running game's guide is at the top, then the guides you opened recently, then the rest
+  A–Z or by popularity (a switch under the search box). Search filters the list as you type. Guides that are fully
+  checked against sources say so.
+- **Cleaner guide header.** Back with the game's name has its own row, cut to one line with "…" when the name is long,
+  and Full screen is a compact button at the end of that row. Left and right move between them on the D-pad.
+- **👍 / 👎 under every answer.** Next to Report, in the panel and on the full answer page; a 👎 can say what was wrong
+  (wrong place, wrong info, marker off, not helpful), which helps us see which games and questions need work.
+- **Hold to talk.** A Hold to talk button in the panel: hold A on it to ask out loud, let go to send it with a
+  screenshot (a touch tap starts and stops). It records from the Deck's microphone and only shows when a recorder is
+  available.
+
 ## 0.11.0
 Catches up with the desktop app:
 - **New quick questions.** The buttons are now "What should I do next?", "I'm stuck. How do I get past this?",
