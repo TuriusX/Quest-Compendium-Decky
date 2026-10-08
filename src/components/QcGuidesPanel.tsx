@@ -667,7 +667,6 @@ function AchievementsPage({ gameKey, game, full }: { gameKey: string; game?: str
   const s = useLoad<{ guide?: QcAchievementGuide }>(() => guideAchievements(gameKey, getLocale()));
   const [done, setDone] = useState<Set<string>>(() => readDone(gameKey, ACH_SLUG));
   const [openSec, setOpenSec] = useState<Set<string>>(new Set());
-  const [showHidden, setShowHidden] = useState(false);
   const [q, setQ] = useState("");
   const ach = s.data?.guide;
   const toggle = (id: string) => {
@@ -696,12 +695,10 @@ function AchievementsPage({ gameKey, game, full }: { gameKey: string; game?: str
 
   const r = ach.roadmap || {};
   const needle = fold(q.trim());
-  // Hidden achievements keep their name, description and tip covered until the player asks to see them.
-  const covered = (x: QcAchievementTip) => x.hidden && !showHidden;
   const list = ach.list
     .slice()
     .sort((x, y) => (y.rarity ?? 0) - (x.rarity ?? 0))
-    .filter((x) => !needle || (!covered(x) && fold(`${x.name} ${x.desc} ${x.areaName || ""}`).includes(needle)));
+    .filter((x) => !needle || (fold(`${x.name} ${x.desc} ${x.areaName || ""}`).includes(needle)));
   const canMiss = list.filter((x) => x.missable && !done.has(achId(x)));
   const n = (xs: QcAchievementTip[]) => xs.filter((x) => done.has(achId(x))).length;
   const text = (key: string | number, children: React.ReactNode) => (
@@ -711,21 +708,20 @@ function AchievementsPage({ gameKey, game, full }: { gameKey: string; game?: str
   );
   const row = (x: QcAchievementTip, where: string) => {
     const id = achId(x);
-    const hide = covered(x);
     return (
       <div key={`${where}:${id}`} className="qcgp-list">
         <DialogButton className={`qcgp-check ${done.has(id) ? "qcg-done" : ""}`} onClick={() => toggle(id)}>
           <span className="qcg-box">{done.has(id) ? "☑" : "☐"}</span>
           <span className="qcgp-check-text">
-            <span className="qcg-strong">{hide ? "???" : x.name}</span>
+            <span className="qcg-strong">{x.name}</span>
             {x.missable && <span className="qcg-tag">{t("qcg.missable")}</span>}
             {x.hidden && <span className="qcg-tag">{t("qcg.achHidden")}</span>}
             {x.rarity != null && <span className="qcg-detail"> · {x.rarity}%</span>}
-            {!hide && x.desc && <span className="qcg-detail">: {x.desc}</span>}
+            {x.desc && <span className="qcg-detail">: {x.desc}</span>}
           </span>
         </DialogButton>
-        {!hide && x.how && text(`${where}:${id}:how`, x.how)}
-        {!hide && x.area && (
+        {x.how && text(`${where}:${id}:how`, x.how)}
+        {x.area && (
           <DialogButton className="qcgp-nav" onClick={() => guideGo({ view: "area", key: gameKey, slug: x.area!, game })}>
             {t("qcg.achInGuide", { area: x.areaName || x.area })} ▶
           </DialogButton>
@@ -784,11 +780,6 @@ function AchievementsPage({ gameKey, game, full }: { gameKey: string; game?: str
 
           {!needle && !!r.steps?.length && section("steps", t("qcg.achSteps"), r.steps.map((st, i) => text(`step${i}`, `${i + 1}. ${st}`)))}
 
-          {ach.list.some((x) => x.hidden) && (
-            <DialogButton className="qcgp-nav" onClick={() => setShowHidden((v) => !v)}>
-              {showHidden ? t("qcg.achHideHidden") : t("qcg.achShowHidden")}
-            </DialogButton>
-          )}
           <div className="qcgp-section">
             {t("qcg.achAll")} <span className="qcg-count">{n(list)}/{list.length}</span>
           </div>
