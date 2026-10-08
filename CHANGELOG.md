@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.13.0
+- **Pro or Fast, your pick.** A switch above Send picks the model for your next question, as in the desktop app: Pro
+  for the best answers, Fast for quicker ones, each with the questions you have left today. Your pick is remembered.
+  When it runs out, the panel switches to the other one with a short note, and back again once it has questions.
+- **Questions left, from the server.** The status line shows both counts ("Pro 7 · Fast 24") with the bar for the
+  model you're using. The day resets at midnight where you are: the Deck sends its time zone.
+
 ## 0.12.0
 - **Guides open fast.** The guide list now comes from a small index published with the website (name, cover, page
   count, whether it's checked against sources), so it no longer waits on the server and "The server took too long to
