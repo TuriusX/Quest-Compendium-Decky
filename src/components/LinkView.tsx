@@ -14,7 +14,7 @@ function qrDataUrl(text: string): string {
 }
 
 /** Device-code sign-in: shows a QR code + short code; the user approves on their phone. */
-export function LinkView({ onLinked }: { onLinked: () => void }) {
+export function LinkView({ onLinked, autoStart = false }: { onLinked: () => void; autoStart?: boolean }) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [qr, setQr] = useState<string | null>(null);
   const [code, setCode] = useState<string>("");
@@ -82,6 +82,11 @@ export function LinkView({ onLinked }: { onLinked: () => void }) {
       }
     }
   };
+
+  // autoStart: the QR code shows straight away (the sign-in card), no extra press.
+  useEffect(() => {
+    if (autoStart) void begin();
+  }, []);
 
   if (phase === "idle" || phase === "expired" || phase === "error") {
     return (

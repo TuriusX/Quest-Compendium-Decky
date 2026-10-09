@@ -128,6 +128,8 @@ export interface AskResult {
   error?: string;
   text?: string;
   limitReached?: boolean;
+  /** A guest who used their last question today (or hit the limit): the sign-in card shows. */
+  signInNudge?: boolean;
   /** Which model answered, and whether that's the other one (the picked one was used up). */
   answeredWith?: AnswerModel;
   switched?: boolean;

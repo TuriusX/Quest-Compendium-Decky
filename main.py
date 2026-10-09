@@ -640,6 +640,9 @@ class Plugin:
                 modelUsed=data.get("modelUsed"),
                 quota=_quota_from(data.get("userData")),
             )
+            # A guest's last question today: the sign-in card shows under this answer.
+            if data.get("signInNudge") is True:
+                result["signInNudge"] = True
             # Which model answered; switched = the picked one was used up and the other answered.
             if data.get("answeredWith") in ("pro", "fast"):
                 result["answeredWith"] = data["answeredWith"]
@@ -674,6 +677,9 @@ class Plugin:
                     result["place"]["story"] = story
         elif status == 429:
             result.update(ok=True, limitReached=True, text=data.get("text") or "Daily limit reached.")
+            # A guest at their limit: the sign-in card (link with your phone) instead of Premium.
+            if isinstance(data.get("limit"), dict) and data["limit"].get("isGuest") is True:
+                result["signInNudge"] = True
             q = _quota_from(data.get("userData"))
             if q:
                 result["quota"] = q

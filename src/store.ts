@@ -10,6 +10,8 @@ export interface ChatState {
   notice: string | null;
   screenshotNote: string | null;
   limitReached: boolean;
+  /** A guest's last question today: the sign-in card (link with your phone) shows under the answer. */
+  signInNudge: boolean;
   quota: Quota | null;
   gameKey: number | null;
   /** The question currently being answered, shown while waiting (kept after an error so it can be retried). */
@@ -25,6 +27,7 @@ const initial: ChatState = {
   notice: null,
   screenshotNote: null,
   limitReached: false,
+  signInNudge: false,
   quota: null,
   gameKey: null,
   pending: null,
@@ -42,7 +45,7 @@ export function setChat(patch: Partial<ChatState>): void {
 }
 
 export function resetConversation(gameKey: number | null): void {
-  setChat({ history: [], error: null, notice: null, screenshotNote: null, limitReached: false, gameKey, pending: null, freshAnswer: false });
+  setChat({ history: [], error: null, notice: null, screenshotNote: null, limitReached: false, signInNudge: false, gameKey, pending: null, freshAnswer: false });
 }
 
 /** Tick a marked point off (or back on) in one answer; the ticks stay with the conversation. */

@@ -27,6 +27,7 @@ import { Logo } from "./Brand";
 import { BrowserTab } from "./BrowserTab";
 import { PointChecklist } from "./PointChecklist";
 import { QuestLog } from "./QuestLog";
+import { SignInNudge } from "./SignInNudge";
 import { storyPhrase } from "../format";
 import { QUICK_MAIN, QUICK_MORE, QUICK_FOLLOW, type QuickId } from "../quick";
 import { startRecording, stopRecording } from "../api";
@@ -150,12 +151,13 @@ export function QuickAccessPanel() {
       ...(opts.quick ? { quick: opts.quick } : {}),
       ...(opts.audio ? { audio: opts.audio } : {}),
     };
-    setChat({ busy: true, pending: q, error: null, notice: null, screenshotNote: null, limitReached: false, freshAnswer: false });
+    setChat({ busy: true, pending: q, error: null, notice: null, screenshotNote: null, limitReached: false, signInNudge: false, freshAnswer: false });
     try {
       const res = await ask(req);
       // `pending` stays set on errors so Retry can send the same question again.
       const patch: Partial<ReturnType<typeof getChat>> = {
         busy: false,
+        signInNudge: !!res.signInNudge,
         notice: res.notice ?? null,
         screenshotNote:
           res.screenshot === "failed" ? t("answer.shotFailed", { error: res.screenshotError ?? "?" }) : null,
@@ -364,7 +366,7 @@ export function QuickAccessPanel() {
           </div>
         </PanelSectionRow>
       )}
-      {chat.limitReached && (
+      {chat.limitReached && !chat.signInNudge && (
         <PanelSectionRow>
           <ButtonItem layout="below" onClick={() => Navigation.NavigateToExternalWeb("https://questcompendium.com")}>
             {t("premium.about")}
@@ -437,6 +439,7 @@ export function QuickAccessPanel() {
           )}
         </>
       )}
+      {chat.signInNudge && !chat.busy && <SignInNudge />}
     </PanelSection>
   );
 
