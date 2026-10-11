@@ -33,3 +33,23 @@ export function deviceTimeZone(): string {
     return "";
   }
 }
+
+/**
+ * The next daily top-up, as in the desktop app: what each model gets at midnight (the Deck's time zone) and how long
+ * until then, as one line: "+8 Pro · +25 Fast in 13h 20m" (Premium at its carry-over cap: "Pro at max 100"). Under an
+ * hour, minutes only. '' while the reset time or the amounts aren't known.
+ */
+export function topUpLine(q: Quota | null, t: (k: string, v?: Record<string, string | number>) => string, now = Date.now()): string {
+  if (!q?.resetAt || (!q.dailyPro && !q.dailyFast)) return "";
+  const cap = q.rollover && q.bankCap ? q.bankCap : 0;
+  const part = (model: string, left: number | undefined, daily: number | undefined) => {
+    const l = left ?? 0, d = daily ?? 0;
+    if (cap && l >= cap) return t("topup.max", { model, n: cap });
+    const n = cap ? Math.min(d, cap - l) : d;
+    return n > 0 ? t("topup.add", { model, n }) : "";
+  };
+  const parts = [part(t("model.pro"), q.pro, q.dailyPro), part(t("model.fast"), q.fast, q.dailyFast)].filter(Boolean).join(" · ");
+  const mins = Math.max(0, Math.ceil((q.resetAt - now) / 60_000));
+  const h = Math.floor(mins / 60), m = mins % 60;
+  return t("topup.line", { parts, when: h > 0 ? t("topup.hm", { h, m }) : t("topup.m", { m }) });
+}

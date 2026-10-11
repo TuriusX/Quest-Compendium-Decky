@@ -11,7 +11,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { FaCog, FaComments, FaPlus } from "react-icons/fa";
 import { ask, AskRequest, AnswerModel, getQuota, getState, PluginState, saveSettings, Turn } from "../api";
-import { balancesOf, deviceTimeZone, modelOf, settingOf, startingModel } from "../answerModel";
+import { balancesOf, deviceTimeZone, modelOf, settingOf, startingModel, topUpLine } from "../answerModel";
 import { ModelToggle } from "./ModelToggle";
 import { currentGame, useCurrentGame } from "../game";
 import { rememberPlace } from "../qcGuides";
@@ -49,6 +49,12 @@ export function QuickAccessPanel() {
   const t = useT();
   const game = useCurrentGame();
   const chat = useChat();
+  // The top-up countdown moves on every minute.
+  const [minuteNow, setMinuteNow] = useState(Date.now);
+  useEffect(() => {
+    const iv = setInterval(() => setMinuteNow(Date.now()), 60_000);
+    return () => clearInterval(iv);
+  }, []);
   const browser = useBrowser();
   const [ps, setPs] = useState<PluginState | null>(null);
   const [prompt, setPrompt] = useState("");
@@ -213,7 +219,9 @@ export function QuickAccessPanel() {
   // Status strip: game · place · story beat · collected.
   const points = last?.turn.points ?? [];
   const collected = points.length ? t("status.collected", { n: (last?.turn.donePoints ?? []).length, m: points.length }) : null;
-  const info = game ? [game.name, last?.turn.place || t("status.placeUnknown"), last?.turn.place ? last?.turn.story : null, collected] : [collected];
+  // When the next questions arrive ("+8 Pro · +25 Fast in 13h 20m"), counting down by the minute.
+  const nextTopUp = topUpLine(chat.quota, t, minuteNow);
+  const info = game ? [game.name, last?.turn.place || t("status.placeUnknown"), last?.turn.place ? last?.turn.story : null, collected, nextTopUp] : [collected, nextTopUp];
   // Next turn (a fight): a fresh screenshot and a short question for whoever acts now; its answer replaces the plan.
   const canNextTurn = !!ps?.tools.gamescopectl && !!game;
   const nextTurn = () => submit(t("log.nextTurnQ"), { shot: true });
@@ -364,6 +372,11 @@ export function QuickAccessPanel() {
             </Focusable>
             {canRetry && <DialogButton onClick={() => submit(chat.pending ?? "")}>{t("ask.retry")}</DialogButton>}
           </div>
+        </PanelSectionRow>
+      )}
+      {chat.limitReached && nextTopUp && (
+        <PanelSectionRow>
+          <div className="qc-note qc-muted">{nextTopUp}</div>
         </PanelSectionRow>
       )}
       {chat.limitReached && !chat.signInNudge && (

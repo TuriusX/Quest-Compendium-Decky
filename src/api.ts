@@ -27,6 +27,9 @@ export interface Quota {
   dailyPro?: number;
   dailyFast?: number;
   resetAt?: number;
+  /** Premium's carry-over: unused questions are kept, each model capped at bankCap. */
+  rollover?: boolean;
+  bankCap?: number;
 }
 
 /** The player's pick next to Send: Pro (the best answers) or Fast (quicker answers). */

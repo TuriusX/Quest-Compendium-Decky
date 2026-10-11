@@ -193,6 +193,12 @@ def _quota_from(user_data: Any) -> Optional[Dict[str, Any]]:
         v = _to_int(user_data.get(src))
         if v is not None:
             out[key] = max(0, v)
+    # Premium's carry-over: unused questions are kept, each model capped at bankCap (for the top-up countdown).
+    if user_data.get("rollover") is True:
+        out["rollover"] = True
+        cap = _to_int(user_data.get("bankCap"))
+        if cap is not None:
+            out["bankCap"] = max(0, cap)
     return out
 
 
