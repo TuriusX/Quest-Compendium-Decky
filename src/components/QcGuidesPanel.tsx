@@ -639,6 +639,7 @@ function EntityPage({ gameKey, slug, game, full }: { gameKey: string; slug: stri
           {e.overview && text("overview", e.overview)}
           {line(t("qcg.infoRegion"), sm.region)}
           {line(t("qcg.entWhere"), sm.where)}
+          {sm.whereToFind?.length ? text("find", <><span className="qcg-detail">{t("qcg.entFind")}:</span> {sm.whereToFind.map((w) => `${w.when ? `${w.when}: ` : ""}${w.where}`).join(" · ")}</>) : null}
           {line(t("qcg.infoWay"), sm.gettingThere)}
           {named(t("qcg.shops"), sm.shops)}
           {line(t("qcg.infoServices"), sm.services?.join(" · "))}

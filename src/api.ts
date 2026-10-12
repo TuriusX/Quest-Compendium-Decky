@@ -241,7 +241,7 @@ export interface QcCompendiumType { type: string; built: { slug: string; name: s
 export interface QcEntityRef { slug: string; name: string; type: string; region?: string; line?: string }
 export interface QcEntity {
   slug: string; name: string; type: string; overview?: string;
-  summary?: { region?: string; where?: string; gettingThere?: string; shops?: { name: string; what?: string }[]; services?: string[]; places?: { name: string; what?: string }[]; collectibles?: { name: string; where?: string }[]; quests?: { name: string; kind?: string; chapter?: string }[]; notes?: string[] };
+  summary?: { region?: string; where?: string; gettingThere?: string; whereToFind?: { when?: string; where: string }[]; shops?: { name: string; what?: string }[]; services?: string[]; places?: { name: string; what?: string }[]; collectibles?: { name: string; where?: string }[]; quests?: { name: string; kind?: string; chapter?: string }[]; notes?: string[] };
 }
 export const guideEntity = callable<[key: string, slug: string], { ok: boolean; entity?: QcEntity; error?: string }>("guide_entity");
 export const guideSearchIndex = callable<[key: string, lang?: string], { ok: boolean; index?: { l: string; k: string; c: string; h: string; p?: number; e?: number }[]; error?: string }>("guide_search_index");
