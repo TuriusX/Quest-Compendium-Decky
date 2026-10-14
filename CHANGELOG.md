@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.15.0
+- **Missables where you are.** When an answer is about a place our guide covers, it ends with what you could miss
+  there for good and why, up to three, with "more in the guide" for the rest. Press one to open the guide at it. Tick
+  it off in the guide and it leaves the list. This doesn't use a question.
+- **Guide items spotted on screen.** With a screenshot, an answer can now mark things our guide lists in your area
+  (in amber, "From the guide"). Ticking one ticks it in the guide too. Answers also know where you last were, so
+  they use that place's guide.
+- **Update now.** When a new version is out, Update now hands it to Decky, which asks you to confirm and installs
+  it. If that doesn't work on your Deck, the reinstall steps show instead.
+
 ## 0.14.0
 - **Know when there's an update.** When a newer version is out, the panel says so, with How to update: the same
   "Install Plugin from URL" link as before. Your settings and sign-in are kept. Not now hides it until the next one.
