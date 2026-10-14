@@ -84,6 +84,19 @@ const CSS = `
 .qc-pt-sub { font-size: 12px; line-height: 1.35; color: #b9b2d6; margin-top: 1px; }
 .qc-pt-done .qc-pt-label { opacity: 0.55; text-decoration: line-through; }
 .qc-pt-done .qc-pt-sub { opacity: 0.55; }
+/* "Missable in <area>" under an answer, and guide-backed markers (amber, like the guide's missables) */
+.qc-miss { width: 100%; box-sizing: border-box; padding: 8px 10px; border-radius: 4px; background: rgba(251, 191, 36, 0.08);
+  border: 1px solid rgba(251, 191, 36, 0.35); }
+.qc-miss-title { font-size: 12.5px; font-weight: 700; color: #fde68a; margin-bottom: 4px; }
+.qc-miss-list { display: flex; flex-direction: column; gap: 3px; }
+.qc-miss-list > .qc-miss-item { display: flex !important; flex-direction: column !important; align-items: flex-start !important;
+  text-align: left !important; padding: 5px 8px !important; min-width: 0 !important; background: rgba(255, 255, 255, 0.03) !important; }
+.qc-miss-list > .qc-miss-item.gpfocus { background: rgba(251, 191, 36, 0.18) !important; }
+.qc-miss-list > .qc-miss-more { padding: 4px 8px !important; min-width: 0 !important; font-size: 12px !important; color: #fde68a !important; }
+.qc-badge-guide { background: #f59e0b; color: #1a1726; }
+.qc-mk-guide .qc-mk-frame { border-color: #f59e0b; box-shadow: 0 0 0 2px rgba(10, 8, 18, 0.9), 0 0 10px rgba(245, 158, 11, 0.6); }
+.qc-update-fail { font-size: 12px; color: #fca5a5; margin-top: 4px; }
+.qc-update-row > .qc-update-now { background: rgba(139, 92, 246, 0.35) !important; }
 /* "Version X is out": how to update a manual install */
 .qc-update { width: 100%; padding: 8px 10px; box-sizing: border-box; border-radius: 4px; background: rgba(251, 191, 36, 0.1);
   border: 1px solid rgba(251, 191, 36, 0.45); }

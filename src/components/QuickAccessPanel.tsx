@@ -16,7 +16,9 @@ import { ModelToggle } from "./ModelToggle";
 import { UpdateNotice } from "./UpdateNotice";
 import { useUpdate } from "../update";
 import { currentGame, useCurrentGame } from "../game";
-import { rememberPlace } from "../qcGuides";
+import { lastPlace, rememberPlace } from "../qcGuides";
+import { guideContextFor } from "../guideHere";
+import { MissablesHere } from "./MissablesHere";
 import { setTab, useBrowser } from "../browser";
 import { aiLanguageName, setLocaleSetting, useT } from "../i18n";
 import { ANSWER_ROUTE, openPage, SETTINGS_ROUTE } from "../routes";
@@ -162,6 +164,13 @@ export function QuickAccessPanel() {
     };
     setChat({ busy: true, pending: q, error: null, notice: null, screenshotNote: null, limitReached: false, signInNudge: false, freshAnswer: false });
     try {
+      // Where the player last was (not confirmed) and that guide area's ticks: the answer uses that guide page and can
+      // mark the guide's unticked entries it sees. A quick, cached lookup that gives up rather than delay the question.
+      const placeNow = liveGame?.name ? lastPlace(liveGame.name) : null;
+      if (liveGame?.name && placeNow) {
+        req.place = { name: placeNow };
+        req.guideDone = await guideContextFor(liveGame.name, placeNow);
+      }
       const res = await ask(req);
       // `pending` stays set on errors so Retry can send the same question again.
       const patch: Partial<ReturnType<typeof getChat>> = {
@@ -439,6 +448,8 @@ export function QuickAccessPanel() {
               <PointChecklist turn={last.turn} turnIndex={last.index} />
             </PanelSectionRow>
           )}
+          {/* What the guide marks missable in the place this answer is about, not ticked yet (no question used). */}
+          {game?.name && last.turn.place && <MissablesHere game={game.name} place={last.turn.place} row />}
           <PanelSectionRow>
             <Focusable className="qc-presets" flow-children="horizontal">
               {followUps.map((id) => (

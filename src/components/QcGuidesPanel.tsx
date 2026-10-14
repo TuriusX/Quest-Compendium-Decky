@@ -27,6 +27,7 @@ import {
   lastArea,
   lastPlace,
   readDone,
+  onDoneChange,
   rememberArea,
   samePlace,
   useGuideView,
@@ -399,6 +400,8 @@ function AreaPage({ gameKey, slug, game, full, focus }: { gameKey: string; slug:
   const s = useLoad<{ page?: QcGuidePage }>(() => guideArea(gameKey, slug, getLocale()));
   const order = useLoad<{ areas?: QcGuideArea[]; entities?: QcEntityRef[] }>(() => guideGame(gameKey, getLocale()));
   const [done, setDone] = useState<Set<string>>(() => readDone(gameKey, slug));
+  // Ticks made elsewhere (a guide-backed marker under an answer) show here too.
+  useEffect(() => onDoneChange((k, s2) => k === gameKey && s2 === slug && setDone(readDone(gameKey, slug))), [gameKey, slug]);
   const [openSec, setOpenSec] = useState<Set<string>>(new Set());
   useEffect(() => rememberArea(gameKey, slug), [gameKey, slug]);
   const page = s.data?.page;

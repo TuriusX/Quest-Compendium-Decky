@@ -230,6 +230,10 @@ def _points_from(data: Any) -> List[Dict[str, Any]]:
             rank = _to_int(p.get("rank"))
             if rank and 1 <= rank <= 3:
                 point["rank"] = rank
+            # A guide entry the answer found on screen (guide-backed marker): ticking it ticks the guide entry.
+            gid, gkey, gslug = (str(p.get(k) or "").strip() for k in ("guideId", "guideKey", "guideSlug"))
+            if gid and gkey and gslug and len(gid) <= 120 and len(gkey) <= 120 and len(gslug) <= 160:
+                point.update(guideId=gid, guideKey=gkey, guideSlug=gslug)
             out.append(point)
     return out[:8 if isinstance(data, dict) and data.get("combat") is True else 5]
 
@@ -645,6 +649,17 @@ class Plugin:
         self._remember_tz(req.get("timeZone"))
         if getattr(self, "_tz", ""):
             payload["timeZone"] = self._tz
+        # Where the player last was (the latest answer's place, not confirmed), so the server can use that guide page,
+        # and the entries ticked there, so an answer can mark the guide's unticked ones it sees.
+        place = req.get("place")
+        if isinstance(place, dict) and str(place.get("name") or "").strip():
+            payload["place"] = {"name": str(place["name"]).strip()[:80], "confirmed": False}
+        done = req.get("guideDone")
+        if isinstance(done, dict) and str(done.get("slug") or "").strip() and isinstance(done.get("ids"), list):
+            payload["guideDone"] = {
+                "slug": str(done["slug"]).strip()[:160],
+                "ids": [str(i)[:120] for i in done["ids"][:200] if isinstance(i, (str, int))],
+            }
         if req.get("quick") in QUICK_IDS:
             payload["quick"] = req["quick"]
         # Hold to talk: the recorded question (stop_recording), sent as audio like the desktop app's voice questions.

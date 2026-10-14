@@ -69,6 +69,25 @@ export function writeDone(key: string, slug: string, done: Set<string>): void {
   } catch {
     /* ticks just won't be remembered */
   }
+  doneListeners.forEach((l) => l(key, slug));
+}
+
+/** Tick or untick one guide entry (a guide-backed marker ticks its entry too). */
+export function setEntryDone(key: string, slug: string, id: string, on: boolean): void {
+  const done = readDone(key, slug);
+  if (on === done.has(id)) return;
+  if (on) done.add(id);
+  else done.delete(id);
+  writeDone(key, slug, done);
+}
+
+// Ticks changed somewhere (the guide, a marker under an answer): open views re-read them.
+const doneListeners = new Set<(key: string, slug: string) => void>();
+export function onDoneChange(l: (key: string, slug: string) => void): () => void {
+  doneListeners.add(l);
+  return () => {
+    doneListeners.delete(l);
+  };
 }
 
 // ---- where the player is, and where they were in the guide ----

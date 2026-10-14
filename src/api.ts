@@ -48,6 +48,10 @@ export interface ShotPoint {
   missable?: boolean;
   /** A fight: kill order of the top 2-3 targets (1 = first), drawn stronger. */
   rank?: number;
+  /** A guide entry the answer found on screen (guide-backed marker): ticking the marker ticks the entry. */
+  guideId?: string;
+  guideKey?: string;
+  guideSlug?: string;
 }
 
 /** One quest-log takeaway from an answer: a step to take, a choice to make, or a warning. */
@@ -124,6 +128,10 @@ export interface AskRequest {
   answerModel?: AnswerModel;
   /** The Deck's time zone, so the day's questions reset at local midnight. */
   timeZone?: string;
+  /** Where the player last was (the latest answer's place, not confirmed). */
+  place?: { name: string };
+  /** The entries ticked in that place's guide area, so the answer can mark the unticked ones it sees. */
+  guideDone?: { slug: string; ids: string[] } | null;
   /** A quick question's id (src/quick.ts): the server adds what it asks for. */
   quick?: string;
   /** Hold to talk: the recorded question (stopRecording), a data URL. */

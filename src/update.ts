@@ -43,6 +43,24 @@ const dismissedVersion = (): string => {
   }
 };
 
+/**
+ * "Update now": hand the release link to Decky's own installer (what Developer → Install Plugin from URL does), which
+ * asks the player to confirm, then replaces this plugin, keeping its settings. That installer isn't a public Decky API,
+ * so this returns false when it's missing or fails, and the panel shows the manual steps instead.
+ * The name must be plugin.json's: Decky finds the installed copy by it (another name would install a second copy).
+ */
+export async function installWithDecky(url: string, version: string): Promise<boolean> {
+  const backend = (window as any).DeckyBackend;
+  if (!url || !backend || typeof backend.call !== "function") return false;
+  try {
+    const INSTALL_TYPE_UPDATE = 2; // Decky's InstallType: INSTALL, REINSTALL, UPDATE, DOWNGRADE, OVERWRITE
+    await backend.call("utilities/install_plugin", url, "Quest Compendium", version, "", INSTALL_TYPE_UPDATE);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** "Not now": hide the notice until a newer version than this one comes out. */
 export function dismissUpdate(version: string): void {
   try {

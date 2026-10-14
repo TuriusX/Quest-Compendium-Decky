@@ -6,6 +6,7 @@ import { ThemeStyle } from "../theme";
 import { AnswerBlocks } from "./AnswerBlocks";
 import { MarkedShot } from "./MarkedShot";
 import { QuestLog } from "./QuestLog";
+import { MissablesHere } from "./MissablesHere";
 import { PageHeader } from "./Brand";
 import { ReportButton, ReportedNote } from "./ReportAnswer";
 import { VoteButtons } from "./VoteButtons";
@@ -17,6 +18,7 @@ export function AnswerPage() {
   const game = useCurrentGame();
   const turns = chat.history;
   const lastUserIndex = turns.map((t) => t.role).lastIndexOf("user");
+  const lastAnswerIndex = turns.map((t) => t.role).lastIndexOf("assistant");
 
   return (
     <div className="qc-page">
@@ -50,6 +52,8 @@ export function AnswerPage() {
                   <AnswerBlocks text={t.text} chunk={420} />
                   {/* The answer's quest log (steps, or a fight's battle plan); ticks are shared with the panel. */}
                   <QuestLog turn={t} turnIndex={i} />
+                  {/* The latest answer: what the guide marks missable in its place, not ticked yet. */}
+                  {i === lastAnswerIndex && game?.name && t.place && <MissablesHere game={game.name} place={t.place} />}
                   <Focusable style={{ marginTop: 8, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "flex-start" }} flow-children="horizontal">
                     <VoteButtons info={{ turn: t, turnIndex: i, question: turns.slice(0, i).reverse().find((x) => x.role === "user")?.text ?? "", game: game?.name ?? "" }} />
                     <ReportButton info={{ turn: t, turnIndex: i, question: turns.slice(0, i).reverse().find((x) => x.role === "user")?.text ?? "", game: game?.name ?? "" }} />
