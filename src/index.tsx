@@ -10,6 +10,7 @@ import { QuickAccessPanel } from "./components/QuickAccessPanel";
 import { SettingsPage } from "./components/SettingsPage";
 import { destroyGuideBrowser, GUIDE_ROUTE } from "./guideBrowser";
 import { ANSWER_ROUTE, SETTINGS_ROUTE } from "./routes";
+import { startUpdateChecks, stopUpdateChecks } from "./update";
 
 const ROUTES: [string, () => ReactElement][] = [
   [ANSWER_ROUTE, AnswerPage],
@@ -20,6 +21,8 @@ const ROUTES: [string, () => ReactElement][] = [
 
 export default definePlugin(() => {
   for (const [path, page] of ROUTES) routerHook.addRoute(path, page, { exact: true });
+  // "Update available": check the latest release now and every few hours (silent when offline).
+  startUpdateChecks();
 
   return {
     name: "Quest Compendium",
@@ -32,6 +35,7 @@ export default definePlugin(() => {
     content: <QuickAccessPanel />,
     icon: <BookIcon />,
     onDismount() {
+      stopUpdateChecks();
       destroyGuideBrowser();
       for (const [path] of ROUTES) routerHook.removeRoute(path);
     },

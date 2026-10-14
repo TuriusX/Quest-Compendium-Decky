@@ -54,6 +54,10 @@ export interface ShotPoint {
 export interface QuestStep {
   kind: "step" | "choice" | "warning";
   text: string;
+  /** The objective in a few words (newer answers); text is the longer wording, used when there's no label. */
+  label?: string;
+  /** One short line saying where it is or how to do it (goes with label). */
+  where?: string;
   /** The sentence of the answer it comes from. */
   detail?: string;
 }
@@ -191,6 +195,16 @@ export interface ScreenshotTest {
 export const getState = callable<[], PluginState>("get_state");
 export const saveSettings = callable<[patch: Partial<Settings>], boolean>("save_settings");
 export const getQuota = callable<[tz?: string], QuotaResult>("get_quota");
+
+/** A newer release on GitHub than the one installed (manual installs don't update by themselves). */
+export interface UpdateInfo {
+  ok: boolean;
+  current?: string;
+  latest?: string;
+  newer?: boolean;
+  installUrl?: string;
+}
+export const checkUpdate = callable<[], UpdateInfo>("check_update");
 export const ask = callable<[req: AskRequest], AskResult>("ask");
 export const startLink = callable<[], LinkStart>("start_link");
 export const pollLink = callable<[], LinkPoll>("poll_link");

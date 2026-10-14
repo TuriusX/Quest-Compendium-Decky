@@ -5,9 +5,10 @@ import { toggleStep } from "../store";
 
 /**
  * The answer's quest log, like the desktop app's: its title, then the 1-4 things to keep in mind (steps to take,
- * choices labelled, warnings in amber), each with the answer's sentence under it. Pressing A ticks a step off; ticks
- * stay with the conversation. In a fight the steps are the Battle plan (this turn's action, kill order, key tactic),
- * with Next turn under them: a fresh screenshot and a short question for whoever acts now.
+ * choices labelled, warnings in amber): each a short objective with one line saying where or how, or for older answers
+ * the longer step with the answer's sentence under it. Pressing A ticks a step off; ticks stay with the conversation.
+ * In a fight the steps are the Battle plan (this turn's action, kill order, key tactic), with Next turn under them: a
+ * fresh screenshot and a short question for whoever acts now.
  */
 export function QuestLog({
   turn,
@@ -39,7 +40,10 @@ export function QuestLog({
       )}
       {steps.map((s, i) => {
         const isDone = done.has(i);
-        const text = s.kind === "choice" ? t("log.choice", { text: s.text }) : s.text;
+        // The short objective and its where / how line when the answer has them, else the longer step and its sentence.
+        const main = s.label || s.text;
+        const text = s.kind === "choice" ? t("log.choice", { text: main }) : main;
+        const sub = s.label ? s.where || "" : s.detail || "";
         return (
           <DialogButton
             key={i}
@@ -51,7 +55,7 @@ export function QuestLog({
             </span>
             <span className="qc-pt-text">
               <span className="qc-pt-label">{text}</span>
-              {s.detail && <span className="qc-pt-sub">{s.detail}</span>}
+              {sub && <span className="qc-pt-sub">{sub}</span>}
             </span>
           </DialogButton>
         );

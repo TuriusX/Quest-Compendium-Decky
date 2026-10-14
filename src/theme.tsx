@@ -84,6 +84,15 @@ const CSS = `
 .qc-pt-sub { font-size: 12px; line-height: 1.35; color: #b9b2d6; margin-top: 1px; }
 .qc-pt-done .qc-pt-label { opacity: 0.55; text-decoration: line-through; }
 .qc-pt-done .qc-pt-sub { opacity: 0.55; }
+/* "Version X is out": how to update a manual install */
+.qc-update { width: 100%; padding: 8px 10px; box-sizing: border-box; border-radius: 4px; background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.45); }
+.qc-update-title { font-size: 13px; font-weight: 700; color: #fde68a; }
+.qc-update-steps { margin: 6px 0 0; padding-left: 18px; font-size: 12px; line-height: 1.4; color: #e6e1f7; }
+.qc-update-steps li { margin-bottom: 3px; }
+.qc-update-url { font-family: monospace; font-size: 11px; color: #c4b5fd; word-break: break-all; margin-top: 2px; }
+.qc-update-row { display: flex; gap: 6px; margin-top: 6px; }
+.qc-update-row > * { flex: 1 1 0; min-width: 0 !important; padding: 4px 8px !important; font-size: 12px !important; }
 /* Pro / Fast next to Send, each with the questions left */
 .qc-model { display: flex; gap: 4px; width: 100%; }
 .qc-model > .qc-model-opt { flex: 1 1 0 !important; min-width: 0 !important; display: flex !important; align-items: center !important;

@@ -43,6 +43,11 @@ SHORT_TIMEOUT_S = 20
 # Guides: the list comes from the website's small index (published with the site), the server's list is the fallback;
 # a guide's pages come from the server. Longer timeouts than other calls, each tried twice.
 GUIDE_INDEX_URL = "https://questcompendium.com/guides/index.json"
+# "Update available": the newest release on GitHub (manually installed plugins don't update by themselves).
+RELEASES_API = "https://api.github.com/repos/TuriusX/Quest-Compendium-Decky/releases/latest"
+INSTALL_URL = "https://github.com/TuriusX/Quest-Compendium-Decky/releases/latest/download/quest-compendium-decky.zip"
+UPDATE_CHECK_S = 3 * 3600  # GitHub allows 60 unauthenticated calls an hour; one every few hours is plenty
+UPDATE_RETRY_S = 30 * 60  # after a failed check (offline), try again later rather than on every panel open
 GUIDE_INDEX_TIMEOUT_S = 30
 GUIDE_TIMEOUT_S = 45
 TOKEN_REFRESH_MARGIN_S = 120  # refresh Firebase ID tokens this long before they expire
@@ -232,8 +237,16 @@ def _points_from(data: Any) -> List[Dict[str, Any]]:
 STEP_KINDS = ("step", "choice", "warning")
 
 
+def _version_tuple(v: Any) -> Tuple[int, ...]:
+    """'0.14.0' -> (0, 14, 0); anything else -> () (so it never counts as newer)."""
+    m = re.match(r"^(\d+)\.(\d+)(?:\.(\d+))?", str(v or "").strip())
+    return tuple(int(x or 0) for x in m.groups()) if m else ()
+
+
 def _steps_from(data: Any) -> List[Dict[str, Any]]:
-    """The answer's quest-log takeaways: up to 4 {kind: step|choice|warning, text, detail?}, most important first.
+    """The answer's quest-log takeaways: up to 4 {kind: step|choice|warning, text, label?, where?, detail?}, most
+    important first. label is the short objective (2-6 words) and where one line saying where or how, as the desktop
+    app shows them; text and detail are the longer wording, kept for answers without them.
     In a fight they're the battle plan (this turn's action, kill order, key tactic)."""
     out: List[Dict[str, Any]] = []
     for st in (data.get("steps") if isinstance(data, dict) else None) or []:
@@ -243,6 +256,12 @@ def _steps_from(data: Any) -> List[Dict[str, Any]]:
         if not text:
             continue
         step: Dict[str, Any] = {"kind": st.get("kind") if st.get("kind") in STEP_KINDS else "step", "text": text}
+        label = str(st.get("label") or "").strip()[:60]
+        if label:
+            step["label"] = label
+        where = str(st.get("where") or "").strip()[:120]
+        if where:
+            step["where"] = where
         detail = str(st.get("detail") or "").strip()[:400]
         if detail:
             step["detail"] = detail
@@ -496,6 +515,37 @@ class Plugin:
             _remove_quietly(raw, jpg)
 
     # ---- callable from the frontend ----------------------------------------------------------
+
+    async def check_update(self) -> Dict[str, Any]:
+        """Is there a newer release than this one? {ok, current, latest, newer, installUrl}. Cached for a few hours;
+        offline or any problem: {ok: False}, and the panel shows nothing."""
+        now = time.time()
+        cached = getattr(self, "_update_cache", None)
+        if cached and now < cached[0]:
+            return cached[1]
+        current = str(decky.DECKY_PLUGIN_VERSION or "")
+        result: Dict[str, Any] = {"ok": False, "current": current}
+        try:
+            timeout = aiohttp.ClientTimeout(total=10)
+            connector = aiohttp.TCPConnector(ssl=self._ssl)
+            headers = {"Accept": "application/vnd.github+json", "User-Agent": f"QuestCompendiumDeck/{current}"}
+            async with aiohttp.ClientSession(timeout=timeout, connector=connector) as session:
+                async with session.get(RELEASES_API, headers=headers) as resp:
+                    data = await resp.json(content_type=None) if resp.status == 200 else None
+            tag = str((data or {}).get("tag_name") or "").strip()
+            latest = tag[1:] if tag[:1] in ("v", "V") else tag
+            if _version_tuple(latest):
+                result = {
+                    "ok": True,
+                    "current": current,
+                    "latest": latest,
+                    "newer": bool(_version_tuple(current)) and _version_tuple(latest) > _version_tuple(current),
+                    "installUrl": INSTALL_URL,
+                }
+        except Exception as e:  # offline, rate-limited, unexpected reply: say nothing to the player
+            decky.logger.info(f"Update check skipped: {type(e).__name__}")
+        self._update_cache = (now + (UPDATE_CHECK_S if result["ok"] else UPDATE_RETRY_S), result)
+        return result
 
     async def get_state(self) -> Dict[str, Any]:
         env = _clean_env()

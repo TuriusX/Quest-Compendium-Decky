@@ -13,6 +13,8 @@ import { FaCog, FaComments, FaPlus } from "react-icons/fa";
 import { ask, AskRequest, AnswerModel, getQuota, getState, PluginState, saveSettings, Turn } from "../api";
 import { balancesOf, deviceTimeZone, modelOf, settingOf, startingModel, topUpLine } from "../answerModel";
 import { ModelToggle } from "./ModelToggle";
+import { UpdateNotice } from "./UpdateNotice";
+import { useUpdate } from "../update";
 import { currentGame, useCurrentGame } from "../game";
 import { rememberPlace } from "../qcGuides";
 import { setTab, useBrowser } from "../browser";
@@ -59,6 +61,7 @@ export function QuickAccessPanel() {
   const [ps, setPs] = useState<PluginState | null>(null);
   const [prompt, setPrompt] = useState("");
   const [backendDown, setBackendDown] = useState(false);
+  const update = useUpdate();
   // Pro / Fast next to Send: the saved pick when it has questions left, else the other one (with a short note).
   const [answerModel, setAnswerModel] = useState<AnswerModel>("pro");
   const [modelNote, setModelNote] = useState("");
@@ -472,6 +475,12 @@ export function QuickAccessPanel() {
             </div>
           </div>
         </PanelSectionRow>
+        {/* A newer version is out (installed by hand, so it doesn't update itself): how to get it. */}
+        {update && (
+          <PanelSectionRow>
+            <UpdateNotice />
+          </PanelSectionRow>
+        )}
         <PanelSectionRow>
           <div className="qc-strip">
             <span className="qc-strip-info">

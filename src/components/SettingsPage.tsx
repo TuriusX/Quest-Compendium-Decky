@@ -8,6 +8,7 @@ import { ThemeStyle } from "../theme";
 import { PageHeader } from "./Brand";
 import { DEFAULT_SITES } from "./BrowserTab";
 import { LinkView } from "./LinkView";
+import { UpdateNotice } from "./UpdateNotice";
 
 const MODES: Mode[] = ["standard", "minmax", "roleplay"];
 
@@ -60,6 +61,8 @@ export function SettingsPage() {
       <ThemeStyle />
       <div className="qc-page-inner">
         <PageHeader title={t("settings.title")} sub={ps ? t("settings.sub", { v: ps.version }) : null} />
+        {/* A newer version on GitHub: how to update (always shown here, even after "Not now" in the panel). */}
+        <UpdateNotice inSettings />
 
         {backendDown && (
           <div className="qc-note qc-err" style={{ margin: "8px 0" }}>
