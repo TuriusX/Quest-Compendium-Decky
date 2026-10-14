@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.14.0
+- **Know when there's an update.** When a newer version is out, the panel says so, with How to update: the same
+  "Install Plugin from URL" link as before. Your settings and sign-in are kept. Not now hides it until the next one.
+- **A cleaner quest log.** Objectives are a few words with one line saying where or how, like the desktop app.
+- **Characters, places and collectibles.** Guides list them on the game's page, each with its own page: what it is,
+  where to find it (for characters, chapter by chapter), how to get there, shops, services, missions and more. Area
+  pages link the ones they mention, and ones still being written are greyed out as coming soon.
+- **Search the whole guide.** One search box finds steps, items, characters and places and jumps straight to the
+  entry. Apostrophes are optional.
+- **When your questions come back.** The status line shows your next top-up, for example "+8 Pro · +25 Fast in
+  13h 20m", also under the limit message.
+- **Link your account in one step.** Guests see a QR code to link with their phone on their last question of the
+  day. Linking keeps your conversation, quest log and guide ticks.
+- **Hidden achievements shown plainly**, with their tips, no tapping to reveal.
+
 ## 0.13.0
 - **Pro or Fast, your pick.** A switch above Send picks the model for your next question, as in the desktop app: Pro
   for the best answers, Fast for quicker ones, each with the questions you have left today. Your pick is remembered.
