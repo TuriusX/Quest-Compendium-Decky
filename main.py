@@ -84,6 +84,8 @@ DEFAULT_SETTINGS: Dict[str, Any] = {
     "mode": "standard",
     "model": "pro",
     "include_screenshot": True,
+    # Hint mode: "Just a hint" among the quick questions.
+    "hint_mode": False,
     "language": "English",
     # Interface + answer language: "auto" follows the Steam language.
     "locale": "auto",
@@ -562,6 +564,7 @@ class Plugin:
                 "mode": self.state["settings"]["mode"],
                 "model": self.state["settings"]["model"],
                 "include_screenshot": bool(self.state["settings"]["include_screenshot"]),
+                "hint_mode": bool(self.state["settings"].get("hint_mode", False)),
             },
             "tools": {
                 "gamescopectl": bool(_which("gamescopectl", env)),
@@ -580,6 +583,8 @@ class Plugin:
             s["model"] = patch["model"]
         if isinstance(patch.get("include_screenshot"), bool):
             s["include_screenshot"] = patch["include_screenshot"]
+        if isinstance(patch.get("hint_mode"), bool):
+            s["hint_mode"] = patch["hint_mode"]
         if patch.get("locale") in VALID_LOCALES:
             s["locale"] = patch["locale"]
         if isinstance(patch.get("guide_sites"), list):

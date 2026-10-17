@@ -11,7 +11,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { FaCog, FaComments, FaPlus } from "react-icons/fa";
 import { ask, AskRequest, AnswerModel, getQuota, getState, PluginState, saveSettings, Turn } from "../api";
-import { balancesOf, deviceTimeZone, modelOf, settingOf, startingModel, topUpLine } from "../answerModel";
+import { balancesOf, deviceTimeZone, modelOf, questionsLine, settingOf, startingModel } from "../answerModel";
 import { ModelToggle } from "./ModelToggle";
 import { UpdateNotice } from "./UpdateNotice";
 import { useUpdate } from "../update";
@@ -33,7 +33,7 @@ import { PointChecklist } from "./PointChecklist";
 import { QuestLog } from "./QuestLog";
 import { SignInNudge } from "./SignInNudge";
 import { storyPhrase } from "../format";
-import { QUICK_MAIN, QUICK_MORE, QUICK_FOLLOW, type QuickId } from "../quick";
+import { quickChips, quickLabelKey, type QuickId } from "../quick";
 import { startRecording, stopRecording } from "../api";
 import { GamepadButton } from "@decky/ui";
 
@@ -53,10 +53,10 @@ export function QuickAccessPanel() {
   const t = useT();
   const game = useCurrentGame();
   const chat = useChat();
-  // The top-up countdown moves on every minute.
-  const [minuteNow, setMinuteNow] = useState(Date.now);
+  // The questions countdown ticks every second while the panel is open.
+  const [secondNow, setSecondNow] = useState(Date.now);
   useEffect(() => {
-    const iv = setInterval(() => setMinuteNow(Date.now()), 60_000);
+    const iv = setInterval(() => setSecondNow(Date.now()), 1000);
     return () => clearInterval(iv);
   }, []);
   const browser = useBrowser();
@@ -231,8 +231,8 @@ export function QuickAccessPanel() {
   // Status strip: game · place · story beat · collected.
   const points = last?.turn.points ?? [];
   const collected = points.length ? t("status.collected", { n: (last?.turn.donePoints ?? []).length, m: points.length }) : null;
-  // When the next questions arrive ("+8 Pro · +25 Fast in 13h 20m"), counting down by the minute.
-  const nextTopUp = topUpLine(chat.quota, t, minuteNow);
+  // The questions left and when the next ones arrive ("Pro 1 · Fast 3 · ⏱ 5:26:41"), as the desktop app's pill.
+  const nextTopUp = questionsLine(chat.quota, t, secondNow);
   const info = game ? [game.name, last?.turn.place || t("status.placeUnknown"), last?.turn.place ? last?.turn.story : null, collected, nextTopUp] : [collected, nextTopUp];
   // Next turn (a fight): a fresh screenshot and a short question for whoever acts now; its answer replaces the plan.
   const canNextTurn = !!ps?.tools.gamescopectl && !!game;
@@ -257,9 +257,11 @@ export function QuickAccessPanel() {
     else setTalkError(r.error || t("talk.failed"));
   };
   const canTalk = !!ps?.tools.recorder;
-  const askQuick = (id: QuickId) => submit(t(`quick.${id}`), { quick: id, ...(id === "where" ? { shot: true } : {}) });
-  // "Show me where on screen": markers need an answer about a screenshot, and a fresh screenshot of the game now.
-  const followUps = QUICK_FOLLOW.filter((id) => id !== "where" || (canNextTurn && !!last?.turn.sawShot));
+  const askQuick = (id: QuickId) => submit(t(quickLabelKey(id)), { quick: id, ...(id === "where" ? { shot: true } : {}) });
+  // The chips that fit (as in the desktop app): starters before an answer, two follow-ups after it ("Show me where on
+  // screen" needs an answer about a screenshot and a fresh screenshot of the game now). Hints only with hint mode on.
+  const chips = quickChips({ asked: !!answer, combat: !!last?.turn.combat, canShowWhere: canNextTurn && !!last?.turn.sawShot, hintMode: !!ps?.settings.hint_mode });
+  const followUps = chips.shown;
   const infoParts = info.filter((s): s is string => !!s);
 
   const askSection = (
@@ -271,9 +273,9 @@ export function QuickAccessPanel() {
       )}
       <PanelSectionRow>
         <Focusable className="qc-presets" flow-children="horizontal">
-          {QUICK_MAIN.map((id) => (
+          {(answer ? [] : chips.shown).map((id) => (
             <DialogButton key={id} disabled={chat.busy || !ps} onClick={() => askQuick(id)}>
-              {t(`quick.${id}`)}
+              {t(quickLabelKey(id))}
             </DialogButton>
           ))}
         </Focusable>
@@ -283,7 +285,7 @@ export function QuickAccessPanel() {
         <DropdownItem
           label={t("more.label")}
           strDefaultLabel={t("more.pick")}
-          rgOptions={QUICK_MORE.map((id) => ({ data: id, label: t(`quick.${id}`) }))}
+          rgOptions={chips.extra.map((id) => ({ data: id, label: t(quickLabelKey(id)) }))}
           selectedOption={null}
           disabled={chat.busy || !ps}
           onChange={(opt) => askQuick(opt.data as QuickId)}
@@ -454,7 +456,7 @@ export function QuickAccessPanel() {
             <Focusable className="qc-presets" flow-children="horizontal">
               {followUps.map((id) => (
                 <DialogButton key={id} disabled={!ps} onClick={() => askQuick(id)}>
-                  {t(`quick.${id}`)}
+                  {t(quickLabelKey(id))}
                 </DialogButton>
               ))}
             </Focusable>

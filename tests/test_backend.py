@@ -104,7 +104,10 @@ async def run():
     check("empty question rejected", (await p.ask({"question": "   "}))["ok"] is False)
     await p.save_settings({"mode": "nonsense", "model": "flash", "include_screenshot": False})
     st = await p.get_state()
-    check("settings: invalid value ignored, valid saved", st["settings"] == {"mode": "standard", "model": "flash", "include_screenshot": False}, st)
+    check("settings: invalid value ignored, valid saved", st["settings"] == {"mode": "standard", "model": "flash", "include_screenshot": False, "hint_mode": False}, st)
+    await p.save_settings({"hint_mode": True})
+    check("settings: hint mode saved", (await p.get_state())["settings"]["hint_mode"] is True)
+    await p.save_settings({"hint_mode": False})
     await p.save_settings({"model": "pro", "include_screenshot": True})
 
     # ---- device linking ----

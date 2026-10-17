@@ -8,6 +8,8 @@ export interface Settings {
   /** No longer used: the server has one mode since app v0.3 (kept so older saved settings still load). */
   model?: Model;
   include_screenshot: boolean;
+  /** Hint mode: "Just a hint" among the quick questions (off by default). */
+  hint_mode?: boolean;
   /** "auto" follows the Steam language. */
   locale?: "auto" | "en" | "es" | "pt" | "de" | "fr" | "ru" | "ja" | "ko" | "zh";
   /** Guide sites shown in the Guides tab (domains). */

@@ -34,6 +34,24 @@ export function deviceTimeZone(): string {
   }
 }
 
+/** "5:26:41" until the reset. */
+export function clock(ms: number): string {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+  return `${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+}
+
+/**
+ * The questions left and the time to the next top-up, as the desktop app's header pill: "Pro 1 · Fast 3 · ⏱ 5:26:41"
+ * (ticking every second). '' until the counts are known.
+ */
+export function questionsLine(q: Quota | null, t: (k: string, v?: Record<string, string | number>) => string, now = Date.now()): string {
+  if (!q || (q.pro === undefined && q.fast === undefined)) return "";
+  const parts = [`${t("model.pro")} ${q.pro ?? 0}`, `${t("model.fast")} ${q.fast ?? 0}`];
+  if (q.resetAt) parts.push(`⏱ ${clock(q.resetAt - now)}`);
+  return parts.join(" · ");
+}
+
 /**
  * The next daily top-up, as in the desktop app: what each model gets at midnight (the Deck's time zone) and how long
  * until then, as one line: "+8 Pro · +25 Fast in 13h 20m" (Premium at its carry-over cap: "Pro at max 100"). Under an

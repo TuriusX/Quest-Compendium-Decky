@@ -107,6 +107,14 @@ export function SettingsPage() {
               />
             </PanelSectionRow>
             <PanelSectionRow>
+              <ToggleField
+                label={t("settings.hintMode")}
+                description={t("settings.hintModeDesc")}
+                checked={!!ps.settings.hint_mode}
+                onChange={(on) => updateSettings({ hint_mode: on })}
+              />
+            </PanelSectionRow>
+            <PanelSectionRow>
               <ButtonItem
                 layout="inline"
                 label={t("settings.check")}
