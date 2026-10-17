@@ -105,8 +105,11 @@ a fake `gamescopectl`, and a local HTTPS server. They need Python 3, `aiohttp`, 
 cd tests && npm install && npm test
 ```
 
-**Releasing:** bump `version` in `package.json`, commit, then tag and push, for example
-`git tag v0.1.3 && git push origin v0.1.3`. The Release workflow checks the tag matches `package.json` and attaches the zip.
+**Releasing:** bump `version` in `package.json` and add a `## <version>` section to `CHANGELOG.md` (the release notes),
+commit, then tag and push, for example `git tag v0.1.3 && git push origin main v0.1.3`. The Release workflow checks the
+tag matches `package.json`, typechecks, builds the zip and publishes the release with that changelog section as its
+notes. That's the only step: don't create the release by hand (if one exists, the workflow replaces its zip and notes).
+To check a tag without publishing, run the Release workflow from the Actions tab (a dry run).
 
 ### Architecture
 

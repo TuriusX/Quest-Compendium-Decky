@@ -1,18 +1,37 @@
 name: Release
-# Push a tag like v0.1.3 (matching "version" in package.json) to publish a release with the install zip attached.
+# The one way Deck releases are published: bump "version" in package.json, add its "## <version>" section to
+# CHANGELOG.md, commit, then push a tag like v0.15.3 (git tag v0.15.3 && git push origin main v0.15.3). This checks the
+# tag matches package.json, typechecks, builds the install zip and publishes the release with the changelog section as
+# its notes. Don't create the release by hand: if one already exists, its zip and notes are replaced from this build.
+#
+# Run it from the Actions tab (Run workflow) to check a tag without publishing anything: it builds that tag and prints
+# the notes it would publish.
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to check, e.g. v0.15.2 (a dry run: builds it and shows the notes, publishes nothing)"
+        required: true
 
 permissions:
   contents: write
 
 jobs:
   release:
-    runs-on: ubuntu-latest
+    # Pinned rather than ubuntu-latest, so the image changing underneath (Ubuntu 26.04 from October 19) can't break a
+    # release. Nothing here needs a newer one; move it on deliberately.
+    runs-on: ubuntu-24.04
+    env:
+      TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+          fetch-depth: 0 # all tags, for the notes' "Full Changelog" link
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - run: npm install -g pnpm
@@ -21,14 +40,38 @@ jobs:
       - name: Tag must match package.json version
         run: |
           PKG="v$(node -p "require('./package.json').version")"
-          if [ "$PKG" != "$GITHUB_REF_NAME" ]; then
-            echo "Tag $GITHUB_REF_NAME does not match package.json version $PKG"; exit 1
+          if [ "$PKG" != "$TAG" ]; then
+            echo "Tag $TAG does not match package.json version $PKG"; exit 1
           fi
 
       - run: pnpm run typecheck
       - run: pnpm run package
 
-      - name: Create release
+      - name: Release notes from CHANGELOG.md
+        run: |
+          # The script from this workflow's own commit (older tags, checked in a dry run, don't have it).
+          git show "${{ github.sha }}:scripts/release_notes.py" > "$RUNNER_TEMP/release_notes.py"
+          python3 "$RUNNER_TEMP/release_notes.py" "${TAG#v}" > out/release-notes.md
+          cat out/release-notes.md
+
+      - name: Publish the release
+        if: env.DRY_RUN != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release create "$GITHUB_REF_NAME" out/quest-compendium-decky.zip --title "$GITHUB_REF_NAME" --generate-notes
+        run: |
+          if gh release create "$TAG" out/quest-compendium-decky.zip --title "$TAG" --notes-file out/release-notes.md; then
+            echo "Published $TAG."
+          elif gh release view "$TAG" > /dev/null 2>&1; then
+            # Made by hand already: this build's zip and the changelog's notes replace what's there.
+            echo "$TAG already existed: replacing its zip and notes from this build."
+            gh release upload "$TAG" out/quest-compendium-decky.zip --clobber
+            gh release edit "$TAG" --title "$TAG" --notes-file out/release-notes.md
+          else
+            echo "Couldn't create the release for $TAG."; exit 1
+          fi
+
+      - name: Dry run (nothing published)
+        if: env.DRY_RUN == 'true'
+        run: |
+          echo "Dry run for $TAG: the zip built and these notes would be published:"
+          ls -l out/quest-compendium-decky.zip
