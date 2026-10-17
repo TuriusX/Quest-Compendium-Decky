@@ -1,8 +1,8 @@
-import { ButtonItem, PanelSectionRow, Spinner } from "@decky/ui";
+import { ButtonItem, PanelSectionRow, Spinner, TextField } from "@decky/ui";
 import { useEffect, useRef, useState } from "react";
 import qrcode from "qrcode-generator";
-import { cancelLink, pollLink, startLink } from "../api";
-import { t } from "../i18n";
+import { cancelLink, pollLink, sendEmailLink, startLink } from "../api";
+import { getLocale, t } from "../i18n";
 
 type Phase = "idle" | "starting" | "waiting" | "linked" | "expired" | "error";
 
@@ -20,6 +20,10 @@ export function LinkView({ onLinked, autoStart = false }: { onLinked: () => void
   const [code, setCode] = useState<string>("");
   const [shortUrl, setShortUrl] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
+  // "Email me a sign-in link" for the code on screen (typed with the on-screen keyboard).
+  const [mail, setMail] = useState<"closed" | "open" | "sending" | "sent">("closed");
+  const [email, setEmail] = useState("");
+  const [mailError, setMailError] = useState<string | null>(null);
   const alive = useRef(true);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -74,6 +78,8 @@ export function LinkView({ onLinked, autoStart = false }: { onLinked: () => void
       setCode(res.userCode);
       setShortUrl(res.verificationUrl.replace(/^https?:\/\//, "").replace(/\?.*$/, ""));
       setPhase("waiting");
+      setMail("closed");
+      setMailError(null);
       schedulePoll(res.interval ?? 3);
     } catch {
       if (alive.current) {
@@ -81,6 +87,28 @@ export function LinkView({ onLinked, autoStart = false }: { onLinked: () => void
         setPhase("error");
       }
     }
+  };
+
+  const sendMail = async () => {
+    const address = email.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) {
+      setMailError(t("email.badAddress"));
+      return;
+    }
+    setMail("sending");
+    setMailError(null);
+    try {
+      const res = await sendEmailLink(address, code, getLocale());
+      if (!alive.current) return;
+      if (res.ok) {
+        setMail("sent");
+        return;
+      }
+      setMailError(res.error === "too_many" ? t("email.tooMany") : t("email.failed"));
+    } catch {
+      if (alive.current) setMailError(t("email.failed"));
+    }
+    if (alive.current) setMail("open");
   };
 
   // autoStart: the QR code shows straight away (the sign-in card), no extra press.
@@ -140,6 +168,35 @@ export function LinkView({ onLinked, autoStart = false }: { onLinked: () => void
           <div style={{ opacity: 0.7 }}>or go to {shortUrl}</div>
         </div>
       </PanelSectionRow>
+      {mail === "closed" && (
+        <PanelSectionRow>
+          <ButtonItem layout="below" onClick={() => setMail("open")}>
+            {t("email.open")}
+          </ButtonItem>
+        </PanelSectionRow>
+      )}
+      {(mail === "open" || mail === "sending") && (
+        <>
+          <PanelSectionRow>
+            <TextField label={t("email.label")} value={email} onChange={(e) => setEmail(e.target.value)} />
+          </PanelSectionRow>
+          {mailError && (
+            <PanelSectionRow>
+              <div style={{ fontSize: 12, color: "#f87171" }}>{mailError}</div>
+            </PanelSectionRow>
+          )}
+          <PanelSectionRow>
+            <ButtonItem layout="below" disabled={mail === "sending"} onClick={sendMail}>
+              {mail === "sending" ? t("email.sending") : t("email.send")}
+            </ButtonItem>
+          </PanelSectionRow>
+        </>
+      )}
+      {mail === "sent" && (
+        <PanelSectionRow>
+          <div style={{ fontSize: 12, opacity: 0.85, lineHeight: 1.4 }}>{t("email.sent", { email: email.trim(), code })}</div>
+        </PanelSectionRow>
+      )}
     </>
   );
 }

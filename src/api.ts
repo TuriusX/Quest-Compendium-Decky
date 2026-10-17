@@ -219,6 +219,8 @@ export const ask = callable<[req: AskRequest], AskResult>("ask");
 export const startLink = callable<[], LinkStart>("start_link");
 export const pollLink = callable<[], LinkPoll>("poll_link");
 export const cancelLink = callable<[], boolean>("cancel_link");
+/** Email a sign-in link for the code on screen (the email's page asks to confirm the code). */
+export const sendEmailLink = callable<[email: string, userCode: string, lang: string], { ok: boolean; error?: string }>("send_email_link");
 export const unlink = callable<[], boolean>("unlink");
 export const testScreenshot = callable<[], ScreenshotTest>("test_screenshot");
 /** Report an AI answer for review (Microsoft Store / Steam policy on generated content). */

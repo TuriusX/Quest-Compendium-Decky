@@ -355,6 +355,9 @@ class Plugin:
             self.state["settings"].setdefault(key, value)
         if not self.state.get("guest_id"):
             self.state["guest_id"] = "guest_deck_" + secrets.token_hex(12)
+        # A random id for this Deck (sent as x-qc-device): free accounts on one device share one day of free questions.
+        if not self.state.get("device_id"):
+            self.state["device_id"] = "deck_" + secrets.token_hex(16)
         self.state.setdefault("auth", None)
         self.state.setdefault("relink_needed", False)
         self.pending_link: Optional[Dict[str, Any]] = None
@@ -399,6 +402,8 @@ class Plugin:
         # The Deck's time zone (from the panel), so the day's questions reset at local midnight.
         if getattr(self, "_tz", ""):
             headers["x-qc-tz"] = self._tz
+        if getattr(self, "state", None) and self.state.get("device_id"):
+            headers["x-qc-device"] = self.state["device_id"]
         try:
             timeout = aiohttp.ClientTimeout(total=timeout_s)
             connector = aiohttp.TCPConnector(ssl=self._ssl)
@@ -812,6 +817,16 @@ class Plugin:
             self.pending_link = None
             return {"status": "error", "error": "Account linking isn't available on the server yet."}
         return {"status": "error", "error": data.get("error") or f"Server error ({status})."}
+
+    async def send_email_link(self, email: str, user_code: str, lang: str = "en") -> Dict[str, Any]:
+        """Emails a sign-in link for the code on screen: opened on a phone or PC, it asks to confirm the code, and the
+        Deck's link check (poll_link) then signs in."""
+        status, data = await self._http(
+            "POST", "/api/email-link/send", body={"email": str(email or "").strip(), "userCode": str(user_code or ""), "lang": str(lang or "en")}
+        )
+        if status == 200:
+            return {"ok": True}
+        return {"ok": False, "error": data.get("error") or f"Server error ({status})."}
 
     async def cancel_link(self) -> bool:
         self.pending_link = None
