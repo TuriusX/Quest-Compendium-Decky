@@ -3,7 +3,6 @@ import {
   DialogButton,
   DropdownItem,
   Focusable,
-  Navigation,
   PanelSection,
   PanelSectionRow,
   TextField,
@@ -34,6 +33,7 @@ import { QuestLog } from "./QuestLog";
 import { SignInNudge } from "./SignInNudge";
 import { storyPhrase } from "../format";
 import { quickChips, quickLabelKey, type QuickId } from "../quick";
+import { PremiumQR } from "./PremiumQR";
 import { startRecording, stopRecording } from "../api";
 import { GamepadButton } from "@decky/ui";
 
@@ -393,13 +393,8 @@ export function QuickAccessPanel() {
           <div className="qc-note qc-muted">{nextTopUp}</div>
         </PanelSectionRow>
       )}
-      {chat.limitReached && !chat.signInNudge && (
-        <PanelSectionRow>
-          <ButtonItem layout="below" onClick={() => Navigation.NavigateToExternalWeb("https://questcompendium.com")}>
-            {t("premium.about")}
-          </ButtonItem>
-        </PanelSectionRow>
-      )}
+      {/* Out of questions: Get Premium, a QR code to buy it on a phone (the Deck can't take payments). */}
+      {chat.limitReached && !chat.signInNudge && !q?.isPremium && <PremiumQR linked={!!ps?.linked} />}
       {answer && last && !chat.busy && !canRetry && (
         <>
           {asked && (

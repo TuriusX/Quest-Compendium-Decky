@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import { getQuota, getState, Mode, PluginState, saveSettings, Settings, testScreenshot, unlink } from "../api";
 import { siteLabel } from "../browser";
 import { LOCALE_OPTIONS, LocaleSetting, setLocaleSetting, useT } from "../i18n";
-import { setChat } from "../store";
+import { setChat, useChat } from "../store";
+import { PremiumQR } from "./PremiumQR";
 import { ThemeStyle } from "../theme";
 import { PageHeader } from "./Brand";
 import { DEFAULT_SITES } from "./BrowserTab";
@@ -15,6 +16,7 @@ const MODES: Mode[] = ["standard", "minmax", "roleplay"];
 /** Settings and account, moved out of the Quick Access panel so the panel stays focused on asking and reading. */
 export function SettingsPage() {
   const t = useT();
+  const chat = useChat();
   const [ps, setPs] = useState<PluginState | null>(null);
   const [backendDown, setBackendDown] = useState(false);
   const [showLink, setShowLink] = useState(false);
@@ -202,6 +204,11 @@ export function SettingsPage() {
                 <PanelSectionRow>
                   <Field label={t("account.signedIn")} description={ps.email ?? undefined} />
                 </PanelSectionRow>
+                {/* The plan: Premium, or Free with Get Premium (a QR code to buy on a phone). */}
+                <PanelSectionRow>
+                  <Field label={t("premium.plan")} description={chat.quota?.isPremium ? t("tier.premium") : t("premium.free")} />
+                </PanelSectionRow>
+                {!chat.quota?.isPremium && <PremiumQR linked />}
                 <PanelSectionRow>
                   <ButtonItem
                     layout="inline"
