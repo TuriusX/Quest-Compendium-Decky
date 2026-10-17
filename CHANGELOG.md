@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.15.2
+- **Sign in by email.** Under the link QR code, "Or email me a sign-in link": type your address, open the email on
+  your phone or PC, confirm the code shown on the Deck, and the Deck signs in by itself. No Google account needed.
+- **Premium from the Deck.** Settings shows your plan. "Get Premium" shows a QR code that opens Premium on your phone,
+  where you sign in with the same account; Premium then shows up on the Deck by itself. It's also on the
+  out-of-questions screen, in place of "About Premium".
+
 ## 0.15.1
 - **Your questions and the countdown.** The status line shows "Pro 1 · Fast 3 · ⏱ 5:26:41", ticking every second, like
   the desktop app.
