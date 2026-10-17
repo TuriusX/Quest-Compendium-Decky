@@ -239,7 +239,7 @@ const en: Dict = {
   "premium.about": "About Premium",
   "premium.get": "Get Premium",
   "premium.qrAlt": "QR code to get Premium on your phone",
-  "premium.scan": "Scan with your phone: Premium is $4.99/month for 8 Pro and 25 Fast questions a day, and unused ones carry over.",
+  "premium.scan": "Scan with your phone: Premium is $4.99/month or $39.99/year (save 33%) for 8 Pro and 25 Fast questions a day, and unused ones carry over.",
   "premium.sameAccount": "Sign in there with the same account you linked here. Premium shows up on your Deck by itself.",
   "premium.linkFirst": "Link your account on this Deck first (Settings), so Premium works here too.",
   "premium.plan": "Your plan",
