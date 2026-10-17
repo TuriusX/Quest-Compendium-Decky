@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.15.3
+- **Premium yearly.** The Get Premium QR page now gives both plans: $4.99 a month, or $39.99 a year (save 33%). You
+  pick on your phone. Already subscribed? Manage your plan there to switch between monthly and yearly.
+
 ## 0.15.2
 - **Sign in by email.** Under the link QR code, "Or email me a sign-in link": type your address, open the email on
   your phone or PC, confirm the code shown on the Deck, and the Deck signs in by itself. No Google account needed.
