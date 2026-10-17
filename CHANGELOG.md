@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.15.1
+- **Your questions and the countdown.** The status line shows "Pro 1 · Fast 3 · ⏱ 5:26:41", ticking every second, like
+  the desktop app.
+- **Quick questions that fit where you are.** Before you ask anything: What should I do next?, Anything I can miss
+  here?, and Best gear for where I am (How do I beat this? in a fight). After an answer, two follow-ups. The rest are
+  in the pull-down.
+- **Hint mode.** "Just a hint" is no longer a default question. Turn on Hint mode in Settings to get it back.
+
 ## 0.15.0
 - **Missables where you are.** When an answer is about a place our guide covers, it ends with what you could miss
   there for good and why, up to three, with "more in the guide" for the rest. Press one to open the guide at it. Tick
