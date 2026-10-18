@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.15.4
+- **The same guide as the website.** The guide screens now show what questcompendium.com shows: every section, everything
+  that's live (no more "coming soon" for places and quests the site already has), the same short names ("Ciri"),
+  the kind icons, the walkthrough with its route, choices and advice, and the pictures. When the website's guide gets
+  better, the Deck has it the next day.
+- **Tidier compendium.** Its sections start folded, each with its count, so the areas stay close at hand.
+
 ## 0.15.3
 - **Premium yearly.** The Get Premium QR page now gives both plans: $4.99 a month, or $39.99 a year (save 33%). You
   pick on your phone. Already subscribed? Manage your plan there to switch between monthly and yearly.
