@@ -286,7 +286,7 @@ export const guideArea = callable<
 // ---- One guide everywhere: the website's guide data files (guide.json, page.json), read before the server's ----
 // They hold what the site's pages show, as they show it (display names, links, kind icons, routes, pictures).
 /** An owner-approved picture (absolute addresses). `credit` only when the source's terms ask for one. */
-export interface QcSitePicture { thumb: string; w300: string; w600: string; big: string; alt: string; caption: string; credit?: string }
+export interface QcSitePicture { thumb: string; w300: string; w600: string; big: string; alt: string; caption: string; credit?: string; w?: number; h?: number; focus?: { x: number; y: number; face?: boolean } }
 /** The checklist icons (src/entryKind.ts). */
 export type QcEntryKind = "chest" | "item" | "secret" | "boss" | "enemy" | "shop" | "travel";
 /** A compendium entry: its name as shown, its full name, and a site path (an anchor = a walkthrough step or e-<entryId>). */

@@ -47,6 +47,7 @@ import {
 } from "../qcGuides";
 import { mentionedEntities } from "../entityLinks";
 import { GuideSearch, hitTarget, type SearchHit } from "../guideSearch";
+import { coverPosition } from "../focus";
 import { cachedIndex, normalizeGames, orderGuides, recentGuides, rememberGuideOpened, saveIndex, saveSort, savedSort, type GuideSort } from "../guideIndex";
 
 /**
@@ -346,7 +347,7 @@ function Picture({ p, full }: { p: QcSitePicture; full: boolean }) {
   if (failed) return null;
   return (
     <Focusable className="qcgp-text qcgp-pic" focusClassName="qc-focused" noFocusRing>
-      <img src={full ? p.w600 : p.w300} alt={p.alt} loading="lazy" onError={() => setFailed(true)} />
+      <img src={full ? p.w600 : p.w300} alt={p.alt} loading="lazy" onError={() => setFailed(true)} style={{ objectPosition: coverPosition(p.w || 0, p.h || 0, p.focus || null, 300, 225) }} />
       {p.caption && <span className="qcgp-pic-cap">{p.caption}</span>}
       {p.credit && <span className="qcgp-pic-credit">{p.credit}</span>}
     </Focusable>
@@ -673,7 +674,7 @@ function AreaPage({ gameKey, slug, game, full, focus }: { gameKey: string; slug:
         {tag && <span className="qcg-tag">{tag}</span>}
         {detail && <span className="qcg-detail">: {detail}</span>}
       </span>
-      {site?.thumb && <img className="qcgp-thumb" src={site.thumb.thumb} alt={site.thumb.alt} loading="lazy" />}
+      {site?.thumb && <img className="qcgp-thumb" src={site.thumb.thumb} alt={site.thumb.alt} loading="lazy" style={{ objectPosition: coverPosition(site.thumb.w || 0, site.thumb.h || 0, site.thumb.focus || null, 40, 40) }} />}
     </DialogButton>
     </div>
   );
