@@ -170,6 +170,19 @@ const CSS = `
 /* A search result's entry: highlighted where the guide opened. */
 .qcgp-hit { box-shadow: 0 0 0 2px #a87ffb !important; background: rgba(168, 127, 251, 0.18) !important; }
 .qcgp-jump { border-left: 3px solid #a87ffb !important; }
+/* The website's guide data: pictures (with caption and credit), kind icons, walkthrough steps, coming-soon names. */
+.qcgp-pic { display: flex; flex-direction: column; gap: 3px; }
+.qcgp-pic img { width: 100%; max-width: 300px; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 6px; background: #0c0d14; }
+.qcg-full .qcgp-pic img { max-width: 600px; }
+.qcgp-pic-cap { font-size: 12px; color: #b9b2d6; }
+.qcgp-pic-credit { font-size: 11px; color: #8f88ad; }
+.qcgp-thumb { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; flex-shrink: 0; margin-left: auto; }
+.qcgp-kind { width: 16px; height: 16px; flex-shrink: 0; margin-top: 2px; }
+.qcgp-kind-inline { display: inline-block; vertical-align: -3px; margin: 0 6px 0 0; }
+.qcgp-step-num { color: #a87ffb; font-weight: 800; margin-right: 6px; }
+.qcgp-step-warn { color: #fbbf24; }
+.qcgp-soon { opacity: 0.55; font-size: 12px; color: #b9b2d6; line-height: 1.4; padding: 2px 6px; }
+.qcgp-group { font-size: 13px; font-weight: 700; color: #e4e0f5; margin-top: 4px; }
 .qcgp-row-line { display: flex; align-items: baseline; gap: 8px; width: 100%; }
 .qcgp-progress { margin-left: auto; font-size: 12px; font-weight: 700; color: #a87ffb; flex-shrink: 0; }
 .qcgp-miss { display: flex; flex-direction: column; gap: 6px; padding: 6px 8px; border-radius: 6px; background: rgba(251, 191, 36, 0.08); border: 1px solid rgba(251, 191, 36, 0.25); }

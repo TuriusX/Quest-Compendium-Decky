@@ -10,11 +10,21 @@ import {
   type QcAchievementTip,
   type QcEntity,
   type QcEntityRef,
-  type QcCompendiumType,
   type QcGuideArea,
   type QcGuideEntry,
   type QcGuidePage,
+  type QcGuideGameResult,
+  type QcSiteCompSection,
+  type QcSiteEntry,
+  type QcSiteGroup,
+  type QcSiteEntity,
+  type QcSiteGuide,
+  type QcSiteLink,
+  type QcSitePicture,
+  type QcSiteStep,
+  type QcEntryKind,
 } from "../api";
+import { ENTRY_COLORS, ENTRY_ICON_PATHS, entryKind } from "../entryKind";
 import { getLocale, useT } from "../i18n";
 import { openPage } from "../routes";
 import { ThemeStyle } from "../theme";
@@ -29,7 +39,9 @@ import {
   readDone,
   onDoneChange,
   rememberArea,
+  rememberTotal,
   samePlace,
+  savedTotal,
   useGuideView,
   writeDone,
 } from "../qcGuides";
@@ -266,9 +278,212 @@ function openHit(hit: SearchHit, game?: string) {
   else guideGo({ view: "area", key: to.key, slug: to.slug, game, ...(to.focus ? { focus: to.focus } : {}) });
 }
 
+// ---- One guide everywhere: the website's guide data (guide.json, page.json) ----
+// The panel reads the site's files first (main.py), so names, sections, icons, routes and pictures are the site's;
+// the server's data (the older shapes) still draws the way it did when the site couldn't be read.
+
+/** A site link: /guides/{key}/{slug}/ (maybe under a language folder), with an optional #anchor (a step or e-<id>). */
+const SITE_HREF = /\/guides\/([^/]+)\/([^/#]+)\/?(?:#(.+))?$/;
+
+/**
+ * Open a site link in the panel. An area (or a step or entry on one) opens as an area page, at that spot; anything
+ * else as a compendium page. Both views read page.json, so a page that turns out to be the other kind still shows.
+ */
+function openSiteHref(href: string, areas: QcGuideArea[], game?: string) {
+  const m = href.match(SITE_HREF);
+  if (!m) return;
+  const [, key, slug, anchor] = m;
+  if (anchor || areas.some((a) => a.slug === slug)) guideGo({ view: "area", key, slug, game, ...(anchor ? { focus: anchor.replace(/^e-/, "") } : {}) });
+  else guideGo({ view: "entity", key, slug, game });
+}
+
+/** The compendium's own pages in guide.json, for "In this chapter" (matched by the name shown and the full name). */
+function siteEntities(g?: QcSiteGuide): (QcEntityRef & { label: string })[] {
+  const areaSlugs = new Set((g?.areas || []).map((a) => a.slug));
+  const out: (QcEntityRef & { label: string })[] = [];
+  for (const sec of g?.compendium?.sections || []) {
+    for (const x of [...(sec.items || []), ...(sec.groups || []).flatMap((gr) => gr.items)]) {
+      const m = x.href.match(SITE_HREF);
+      if (!m || m[3] || areaSlugs.has(m[2])) continue;
+      out.push({ slug: m[2], name: x.name, type: sec.title, label: x.name });
+      if (x.full && x.full !== x.name) out.push({ slug: m[2], name: x.full, type: sec.title, label: x.name });
+    }
+  }
+  return out;
+}
+
+/** Scroll to an entry or walkthrough step on the open page and focus it (a merged row answers to each of its ids). */
+function focusEntry(id: string) {
+  const el = document.getElementById(`qcgp-e-${id}`) || document.querySelector(`[data-ids~=${JSON.stringify(id)}]`);
+  if (el) {
+    el.scrollIntoView({ block: "center" });
+    (el.querySelector("button, [tabindex]") as HTMLElement | null)?.focus?.();
+  }
+}
+
+/** A checklist kind icon (the website's), in its colour. */
+function KindIcon({ kind, inline = false }: { kind?: QcEntryKind | "miss" | null; inline?: boolean }) {
+  if (!kind) return inline ? null : <span className="qcgp-kind" />; // an empty slot keeps the rows lined up, as on the site
+  return (
+    <svg
+      className={`qcgp-kind ${inline ? "qcgp-kind-inline" : ""}`}
+      style={{ color: ENTRY_COLORS[kind] }}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      dangerouslySetInnerHTML={{ __html: ENTRY_ICON_PATHS[kind] }}
+    />
+  );
+}
+
+/** An owner-approved picture with its caption, and a credit line only when the source asks for one. */
+function Picture({ p, full }: { p: QcSitePicture; full: boolean }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return null;
+  return (
+    <Focusable className="qcgp-text qcgp-pic" focusClassName="qc-focused" noFocusRing>
+      <img src={full ? p.w600 : p.w300} alt={p.alt} loading="lazy" onError={() => setFailed(true)} />
+      {p.caption && <span className="qcgp-pic-cap">{p.caption}</span>}
+      {p.credit && <span className="qcgp-pic-credit">{p.credit}</span>}
+    </Focusable>
+  );
+}
+
+/**
+ * The compendium as the website shows it: its sections in order (each folded behind its title, so the areas below stay
+ * in reach on the D-pad), each entry by the name shown, a quest type's chapters as headings, names with no page yet
+ * folded behind "N coming soon", and the sections with nothing live yet folded at the end.
+ */
+function SiteCompendium({ comp, areas, game }: { comp: NonNullable<QcSiteGuide["compendium"]>; areas: QcGuideArea[]; game: string }) {
+  const t = useT();
+  const [open, setOpen] = useState<Set<string>>(new Set());
+  const flip = (k: string) =>
+    setOpen((prev) => {
+      const n = new Set(prev);
+      if (n.has(k)) n.delete(k);
+      else n.add(k);
+      return n;
+    });
+  const link = (x: QcSiteLink, k: string) => (
+    <DialogButton key={k} className="qcgp-row" onClick={() => openSiteHref(x.href, areas, game)}>
+      <span className="qcgp-row-title">{x.name}</span>
+      {x.full && x.full !== x.name && <span className="qcgp-row-sub">{x.full}</span>}
+    </DialogButton>
+  );
+  // Greyed and not a button (nothing to open yet), but focusable so the D-pad can scroll through a long list.
+  const greyed = (k: string, names: string[]) => (
+    <Focusable key={k} className="qcgp-soon" focusClassName="qc-focused" noFocusRing>
+      {names.join(" · ")}
+    </Focusable>
+  );
+  const soon = (k: string, names?: string[]) =>
+    names?.length ? (
+      <div key={k} className="qcgp-list">
+        <DialogButton className="qcgp-nav" onClick={() => flip(k)}>
+          {open.has(k) ? "▾" : "▸"} {t("qcg.soonCount", { n: names.length })}
+        </DialogButton>
+        {open.has(k) && greyed(`${k}:names`, names)}
+      </div>
+    ) : null;
+  const live = (sec: QcSiteCompSection) => (sec.items || []).length + (sec.groups || []).reduce((n, g) => n + g.items.length, 0);
+  const soonTotal = comp.comingSoon.reduce((n, sec) => n + (sec.soon || []).length, 0);
+  return (
+    <Row>
+      <Focusable className="qcgp-list" flow-children="vertical">
+        <div className="qcgp-section">{t("qcg.compendium")}</div>
+        {comp.sections.map((sec, i) => (
+          <div key={`s${i}`} className="qcgp-list">
+            <DialogButton className="qcgp-sechead" onClick={() => flip(`s${i}`)}>
+              <span>{open.has(`s${i}`) ? "▾" : "▸"} {sec.title}</span>
+              <span className="qcg-count">{live(sec)}</span>
+            </DialogButton>
+            {open.has(`s${i}`) && (
+              <>
+                {(sec.items || []).map((x, j) => link(x, `s${i}:${j}`))}
+                {(sec.groups || []).map((g, j) => (
+                  <div key={`s${i}g${j}`} className="qcgp-list">
+                    {/* A chapter heading opens the chapter's page when it has one. */}
+                    {g.href ? (
+                      <DialogButton className="qcgp-nav" onClick={() => openSiteHref(g.href!, areas, game)}>
+                        {g.name} ▶
+                      </DialogButton>
+                    ) : (
+                      <div className="qcgp-group">{g.name}</div>
+                    )}
+                    {g.items.map((x, m) => link(x, `s${i}g${j}:${m}`))}
+                    {soon(`s${i}g${j}:soon`, g.soon)}
+                  </div>
+                ))}
+                {soon(`s${i}:soon`, sec.soon)}
+              </>
+            )}
+          </div>
+        ))}
+        {soonTotal > 0 && (
+          <div className="qcgp-list">
+            <DialogButton className="qcgp-sechead" onClick={() => flip("comingSoon")}>
+              <span>{open.has("comingSoon") ? "▾" : "▸"} {t("qcg.comingSoon")}</span>
+              <span className="qcg-count">{soonTotal}</span>
+            </DialogButton>
+            {open.has("comingSoon") &&
+              comp.comingSoon.map((sec, i) => (
+                <div key={`cs${i}`} className="qcgp-list">
+                  <div className="qcgp-group">{sec.title}</div>
+                  {greyed(`cs${i}:names`, sec.soon || [])}
+                </div>
+              ))}
+          </div>
+        )}
+      </Focusable>
+    </Row>
+  );
+}
+
+/** A compendium page from the website (page.json, kind "entity"): the name shown, the full name, its text and picture. */
+function SiteEntity({ page: e, game, full }: { page: QcSiteEntity; game?: string; full: boolean }) {
+  const t = useT();
+  const text = (k: string | number, children: React.ReactNode) => (
+    <Focusable key={k} className="qcgp-text" focusClassName="qc-focused" noFocusRing>
+      {children}
+    </Focusable>
+  );
+  const parts = [...(e.story || []), ...(e.gameplay || [])];
+  return (
+    <>
+      <TopBar backLabel={game || t("qcg.title")} full={full} />
+      <Row>
+        <Focusable flow-children="vertical" className="qcgp-area">
+          <div className="qcgp-row-sub">{e.type}</div>
+          <div className="qcgp-title">{e.name}</div>
+          {e.fullName && e.fullName !== e.name && <div className="qcgp-row-sub">{e.fullName}</div>}
+          {e.picture && <Picture p={e.picture} full={full} />}
+          {e.overview && text("overview", e.overview)}
+          {summaryLines(e.summary, t, text)}
+          {parts.map((x, i) => (
+            <div key={`p${i}`} className="qcgp-area">
+              {x.heading && <div className="qcgp-section">{x.heading}</div>}
+              {text(`p${i}:text`, x.text)}
+            </div>
+          ))}
+        </Focusable>
+      </Row>
+    </>
+  );
+}
+
 function GameAreas({ gameKey, game, full, gameName }: { gameKey: string; game?: string; full: boolean; gameName?: string }) {
   const t = useT();
-  const s = useLoad<{ game?: string; art?: string; areas?: QcGuideArea[]; entities?: QcEntityRef[]; compendium?: QcCompendiumType[] }>(() => guideGame(gameKey, getLocale()));
+  const s = useLoad<QcGuideGameResult>(() => guideGame(gameKey, getLocale()));
+  // The website's guide.json, or the server's list (the older compendium shape) when the site couldn't be read.
+  const d = s.data;
+  const site = d?.source === "site" ? d : undefined;
+  const api = d && d.source !== "site" ? d : undefined;
+  // guide.json has no store art: the guide index kept on the Deck does.
+  const art = api?.art || cachedIndex()?.find((g) => g.key === gameKey)?.art;
   // The achievement guide, by the guide's key and in the plugin's language (most guides don't have one yet).
   const ach = useLoad<{ guide?: QcAchievementGuide }>(() => guideAchievements(gameKey, getLocale())).data?.guide;
   const name = s.data?.game || game || "";
@@ -284,15 +499,17 @@ function GameAreas({ gameKey, game, full, gameName }: { gameKey: string; game?: 
   const here = placeName ? areas.find((a) => samePlace(a.name, placeName)) : undefined;
   const progress = (a: QcGuideArea) => {
     const done = readDone(gameKey, a.slug).size;
-    if (!a.total) return "";
-    return done >= a.total ? "✓" : done ? `${done}/${a.total}` : "";
+    // The site's list doesn't count each area's entries: the count kept when the page was last opened.
+    const total = a.total ?? savedTotal(gameKey, a.slug);
+    if (!total) return "";
+    return done >= total ? "✓" : done ? `${done}/${total}` : "";
   };
   return (
     <>
       <TopBar backLabel={t("qcg.all")} full={full} />
       {name && (
         <Row>
-          <GameArt game={name} art={s.data?.art} className="qcgp-art-banner" />
+          <GameArt game={name} art={art} className="qcgp-art-banner" />
         </Row>
       )}
       {name && !full && (
@@ -332,12 +549,15 @@ function GameAreas({ gameKey, game, full, gameName }: { gameKey: string; game?: 
           </Focusable>
         </Row>
       )}
-      {!needle && !!s.data?.compendium?.length && (
+      {!needle && site?.compendium && (site.compendium.sections.length > 0 || site.compendium.comingSoon.length > 0) && (
+        <SiteCompendium comp={site.compendium} areas={site.areas} game={name} />
+      )}
+      {!needle && !!api?.compendium?.length && (
         <Row>
           <Focusable className="qcgp-list" flow-children="vertical">
             <div className="qcgp-section">{t("qcg.compendium")}</div>
-            {s.data.compendium.some((c) => c.soon.length) && <div className="qcgp-row-sub">{t("qcg.comingSoonNote")}</div>}
-            {s.data.compendium.map((c) => (
+            {api.compendium.some((c) => c.soon.length) && <div className="qcgp-row-sub">{t("qcg.comingSoonNote")}</div>}
+            {api.compendium.map((c) => (
               <div key={c.type} className="qcgp-list">
                 <div className="qcgp-row-sub">{c.type}</div>
                 {c.built.map((e) => (
@@ -388,30 +608,43 @@ function GameAreas({ gameKey, game, full, gameName }: { gameKey: string; game?: 
 function AreaPage({ gameKey, slug, game, full, focus }: { gameKey: string; slug: string; game?: string; full: boolean; focus?: string }) {
   const t = useT();
   const [q, setQ] = useState("");
-  // A search result's entry: every section open, scrolled to and focused.
+  // A search result's entry (or a compendium link's step): every section open, scrolled to and focused.
   useEffect(() => {
     if (!focus) return;
-    const tm = setTimeout(() => {
-      const el = document.getElementById(`qcgp-e-${focus}`);
-      if (el) { el.scrollIntoView({ block: "center" }); (el.querySelector("button, [tabindex]") as HTMLElement | null)?.focus?.(); }
-    }, 400);
+    const tm = setTimeout(() => focusEntry(focus), 400);
     return () => clearTimeout(tm);
   });
-  const s = useLoad<{ page?: QcGuidePage }>(() => guideArea(gameKey, slug, getLocale()));
-  const order = useLoad<{ areas?: QcGuideArea[]; entities?: QcEntityRef[] }>(() => guideGame(gameKey, getLocale()));
+  const s = useLoad<Awaited<ReturnType<typeof guideArea>>>(() => guideArea(gameKey, slug, getLocale()));
+  const order = useLoad<QcGuideGameResult>(() => guideGame(gameKey, getLocale()));
   const [done, setDone] = useState<Set<string>>(() => readDone(gameKey, slug));
   // Ticks made elsewhere (a guide-backed marker under an answer) show here too.
   useEffect(() => onDoneChange((k, s2) => k === gameKey && s2 === slug && setDone(readDone(gameKey, slug))), [gameKey, slug]);
   const [openSec, setOpenSec] = useState<Set<string>>(new Set());
   useEffect(() => rememberArea(gameKey, slug), [gameKey, slug]);
-  const page = s.data?.page;
-  const toggle = (id: string) => {
+  // The website's page.json (an area, or a compendium page reached by an area link), else the server's page.
+  const d = s.data;
+  const sitePage = d?.source === "site" ? d.page : undefined;
+  const page = d && d.source !== "site" ? d.page : undefined;
+  // The site's list of areas doesn't count entries: keep this page's checklist size for the area list's progress.
+  useEffect(() => {
+    if (sitePage?.kind !== "area") return;
+    const checkable = sitePage.sections.filter((x) => x.check).reduce((n, x) => n + x.entries.length, 0);
+    rememberTotal(gameKey, slug, sitePage.items.length + sitePage.secrets.length + checkable);
+  }, [sitePage]);
+  /** Tick or untick a row; a same-spot row (several ids) ticks all of them. */
+  const toggle = (id: string, ids?: string[]) => {
     const next = new Set(done);
-    if (next.has(id)) next.delete(id);
+    if (ids) {
+      const on = !isDone(id, ids);
+      next.delete(id);
+      for (const x of ids) on ? next.add(x) : next.delete(x);
+    } else if (next.has(id)) next.delete(id);
     else next.add(id);
     setDone(next);
     writeDone(gameKey, slug, next);
   };
+  // A same-spot row is done when each of its entries is (or the row itself was ticked as one).
+  const isDone = (id: string, ids?: string[]) => done.has(id) || (!!ids && ids.every((x) => done.has(x)));
   const flip = (k: string) =>
     setOpenSec((prev) => {
       const n = new Set(prev);
@@ -429,15 +662,18 @@ function AreaPage({ gameKey, slug, game, full, focus }: { gameKey: string; slug:
     guideGo({ view: "area", key: gameKey, slug: a.slug, game });
   };
 
-  const check = (id: string, label: string, detail?: string, tag?: string) => (
-    <div key={id} id={`qcgp-e-${id}`}>
-    <DialogButton className={`qcgp-check ${done.has(id) ? "qcg-done" : ""} ${focus && (id === focus || id.split("+").includes(focus)) ? "qcgp-hit" : ""}`} onClick={() => toggle(id)}>
-      <span className="qcg-box">{done.has(id) ? "☑" : "☐"}</span>
+  /** A checklist row. Site rows add the kind icon, the entry's picture as a thumbnail, and same-spot ids. */
+  const check = (id: string, label: string, detail?: string, tag?: string, site?: { kind?: QcEntryKind | null; thumb?: QcSitePicture; ids?: string[] }) => (
+    <div key={id} id={`qcgp-e-${site?.ids?.[0] || id}`} data-ids={site?.ids?.join(" ")}>
+    <DialogButton className={`qcgp-check ${isDone(id, site?.ids) ? "qcg-done" : ""} ${focus && (id === focus || id.split("+").includes(focus)) ? "qcgp-hit" : ""}`} onClick={() => toggle(id, site?.ids)}>
+      <span className="qcg-box">{isDone(id, site?.ids) ? "☑" : "☐"}</span>
+      {site && <KindIcon kind={site.kind} />}
       <span className="qcgp-check-text">
         <span className="qcg-strong">{label}</span>
         {tag && <span className="qcg-tag">{tag}</span>}
         {detail && <span className="qcg-detail">: {detail}</span>}
       </span>
+      {site?.thumb && <img className="qcgp-thumb" src={site.thumb.thumb} alt={site.thumb.alt} loading="lazy" />}
     </DialogButton>
     </div>
   );
@@ -459,6 +695,242 @@ function AreaPage({ gameKey, slug, game, full, focus }: { gameKey: string; slug:
       </div>
     );
   };
+  const n = (ids: string[]) => ids.filter((id) => done.has(id)).length;
+  // The summary box: what this place is and how to get there.
+  const infoLines = (info?: QcGuidePage["info"] | null) =>
+    info &&
+    ([
+      ["qcg.infoRegion", info.region],
+      ["qcg.infoLevels", info.levels],
+      ["qcg.infoWay", info.directions ? `${info.directions}${info.coords ? ` (${info.coords})` : ""}` : info.coords],
+      ["qcg.infoConnected", info.connected?.join(", ")],
+      ["qcg.infoQuests", info.quests?.join(" · ")],
+      ["qcg.infoServices", info.services?.join(" · ")],
+      ["qcg.infoEnemies", info.enemyTypes?.join(" · ")],
+    ] as const).map(([k, v]) => (v ? text(k, <><span className="qcg-detail">{t(k)}:</span> {v}</>) : null));
+  /** Key fights, enemies and shops (site rows carry their kind icon). */
+  const fightsBody = (fights: NonNullable<QcGuidePage["fights"]>, icons: boolean) =>
+    fights.map((f) =>
+      text(
+        f.id,
+        <>
+          {icons && <KindIcon kind="boss" inline />}
+          <span className="qcg-strong">{f.name}</span>
+          {f.enemies && <div><span className="qcg-detail">{t("qcg.fightEnemies")}:</span> {f.enemies}</div>}
+          {f.threats && <div><span className="qcg-detail">{t("qcg.fightThreats")}:</span> {f.threats}</div>}
+          {f.weaknesses && <div><span className="qcg-detail">{t("qcg.fightWeak")}:</span> {f.weaknesses}</div>}
+          {f.tactics && <div><span className="qcg-detail">{t("qcg.fightTactics")}:</span> {f.tactics}</div>}
+          {f.rewards && <div><span className="qcg-detail">{t("qcg.fightRewards")}:</span> {f.rewards}</div>}
+        </>,
+      ),
+    );
+  const enemiesBody = (enemies: QcGuideEntry[], icons: boolean) =>
+    enemies.map((e) =>
+      text(
+        e.id,
+        <>
+          {icons && <KindIcon kind="enemy" inline />}
+          <span className="qcg-strong">{e.name}</span>
+          {e.weakness && <div>{t("qcg.weak")}: {e.weakness}</div>}
+          {e.steal && <div>{t("qcg.steal")}: {e.steal}</div>}
+          {e.notes && <div className="qcg-detail">{e.notes}</div>}
+        </>,
+      ),
+    );
+  const shopsBody = (shops: QcGuideEntry[], icons: boolean) =>
+    shops.map((e) =>
+      text(
+        e.id,
+        <>
+          {icons && <KindIcon kind="shop" inline />}
+          <span className="qcg-strong">{e.name}</span>
+          {e.sells && <span className="qcg-detail">: {e.sells}</span>}
+        </>,
+      ),
+    );
+  /** "In this chapter" (the guide's entity pages this page mentions), then previous / next. */
+  const footer = (mentionText: string) => {
+    const od = order.data;
+    const refs: (QcEntityRef & { label?: string })[] = od?.source === "site" ? siteEntities(od) : od?.entities || [];
+    // The site's list holds each page twice (the name shown and the full name): one button each.
+    const here = mentionedEntities(mentionText, refs).filter((e, i, all) => all.findIndex((x) => x.slug === e.slug) === i);
+    return (
+      <>
+        {here.length > 0 && (
+          <>
+            <div className="qcgp-section">{t("qcg.inThisPage")}</div>
+            {here.map((e) => (
+              <DialogButton key={e.slug} className="qcgp-nav" onClick={() => guideGo({ view: "entity", key: gameKey, slug: e.slug, game })}>
+                {e.label || e.name} <span className="qcg-detail">· {e.type}</span>
+              </DialogButton>
+            ))}
+          </>
+        )}
+        {prev && (
+          <DialogButton className="qcgp-nav" onClick={() => go(prev)}>
+            ◀ {prev.name}
+          </DialogButton>
+        )}
+        {next && (
+          <DialogButton className="qcgp-nav" onClick={() => go(next)}>
+            {next.name} ▶
+          </DialogButton>
+        )}
+      </>
+    );
+  };
+
+  // A compendium page reached through an area link: draw it as one.
+  if (sitePage?.kind === "entity") return <SiteEntity page={sitePage} game={game} full={full} />;
+
+  if (sitePage) {
+    // The website's area page, as the site lays it out: picture, route, what you can miss, the walkthrough, then the
+    // checklists with their kind icons. Same-spot entries are one row, ticked together (as on the site).
+    const p = sitePage;
+    const nk = (x: unknown) => String(x || "").toLowerCase().replace(/['’]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+    const grouped = new Set(p.groups.flatMap((g) => g.ids));
+    const missGroups = p.groups.filter((g) => g.missable);
+    const restGroups = p.groups.filter((g) => !g.missable);
+    const missItems = p.items.filter((e) => e.missable && !grouped.has(e.id));
+    const otherItems = p.items.filter((e) => !e.missable && !grouped.has(e.id));
+    const secrets = p.secrets.filter((e) => !grouped.has(e.id));
+    const missSecAll = p.sections.filter((x) => x.check && /miss/i.test(x.orig || x.title));
+    const otherSec = p.sections.filter((x) => !missSecAll.includes(x));
+    // A missable written twice (as a missable item and again as a "missable" line) shows once, as the item.
+    const missNames = p.items.filter((e) => e.missable).map((e) => nk(e.name)).filter((x) => x.length >= 4);
+    const missLines = missSecAll.flatMap((x) => x.entries).filter((e) => !missNames.some((x) => nk(e.text).includes(x)));
+    const missIds = [...missGroups.flatMap((g) => g.ids), ...missItems.map((e) => e.id), ...missLines.map((e) => e.id)];
+    const itemDetail = (e: { where?: string; how?: string; lockout?: string }) =>
+      [e.where, e.how && `${t("qcg.how")}: ${e.how}`, e.lockout && `${t("qcg.lockout")}: ${e.lockout}`].filter(Boolean).join(" · ");
+    const itemLine = (e: QcSiteEntry) => check(e.id, e.name || "", itemDetail(e), undefined, { kind: e.kind, thumb: e.picture });
+    // A same-spot row is named after its container ("Ornate Chest under the Scuffed Rock: Map, Notebook").
+    const groupLine = (g: QcSiteGroup) => {
+      const parts = p.items.filter((e) => g.ids.includes(e.id));
+      const [spot, ...names] = g.label.split(": ");
+      const detail = itemDetail({ where: [names.join(": "), g.where].filter(Boolean).join(" · "), how: parts.find((e) => e.how)?.how, lockout: parts.find((e) => e.lockout)?.lockout });
+      return check(g.ids.join("+"), spot, detail, undefined, { kind: entryKind({ section: "items", name: g.label, where: g.where }), ids: g.ids });
+    };
+    const sectionLine = (e: { id: string; text: string; kind?: QcEntryKind }) => check(e.id, e.text, undefined, undefined, { kind: e.kind });
+    const walkOpen = !!focus || !openSec.has("walk");
+    // A route step: open the walkthrough if it's folded, then jump to that step.
+    const goStep = (id: string) => {
+      if (!walkOpen) flip("walk");
+      setTimeout(() => focusEntry(id), 150);
+    };
+    const step = (st: QcSiteStep, i: number) => (
+      <div key={st.id} id={`qcgp-e-${st.id}`} className="qcgp-area">
+        <Focusable className={`qcgp-text ${focus === st.id ? "qcgp-hit" : ""}`} focusClassName="qc-focused" noFocusRing>
+          <div className="qcg-strong">
+            <span className="qcgp-step-num">{i + 1}</span>
+            {st.title}
+          </div>
+          <div>{st.text}</div>
+          {st.tip && <div className="qcg-detail">💡 {t("qcg.stepTip")}: {st.tip}</div>}
+          {st.warn && <div className="qcgp-step-warn">⚠ {t("qcg.stepWarn")}: {st.warn}</div>}
+        </Focusable>
+        {st.picture && <Picture p={st.picture} full={full} />}
+      </div>
+    );
+    const advice = p.advice || {};
+    const mentionText = [p.overview, p.story, ...p.walkthrough.map((st) => `${st.title} ${st.text}`), ...p.items.map((e) => `${e.name} ${e.where || ""}`), ...p.tips, ...p.sections.flatMap((x) => x.entries.map((e) => e.text))].join(" ");
+    return (
+      <>
+        <TopBar backLabel={game || t("qcg.title")} full={full} />
+        <GuideSearch gameKey={gameKey} value={q} onChange={setQ} onPick={(hit) => { setQ(""); openHit(hit, game); }} />
+        <Row>
+          <Focusable flow-children="vertical" className="qcgp-area">
+            <div className="qcgp-title">{p.name}</div>
+            {p.story && <div className="qcgp-row-sub">{p.story}</div>}
+            {p.picture && <Picture p={p.picture} full={full} />}
+            {p.overview && text("overview", p.overview)}
+            {infoLines(p.info)}
+
+            {/* The route: the walkthrough's steps by title (3 or more), each a jump to its step. */}
+            {p.route.length >= 3 && (
+              <>
+                <div className="qcgp-section">{t("qcg.route")}</div>
+                {p.route.map((r, i) => (
+                  <DialogButton key={`r:${r.id}`} className="qcgp-nav" style={{ textAlign: "left" }} onClick={() => goStep(r.id)}>
+                    <span className="qcgp-step-num">{i + 1}</span>
+                    {r.title}
+                  </DialogButton>
+                ))}
+              </>
+            )}
+
+            {missIds.length > 0 && (
+              <div className="qcgp-miss">
+                <div className="qcgp-section">
+                  ⚠ {t("qcg.dontMiss")} <span className="qcg-count">{n(missIds)}/{missIds.length}</span>
+                </div>
+                {missGroups.map(groupLine)}
+                {missItems.map(itemLine)}
+                {missLines.map(sectionLine)}
+              </div>
+            )}
+
+            {p.walkthrough.length > 0 && section("walk", t("qcg.walkthrough"), p.walkthrough.map(step), undefined, undefined, true)}
+            {!!p.choices?.length &&
+              section(
+                "choices",
+                t("qcg.choices"),
+                p.choices.map((c) =>
+                  text(
+                    c.id,
+                    <>
+                      <span className="qcg-strong">{c.title}</span>
+                      {c.when && <div className="qcg-detail">{c.when}</div>}
+                      {c.options.map((o, i) => (
+                        <div key={i}>• {o.label} → <span className="qcg-detail">{o.outcome}</span></div>
+                      ))}
+                    </>,
+                  ),
+                ),
+              )}
+            {otherSec.map((x) =>
+              section(
+                `s:${x.title}`,
+                x.title,
+                x.check ? x.entries.map(sectionLine) : x.entries.map((e) => text(e.id, <>• {e.text}</>)),
+                x.check ? n(x.entries.map((e) => e.id)) : undefined,
+                x.check ? x.entries.length : undefined,
+                true,
+              ),
+            )}
+            {(restGroups.length > 0 || otherItems.length > 0) &&
+              section(
+                "items",
+                t("qcg.items"),
+                [...restGroups.map(groupLine), ...otherItems.map(itemLine)],
+                n([...restGroups.flatMap((g) => g.ids), ...otherItems.map((e) => e.id)]),
+                restGroups.reduce((k, g) => k + g.ids.length, 0) + otherItems.length,
+                !missIds.length,
+              )}
+            {secrets.length > 0 &&
+              section(
+                "secrets",
+                t("qcg.secrets"),
+                secrets.map((e) => check(e.id, e.text || "", undefined, undefined, { kind: e.kind, thumb: e.picture })),
+                n(secrets.map((e) => e.id)),
+                secrets.length,
+              )}
+            {(p.fights || []).length > 0 && section("fights", t("qcg.fights"), fightsBody(p.fights || [], true), undefined, undefined, true)}
+            {p.enemies.length > 0 && section("enemies", t("qcg.enemies"), enemiesBody(p.enemies, true))}
+            {p.shops.length > 0 && section("shops", t("qcg.shops"), shopsBody(p.shops, true))}
+            {p.tips.length > 0 && section("tips", t("qcg.tips"), p.tips.map((tip, i) => text(`tip${i}`, <>• {tip}</>)))}
+            {(
+              [
+                ["mistakes", "qcg.adviceMistakes", advice.mistakes],
+                ["matters", "qcg.adviceMatters", advice.matters],
+                ["skip", "qcg.adviceSkip", advice.skip],
+              ] as const
+            ).map(([k, label, xs]) => (xs?.length ? section(`a:${k}`, t(label), xs.map((x, i) => text(`a:${k}${i}`, <>• {x}</>))) : null))}
+            {footer(mentionText)}
+          </Focusable>
+        </Row>
+      </>
+    );
+  }
 
   if (!page) {
     return (
@@ -475,7 +947,6 @@ function AreaPage({ gameKey, slug, game, full, focus }: { gameKey: string; slug:
   const missSec = (page.sections || []).filter((x) => x.check && /miss/i.test(x.title));
   const otherSec = (page.sections || []).filter((x) => !missSec.includes(x));
   const missIds = [...missItems.map((e) => e.id), ...missSec.flatMap((x) => x.entries.map((e) => e.id))];
-  const n = (ids: string[]) => ids.filter((id) => done.has(id)).length;
   // Where, then the exact final step and what locks a missable out.
   const itemLine = (e: QcGuideEntry) =>
     check(e.id, e.name || "", [e.where, e.how && `${t("qcg.how")}: ${e.how}`, e.lockout && `${t("qcg.lockout")}: ${e.lockout}`].filter(Boolean).join(" · "));
@@ -489,19 +960,7 @@ function AreaPage({ gameKey, slug, game, full, focus }: { gameKey: string; slug:
           <div className="qcgp-title">{page.name}</div>
           {page.story && <div className="qcgp-row-sub">{page.story}</div>}
           {page.overview && text("overview", page.overview)}
-          {/* The summary box: what this place is and how to get there. */}
-          {page.info &&
-            ([
-              ["qcg.infoRegion", page.info.region],
-              ["qcg.infoLevels", page.info.levels],
-              ["qcg.infoWay", page.info.directions ? `${page.info.directions}${page.info.coords ? ` (${page.info.coords})` : ""}` : page.info.coords],
-              ["qcg.infoConnected", page.info.connected?.join(", ")],
-              ["qcg.infoQuests", page.info.quests?.join(" · ")],
-              ["qcg.infoServices", page.info.services?.join(" · ")],
-              ["qcg.infoEnemies", page.info.enemyTypes?.join(" · ")],
-            ] as const).map(([k, v]) =>
-              v ? text(k, <><span className="qcg-detail">{t(k)}:</span> {v}</>) : null,
-            )}
+          {infoLines(page.info)}
 
           {missIds.length > 0 && (
             <div className="qcgp-miss">
@@ -526,84 +985,13 @@ function AreaPage({ gameKey, slug, game, full, focus }: { gameKey: string; slug:
           {otherItems.length > 0 && section("items", t("qcg.items"), otherItems.map(itemLine), n(otherItems.map((e) => e.id)), otherItems.length, !missIds.length)}
           {page.secrets.length > 0 &&
             section("secrets", t("qcg.secrets"), page.secrets.map((e) => check(e.id, e.text || "")), n(page.secrets.map((e) => e.id)), page.secrets.length)}
-          {(page.fights || []).length > 0 &&
-            section(
-              "fights",
-              t("qcg.fights"),
-              (page.fights || []).map((f) =>
-                text(
-                  f.id,
-                  <>
-                    <span className="qcg-strong">{f.name}</span>
-                    {f.enemies && <div><span className="qcg-detail">{t("qcg.fightEnemies")}:</span> {f.enemies}</div>}
-                    {f.threats && <div><span className="qcg-detail">{t("qcg.fightThreats")}:</span> {f.threats}</div>}
-                    {f.weaknesses && <div><span className="qcg-detail">{t("qcg.fightWeak")}:</span> {f.weaknesses}</div>}
-                    {f.tactics && <div><span className="qcg-detail">{t("qcg.fightTactics")}:</span> {f.tactics}</div>}
-                    {f.rewards && <div><span className="qcg-detail">{t("qcg.fightRewards")}:</span> {f.rewards}</div>}
-                  </>,
-                ),
-              ),
-              undefined,
-              undefined,
-              true,
-            )}
-          {page.enemies.length > 0 &&
-            section(
-              "enemies",
-              t("qcg.enemies"),
-              page.enemies.map((e) =>
-                text(
-                  e.id,
-                  <>
-                    <span className="qcg-strong">{e.name}</span>
-                    {e.weakness && <div>{t("qcg.weak")}: {e.weakness}</div>}
-                    {e.steal && <div>{t("qcg.steal")}: {e.steal}</div>}
-                    {e.notes && <div className="qcg-detail">{e.notes}</div>}
-                  </>,
-                ),
-              ),
-            )}
-          {page.shops.length > 0 &&
-            section(
-              "shops",
-              t("qcg.shops"),
-              page.shops.map((e) =>
-                text(
-                  e.id,
-                  <>
-                    <span className="qcg-strong">{e.name}</span>
-                    {e.sells && <span className="qcg-detail">: {e.sells}</span>}
-                  </>,
-                ),
-              ),
-            )}
+          {(page.fights || []).length > 0 && section("fights", t("qcg.fights"), fightsBody(page.fights || [], false), undefined, undefined, true)}
+          {page.enemies.length > 0 && section("enemies", t("qcg.enemies"), enemiesBody(page.enemies, false))}
+          {page.shops.length > 0 && section("shops", t("qcg.shops"), shopsBody(page.shops, false))}
           {page.tips.length > 0 && section("tips", t("qcg.tips"), page.tips.map((tip, i) => text(`tip${i}`, <>• {tip}</>)))}
 
-          {(() => {
-            // The guide's entity pages this page mentions: one button each ("In this chapter").
-            const text = [page.overview, page.story, ...page.items.map((e) => `${e.name} ${e.where || ""}`), ...page.tips, ...(page.sections || []).flatMap((x) => x.entries.map((e) => e.text))].join(" ");
-            const here = mentionedEntities(text, order.data?.entities || []);
-            return here.length ? (
-              <>
-                <div className="qcgp-section">{t("qcg.inThisPage")}</div>
-                {here.map((e) => (
-                  <DialogButton key={e.slug} className="qcgp-nav" onClick={() => guideGo({ view: "entity", key: gameKey, slug: e.slug, game })}>
-                    {e.name} <span className="qcg-detail">· {e.type}</span>
-                  </DialogButton>
-                ))}
-              </>
-            ) : null;
-          })()}
-          {prev && (
-            <DialogButton className="qcgp-nav" onClick={() => go(prev)}>
-              ◀ {prev.name}
-            </DialogButton>
-          )}
-          {next && (
-            <DialogButton className="qcgp-nav" onClick={() => go(next)}>
-              {next.name} ▶
-            </DialogButton>
-          )}
+          {/* The guide's entity pages this page mentions: one button each ("In this chapter"). */}
+          {footer([page.overview, page.story, ...page.items.map((e) => `${e.name} ${e.where || ""}`), ...page.tips, ...(page.sections || []).flatMap((x) => x.entries.map((e) => e.text))].join(" "))}
         </Focusable>
       </Row>
     </>
@@ -611,15 +999,47 @@ function AreaPage({ gameKey, slug, game, full, focus }: { gameKey: string; slug:
 }
 
 // ---- Entity pages (the compendium) ----
+/** A compendium page's summary box (the server's entity and the site's page.json share its shape). */
+function summaryLines(
+  summary: QcEntity["summary"] | undefined,
+  t: (key: string, vars?: Record<string, string | number>) => string,
+  text: (k: string | number, children: React.ReactNode) => React.ReactNode,
+) {
+  const sm = summary || {};
+  const line = (label: string, v?: string) => (v ? text(label, <><span className="qcg-detail">{label}:</span> {v}</>) : null);
+  const named = (label: string, xs?: { name: string; what?: string; where?: string }[]) =>
+    xs?.length ? text(label, <><span className="qcg-detail">{label}:</span> {xs.map((x) => `${x.name}${x.what || x.where ? ` (${x.what || x.where})` : ""}`).join(" · ")}</>) : null;
+  return (
+    <>
+      {line(t("qcg.infoRegion"), sm.region)}
+      {line(t("qcg.entWhere"), sm.where)}
+      {sm.whereToFind?.length ? text("find", <><span className="qcg-detail">{t("qcg.entFind")}:</span> {sm.whereToFind.map((w) => `${w.when ? `${w.when}: ` : ""}${w.where}`).join(" · ")}</>) : null}
+      {line(t("qcg.infoWay"), sm.gettingThere)}
+      {named(t("qcg.shops"), sm.shops)}
+      {line(t("qcg.infoServices"), sm.services?.join(" · "))}
+      {named(t("qcg.entThere"), sm.places)}
+      {named(t("qcg.entCollectibles"), sm.collectibles)}
+      {sm.quests?.length ? text("quests", <><span className="qcg-detail">{t("qcg.infoQuests")}:</span> {sm.quests.map((q) => `${q.name}${q.chapter ? ` (${q.chapter})` : ""}`).join(" · ")}</>) : null}
+      {(sm.notes || []).map((n, i) => text(`n${i}`, <>• {n}</>))}
+    </>
+  );
+}
+
 function EntityPage({ gameKey, slug, game, full }: { gameKey: string; slug: string; game?: string; full: boolean }) {
   const t = useT();
-  const s = useLoad<{ entity?: QcEntity }>(() => guideEntity(gameKey, slug));
-  const e = s.data?.entity;
+  const s = useLoad<Awaited<ReturnType<typeof guideEntity>>>(() => guideEntity(gameKey, slug, getLocale()));
+  const d = s.data;
   const text = (k: string | number, children: React.ReactNode) => (
     <Focusable key={k} className="qcgp-text" focusClassName="qc-focused" noFocusRing>
       {children}
     </Focusable>
   );
+  // The website's page.json: a compendium page, or an area page a compendium link pointed at.
+  if (d?.source === "site") {
+    if (d.page.kind === "area") return <AreaPage gameKey={gameKey} slug={slug} game={game} full={full} />;
+    return <SiteEntity page={d.page} game={game} full={full} />;
+  }
+  const e = d?.entity;
   if (!e) {
     return (
       <>
@@ -628,10 +1048,6 @@ function EntityPage({ gameKey, slug, game, full }: { gameKey: string; slug: stri
       </>
     );
   }
-  const sm = e.summary || {};
-  const line = (label: string, v?: string) => (v ? text(label, <><span className="qcg-detail">{label}:</span> {v}</>) : null);
-  const named = (label: string, xs?: { name: string; what?: string; where?: string }[]) =>
-    xs?.length ? text(label, <><span className="qcg-detail">{label}:</span> {xs.map((x) => `${x.name}${x.what || x.where ? ` (${x.what || x.where})` : ""}`).join(" · ")}</>) : null;
   return (
     <>
       <TopBar backLabel={game || t("qcg.title")} full={full} />
@@ -640,16 +1056,7 @@ function EntityPage({ gameKey, slug, game, full }: { gameKey: string; slug: stri
           <div className="qcgp-row-sub">{e.type}</div>
           <div className="qcgp-title">{e.name}</div>
           {e.overview && text("overview", e.overview)}
-          {line(t("qcg.infoRegion"), sm.region)}
-          {line(t("qcg.entWhere"), sm.where)}
-          {sm.whereToFind?.length ? text("find", <><span className="qcg-detail">{t("qcg.entFind")}:</span> {sm.whereToFind.map((w) => `${w.when ? `${w.when}: ` : ""}${w.where}`).join(" · ")}</>) : null}
-          {line(t("qcg.infoWay"), sm.gettingThere)}
-          {named(t("qcg.shops"), sm.shops)}
-          {line(t("qcg.infoServices"), sm.services?.join(" · "))}
-          {named(t("qcg.entThere"), sm.places)}
-          {named(t("qcg.entCollectibles"), sm.collectibles)}
-          {sm.quests?.length ? text("quests", <><span className="qcg-detail">{t("qcg.infoQuests")}:</span> {sm.quests.map((q) => `${q.name}${q.chapter ? ` (${q.chapter})` : ""}`).join(" · ")}</>) : null}
-          {(sm.notes || []).map((n, i) => text(`n${i}`, <>• {n}</>))}
+          {summaryLines(e.summary, t, text)}
         </Focusable>
       </Row>
     </>

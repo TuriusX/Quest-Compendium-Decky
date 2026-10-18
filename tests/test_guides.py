@@ -51,9 +51,33 @@ async def page(req):
         await asyncio.sleep(2)  # longer than the test's timeout: no response
     return web.json_response({"key": req.match_info["key"], "game": "ELDEN RING", "areas": [{"slug": "limgrave", "name": "Limgrave", "story": ""}]})
 
+# The website's guide data files (one guide everywhere): only "witcher" has them, in English and Spanish (a page only
+# in English); "down" stands for a site that doesn't answer in time.
+SITE = {
+    "/guides/witcher/guide.json": {"v": 1, "key": "witcher", "game": "The Witcher 3", "lang": "en", "areas": [{"slug": "fyke-isle", "name": "Fyke Isle"}], "compendium": None, "achievements": False},
+    "/es/guides/witcher/guide.json": {"v": 1, "key": "witcher", "game": "The Witcher 3", "lang": "es", "areas": [{"slug": "fyke-isle", "name": "Isla Fyke"}], "compendium": None, "achievements": False},
+    "/guides/witcher/fyke-isle/page.json": {"v": 1, "kind": "area", "key": "witcher", "slug": "fyke-isle", "name": "Fyke Isle"},
+    "/guides/witcher/ciri/page.json": {"v": 1, "kind": "entity", "key": "witcher", "slug": "ciri", "name": "Ciri", "fullName": "Cirilla Fiona Elen Riannon"},
+}
+site_calls = []
+
+async def site_file(req):
+    site_calls.append(req.path)
+    if "/down/" in req.path:
+        await asyncio.sleep(2)
+    if req.path in SITE:
+        return web.json_response(SITE[req.path])
+    return web.Response(status=404, text="<html>Not found</html>")
+
+async def server_area(req):
+    return web.json_response({"key": req.match_info["key"], "slug": req.match_info["slug"], "name": "From the server"})
+
 async def run():
     app = web.Application()
     app.router.add_get("/guides/index.json", index)
+    for pattern in ("/guides/{key}/guide.json", "/{lang}/guides/{key}/guide.json", "/guides/{key}/{slug}/page.json", "/{lang}/guides/{key}/{slug}/page.json"):
+        app.router.add_get(pattern, site_file)
+    app.router.add_get("/api/guides/{key}/{slug}", server_area)
     app.router.add_get("/api/guides", server_list)
     app.router.add_get("/api/guides/{key}", page)
     runner = web.AppRunner(app)
@@ -101,6 +125,25 @@ async def run():
     r = await p.guide_game("elden-ring")
     check("two timeouts: a clear error after exactly one retry", (not r["ok"]) and "took too long" in r["error"] and calls["page"] == 2, (r, calls))
     main.GUIDE_TIMEOUT_S = old
+
+    # One guide everywhere: the site's data files first, the server when a file is missing or the site doesn't answer.
+    r = await p.guide_game("witcher")
+    check("a guide's front page comes from the site's guide.json", r["ok"] and r.get("source") == "site" and r["areas"][0]["name"] == "Fyke Isle", r)
+    r = await p.guide_game("witcher", "es")
+    check("in the plugin's language when the site has it translated", r["ok"] and r.get("source") == "site" and r["areas"][0]["name"] == "Isla Fyke", r)
+    del site_calls[:]
+    r = await p.guide_area("witcher", "fyke-isle", "es")
+    check("an untranslated page falls back to the site's English copy", r["ok"] and r.get("source") == "site" and r["page"]["kind"] == "area" and site_calls == ["/es/guides/witcher/fyke-isle/page.json", "/guides/witcher/fyke-isle/page.json"], (r, site_calls))
+    r = await p.guide_entity("witcher", "ciri")
+    check("a compendium page comes from the site's page.json", r["ok"] and r.get("source") == "site" and r["page"]["fullName"] == "Cirilla Fiona Elen Riannon", r)
+    r = await p.guide_area("witcher", "white-orchard")
+    check("a page the site doesn't have yet comes from the server, as before", r["ok"] and "source" not in r and r["page"]["name"] == "From the server", r)
+    old = main.SITE_JSON_TIMEOUT_S
+    main.SITE_JSON_TIMEOUT_S = 0.5
+    del site_calls[:]
+    r = await p.guide_area("down", "anywhere", "es")
+    main.SITE_JSON_TIMEOUT_S = old
+    check("a site that doesn't answer: one short wait, then the server", r["ok"] and "source" not in r and len(site_calls) == 1, (r, site_calls))
 
     await runner.cleanup()
     print(f"\n{sum(results)}/{len(results)} passed")

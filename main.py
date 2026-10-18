@@ -50,6 +50,12 @@ UPDATE_CHECK_S = 3 * 3600  # GitHub allows 60 unauthenticated calls an hour; one
 UPDATE_RETRY_S = 30 * 60  # after a failed check (offline), try again later rather than on every panel open
 GUIDE_INDEX_TIMEOUT_S = 30
 GUIDE_TIMEOUT_S = 45
+# One guide everywhere: the website publishes each guide page's data next to it (guides/{key}/guide.json and
+# guides/{key}/{slug}/page.json), so the Deck shows what the site shows. Read first, with a short timeout because the
+# server's /api/guides is still there behind it when the site is slow or a file is missing.
+SITE_JSON_TIMEOUT_S = 8
+# The languages the site is translated into (each under its own folder, e.g. /es/guides/...); others read English.
+SITE_LANGS = ("es", "pt", "de", "fr", "ru", "ja", "ko", "zh")
 TOKEN_REFRESH_MARGIN_S = 120  # refresh Firebase ID tokens this long before they expire
 
 MAX_QUESTION_CHARS = 2000
@@ -1054,8 +1060,39 @@ class Plugin:
             return {"ok": True, **data}
         return {"ok": False, "error": data.get("error") or f"Guides are unavailable (HTTP {status})."}
 
+    async def _site_json(self, path: str, lang: str = "") -> Optional[Dict[str, Any]]:
+        """One of the website's guide data files (path under guides/), in the plugin's language when the site has it
+        translated, else English. None when it's missing or the site can't be reached: the caller then asks the server."""
+        lang = str(lang or "").lower()
+        base = getattr(self, "guide_index_url", GUIDE_INDEX_URL).rsplit("/guides/", 1)[0]
+        urls = ([f"{base}/{lang}/guides/{path}"] if lang in SITE_LANGS else []) + [f"{base}/guides/{path}"]
+        headers = {"User-Agent": f"QuestCompendiumDeck/{decky.DECKY_PLUGIN_VERSION}"}
+        try:
+            timeout = aiohttp.ClientTimeout(total=SITE_JSON_TIMEOUT_S)
+            connector = aiohttp.TCPConnector(ssl=self._ssl)
+            async with aiohttp.ClientSession(timeout=timeout, connector=connector) as session:
+                for url in urls:
+                    async with session.get(url, headers=headers) as resp:
+                        if resp.status != 200:
+                            continue  # not translated (or not published yet): try English, then the server
+                        data = await resp.json(content_type=None)
+                        if isinstance(data, dict) and data.get("v"):
+                            return data
+        except (asyncio.TimeoutError, aiohttp.ClientError, ValueError) as e:
+            # Unreachable or garbled: don't wait on the English copy too, the server answers instead.
+            decky.logger.warning(f"Guide data {path}: {type(e).__name__}: {str(e)[:160]}")
+        return None
+
+    @staticmethod
+    def _site_path(*parts: Any) -> str:
+        return "/".join(quote(str(p or "")[:120], safe="") for p in parts)
+
     async def guide_game(self, key: str, lang: str = "") -> Dict[str, Any]:
-        """One game's guide areas, in story order."""
+        """One game's guide areas, in story order. The site's guide.json first ("source": "site": its compendium is
+        the site's sections), else the server's list as before."""
+        data = await self._site_json(self._site_path(key, "guide.json"), lang)
+        if data and isinstance(data.get("areas"), list):
+            return {**data, "ok": True, "source": "site"}
         q = self._guide_lang(lang)
         status, data = await self._guide_http(f"/api/guides/{quote(str(key or '')[:120], safe='')}" + (f"?{q}" if q else ""))
         if status == 200 and isinstance(data.get("areas"), list):
@@ -1063,7 +1100,11 @@ class Plugin:
         return {"ok": False, "error": data.get("error") or f"Guide unavailable (HTTP {status})."}
 
     async def guide_area(self, key: str, slug: str, lang: str = "") -> Dict[str, Any]:
-        """One guide page."""
+        """One guide page. The site's page.json first ("source": "site"; it may turn out to be a compendium page, which
+        its "kind" says), else the server's page as before."""
+        data = await self._site_json(self._site_path(key, slug, "page.json"), lang)
+        if data and data.get("kind") in ("area", "entity") and data.get("name"):
+            return {"ok": True, "source": "site", "page": data}
         q = self._guide_lang(lang)
         path = f"/api/guides/{quote(str(key or '')[:120], safe='')}/{quote(str(slug or '')[:120], safe='')}" + (f"?{q}" if q else "")
         status, data = await self._guide_http(path)
@@ -1090,8 +1131,12 @@ class Plugin:
                 decky.logger.warning(f"Guide search index: {type(e).__name__}: {str(e)[:160]}")
         return {"ok": False, "error": "The guide's search couldn't be loaded."}
 
-    async def guide_entity(self, key: str, slug: str) -> Dict[str, Any]:
-        """One of a guide's entity pages (the compendium: a place, character or collectible)."""
+    async def guide_entity(self, key: str, slug: str, lang: str = "") -> Dict[str, Any]:
+        """One of a guide's entity pages (the compendium: a place, character or collectible). The site's page.json first
+        ("source": "site", as guide_area returns it), else the server's entity as before."""
+        data = await self._site_json(self._site_path(key, slug, "page.json"), lang)
+        if data and data.get("kind") in ("area", "entity") and data.get("name"):
+            return {"ok": True, "source": "site", "page": data}
         path = f"/api/guides/{quote(str(key or '')[:120], safe='')}/entity/{quote(str(slug or '')[:120], safe='')}"
         status, data = await self._guide_http(path)
         if status == 200 and data.get("name"):

@@ -43,7 +43,11 @@ export function loadPage(key: string, slug: string): Promise<QcGuidePage | null>
   const lang = getLocale();
   return cached(pages, `${lang}:${key}:${slug}`, async () => {
     const r = await guideArea(key, slug, lang);
-    return r.ok && r.page ? r.page : null;
+    if (!r.ok) return null;
+    // The website's page.json has what's used here (items, sections) in the server's shape; a compendium page has no
+    // missables.
+    if (r.source === "site") return r.page.kind === "area" ? { ...r.page, info: r.page.info || undefined } : null;
+    return r.page || null;
   });
 }
 

@@ -114,6 +114,13 @@ export const lastPlace = (game?: string) => (game ? lsGet(`qc-last-place:${game.
 export const rememberArea = (key: string, slug: string) => lsSet(`qc-guide-last:${key}`, slug);
 export const lastArea = (key: string) => lsGet(`qc-guide-last:${key}`);
 
+/**
+ * A page's checklist size, kept when the page is opened. The website's guide.json doesn't count each area's entries
+ * (the server's list did), so the area list shows progress for the pages opened at least once.
+ */
+export const rememberTotal = (key: string, slug: string, n: number) => lsSet(`qc-guide-total:${key}:${slug}`, String(n));
+export const savedTotal = (key: string, slug: string) => Number(lsGet(`qc-guide-total:${key}:${slug}`)) || undefined;
+
 /** Same place, allowing for extra detail ("South Figaro" vs "South Figaro, Relic Shop") and small spelling differences. */
 export function samePlace(a: string, b: string): boolean {
   // Letters and digits from any script count, so Japanese or Russian names match too (and never shrink to nothing).

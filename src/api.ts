@@ -260,7 +260,11 @@ export interface QcGuidePage {
 export interface QcGuideFight { id: string; name: string; enemies?: string; threats?: string; weaknesses?: string; tactics?: string; rewards?: string }
 export const guidesList = callable<[], { ok: boolean; games?: QcGuideGame[]; source?: "index" | "server"; error?: string }>("guides_list");
 export const guideFind = callable<[game: string, lang?: string], { ok: boolean; key?: string | null; game?: string; areas?: QcGuideArea[]; error?: string }>("guide_find");
-export const guideGame = callable<[key: string, lang?: string], { ok: boolean; key?: string; game?: string; art?: string; areas?: QcGuideArea[]; entities?: QcEntityRef[]; compendium?: QcCompendiumType[]; error?: string }>("guide_game");
+/** A game's front page: the website's guide.json ("source": "site"), or the server's list when the site couldn't be read. */
+export type QcGuideGameResult =
+  | { ok: boolean; source?: undefined; key?: string; game?: string; art?: string; areas?: QcGuideArea[]; entities?: QcEntityRef[]; compendium?: QcCompendiumType[]; error?: string }
+  | ({ ok: boolean; error?: string } & QcSiteGuide);
+export const guideGame = callable<[key: string, lang?: string], QcGuideGameResult>("guide_game");
 /** The compendium by type: built entity pages and the type's other known entities ("coming soon"). */
 export interface QcCompendiumType { type: string; built: { slug: string; name: string }[]; soon: string[] }
 /** One of the guide's entity pages, as the area list sends it (the compendium). */
@@ -269,9 +273,59 @@ export interface QcEntity {
   slug: string; name: string; type: string; overview?: string;
   summary?: { region?: string; where?: string; gettingThere?: string; whereToFind?: { when?: string; where: string }[]; shops?: { name: string; what?: string }[]; services?: string[]; places?: { name: string; what?: string }[]; collectibles?: { name: string; where?: string }[]; quests?: { name: string; kind?: string; chapter?: string }[]; notes?: string[] };
 }
-export const guideEntity = callable<[key: string, slug: string], { ok: boolean; entity?: QcEntity; error?: string }>("guide_entity");
+export const guideEntity = callable<
+  [key: string, slug: string, lang?: string],
+  { ok: boolean; source?: undefined; entity?: QcEntity; error?: string } | { ok: boolean; source: "site"; page: QcSitePage; error?: string }
+>("guide_entity");
 export const guideSearchIndex = callable<[key: string, lang?: string], { ok: boolean; index?: { l: string; k: string; c: string; h: string; p?: number; e?: number }[]; error?: string }>("guide_search_index");
-export const guideArea = callable<[key: string, slug: string, lang?: string], { ok: boolean; page?: QcGuidePage; error?: string }>("guide_area");
+export const guideArea = callable<
+  [key: string, slug: string, lang?: string],
+  { ok: boolean; source?: undefined; page?: QcGuidePage; error?: string } | { ok: boolean; source: "site"; page: QcSitePage; error?: string }
+>("guide_area");
+
+// ---- One guide everywhere: the website's guide data files (guide.json, page.json), read before the server's ----
+// They hold what the site's pages show, as they show it (display names, links, kind icons, routes, pictures).
+/** An owner-approved picture (absolute addresses). `credit` only when the source's terms ask for one. */
+export interface QcSitePicture { thumb: string; w300: string; w600: string; big: string; alt: string; caption: string; credit?: string }
+/** The checklist icons (src/entryKind.ts). */
+export type QcEntryKind = "chest" | "item" | "secret" | "boss" | "enemy" | "shop" | "travel";
+/** A compendium entry: its name as shown, its full name, and a site path (an anchor = a walkthrough step or e-<entryId>). */
+export interface QcSiteLink { name: string; full?: string; href: string }
+/** One compendium section; quest types come in groups (a chapter each). `soon` = no page yet. */
+export interface QcSiteCompSection {
+  title: string; items?: QcSiteLink[]; soon?: string[];
+  groups?: { name: string; href?: string; items: QcSiteLink[]; soon: string[] }[];
+}
+export interface QcSiteGuide {
+  source: "site"; v: number; key: string; game: string; lang: string; areas: QcGuideArea[];
+  compendium: { pages: number; sections: QcSiteCompSection[]; comingSoon: QcSiteCompSection[] } | null;
+  achievements: boolean;
+}
+export interface QcSiteStep { id: string; title: string; text: string; tip?: string; warn?: string; entries?: string[]; fights?: string[]; picture?: QcSitePicture }
+export type QcSiteEntry = QcGuideEntry & { kind?: QcEntryKind; picture?: QcSitePicture };
+/** Entries in the same spot, shown as one row and ticked together. */
+export interface QcSiteGroup { ids: string[]; label: string; missable?: boolean; where?: string; full?: string }
+export interface QcSiteArea extends Omit<QcGuidePage, "items" | "secrets" | "enemies" | "shops" | "sections" | "info"> {
+  kind: "area"; verified?: boolean; picture?: QcSitePicture; incomplete?: string[];
+  info?: QcGuidePage["info"] | null;
+  /** The walkthrough's steps by title (3 or more steps; empty otherwise). */
+  route: { id: string; title: string }[];
+  walkthrough: QcSiteStep[];
+  choices?: { id: string; title: string; when?: string; options: { label: string; outcome: string }[] }[];
+  advice?: { skip?: string[]; matters?: string[]; mistakes?: string[] } | null;
+  groups: QcSiteGroup[];
+  items: QcSiteEntry[]; secrets: QcSiteEntry[]; enemies: QcSiteEntry[]; shops: QcSiteEntry[];
+  sections: { title: string; check: boolean; orig?: string; entries: { id: string; text: string; kind?: QcEntryKind }[] }[];
+}
+export interface QcSiteEntity {
+  kind: "entity"; key: string; slug: string;
+  /** The name as shown ("Ciri"); fullName is the whole one ("Cirilla Fiona Elen Riannon"). */
+  name: string; fullName?: string; type: string; overview?: string;
+  story?: { heading: string; text: string }[]; gameplay?: { heading: string; text: string }[];
+  summary?: QcEntity["summary"]; picture?: QcSitePicture;
+}
+/** A site page.json: an area page or a compendium page (`kind` says which). */
+export type QcSitePage = QcSiteArea | QcSiteEntity;
 /** One achievement in a guide's achievement guide (name and tips in the guide's language; englishName is Steam's). */
 export interface QcAchievementTip {
   name: string; englishName?: string; desc: string; rarity: number | null; icon: string; hidden: boolean;
