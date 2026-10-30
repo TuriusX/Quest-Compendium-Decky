@@ -117,6 +117,14 @@ export function SettingsPage() {
               />
             </PanelSectionRow>
             <PanelSectionRow>
+              <ToggleField
+                label={t("settings.autoSwitch")}
+                description={t("settings.autoSwitchDesc")}
+                checked={ps.settings.auto_switch !== false}
+                onChange={(on) => updateSettings({ auto_switch: on })}
+              />
+            </PanelSectionRow>
+            <PanelSectionRow>
               <ButtonItem
                 layout="inline"
                 label={t("settings.check")}

@@ -92,6 +92,8 @@ DEFAULT_SETTINGS: Dict[str, Any] = {
     "include_screenshot": True,
     # Hint mode: "Just a hint" among the quick questions.
     "hint_mode": False,
+    # A game that starts brings back its own conversation (off: the current one stays, with "Switch").
+    "auto_switch": True,
     "language": "English",
     # Interface + answer language: "auto" follows the Steam language.
     "locale": "auto",
@@ -351,6 +353,208 @@ async def _read_limited(resp, limit: int) -> bytes:
             break
     return b"".join(chunks)[:limit]
 
+# ---------------------------------------------------------------------------------------------
+# What's running beyond Steam's own games (owner, Oct 30 2026): a non-Steam shortcut's emulator and the game it loaded
+# ---------------------------------------------------------------------------------------------
+# Steam says what's running (the frontend reads it); for a non-Steam shortcut that's often an emulator (EmuDeck,
+# RetroArch, a standalone emulator) or a frontend that started one (ES-DE). The emulator's game comes from the file it
+# was started with (its command line), else RetroArch's content history; with neither name, "Which game is this?" once,
+# remembered for that file. Only the game's name and a hashed key leave this file: never paths or file names.
+# Emulated, modded and unofficial copies are games like any other. Same rules as the desktop app's
+# electron/gameDetect.cjs.
+
+# (id, name, process name). Process names come from the program's file (/proc/<pid>/exe) and its first argument (an
+# AppImage's, or a Windows emulator's under Proton), without .exe / .AppImage, lowercased.
+EMULATORS: Tuple[Tuple[str, str, str], ...] = (
+    ("retroarch", "RetroArch", r"^retroarch$"),
+    ("dolphin", "Dolphin", r"^(dolphin-emu(-nogui)?|dolphin|primehack)$"),
+    ("ryujinx", "Ryujinx", r"^ryujinx(\.ava)?$"),
+    ("yuzu", "yuzu", r"^(yuzu|suyu|sudachi|citron|torzu|eden)(-cmd)?$"),
+    ("pcsx2", "PCSX2", r"^pcsx2(-qt)?([\w.-]*)$"),
+    ("rpcs3", "RPCS3", r"^rpcs3$"),
+    ("cemu", "Cemu", r"^cemu$"),
+    ("duckstation", "DuckStation", r"^duckstation(-qt|-nogui)?([\w.-]*)$"),
+    ("ppsspp", "PPSSPP", r"^ppsspp(sdl|qt)?$"),
+    ("xemu", "xemu", r"^xemu$"),
+    ("xenia", "Xenia", r"^xenia(_canary)?$"),
+    ("citra", "Citra", r"^(citra(-qt)?|lime3ds(-gui)?|azahar|mandarine)$"),
+    ("melonds", "melonDS", r"^melonds$"),
+    ("mgba", "mGBA", r"^mgba(-qt)?$"),
+    ("flycast", "Flycast", r"^flycast$"),
+    ("vita3k", "Vita3K", r"^vita3k$"),
+    ("shadps4", "shadPS4", r"^shadps4$"),
+    ("ares", "ares", r"^ares$"),
+    ("mame", "MAME", r"^mame$"),
+    ("scummvm", "ScummVM", r"^scummvm$"),
+    ("dosbox", "DOSBox", r"^dosbox(-x|-staging)?$"),
+    ("snes9x", "Snes9x", r"^snes9x(-gtk)?$"),
+    ("mednafen", "Mednafen", r"^mednafen$"),
+    ("bsnes", "bsnes", r"^bsnes$"),
+    ("mesen", "Mesen", r"^mesen$"),
+)
+_EMU_RES = tuple((i, n, re.compile(p, re.I)) for i, n, p in EMULATORS)
+# Not a game's file: programs, cores, settings, logs.
+_NOT_ROM = re.compile(r"\.(exe|dll|so|dylib|cfg|ini|json|xml|txt|log|bat|cmd|sh|lnk|toml|yml|yaml|appimage)$", re.I)
+# Options followed by a value that isn't the game (RetroArch's core and config, a config/user folder elsewhere).
+_VALUE_OPTS = re.compile(r"^(-L|--libretro|-c|--config|--appendconfig|-u|--user|--set|--subsystem|-f?b|--batch-config|--userdir|--config-dir)$", re.I)
+_GENERIC_FILE = re.compile(r"^(eboot|default|game|rom|main|boot|index|disc\s*\d*|disk\s*\d*|image|track\s*\d*|data|content|code|menu|app|launch|start|update)$", re.I)
+_TITLE_ID = re.compile(r"^(?:[A-Z]{4}[-_]?\d{5}|[0-9A-F]{16}|[0-9a-f]{8}-[0-9a-f]{8}|title\s*id.*)$", re.I)
+# Files that never say the game, in folders that always do (a PS3 game's EBOOT.BIN, a Wii U game's .rpx, an Xbox
+# game's default.xex); any other file with no name in it is asked about.
+_FOLDER_GAME_FILE = re.compile(r"(^(eboot|default|main|boot)\.(bin|xex|elf|self)$)|\.rpx$", re.I)
+_GAME_SUBDIR = re.compile(r"^(ps3_game|usrdir|code|content|meta|host|sce_sys|app)$", re.I)
+
+
+def _loose(s: Any) -> str:
+    return re.sub(r"[\W_]+", "", str(s or "").lower())
+
+
+def clean_title(s: Any) -> str:
+    """A file or window name as a game name: bracketed codes, regions, versions and "Disc 1" gone."""
+    s = str(s or "")
+    s = re.sub(r"\[[^\]]*\]", " ", s)
+    s = re.sub(r"\((?:[^()]*\b(?:usa|europe|japan|world|en|fr|de|es|it|rev|disc|disk|beta|demo|proto|v\d)[^()]*|[A-Z0-9-]{4,}|\d+-bit)\)", " ", s, flags=re.I)
+    s = re.sub(r"\bv\d+(?:\.\d+)+[\w-]*|\b\d+\.\d+\.\d+[\w-]*", " ", s, flags=re.I)
+    s = re.sub(r"\s{2,}", " ", s)
+    return re.sub(r"^[\s:·|–—-]+|[\s:·|–—-]+$", "", s).strip()
+
+
+def rom_from_args(args: List[str]) -> Optional[str]:
+    """The file an emulator was started with: its last argument that's a file (an extension with a letter in it), not
+    an option or an option's value."""
+    found = None
+    i = 0
+    while i < len(args):
+        a = args[i]
+        i += 1
+        if _VALUE_OPTS.match(a):
+            i += 1
+            continue
+        m = re.match(r"^--?([\w-]+)=(.*)$", a)
+        if m:
+            v = m.group(2)
+            if m.group(1).lower() in ("rom", "game", "disc", "iso", "boot", "file", "path") and re.search(r"\.[a-z0-9]{0,4}[a-z][a-z0-9]{0,4}$", v, re.I) and not _NOT_ROM.search(v):
+                found = v
+            continue
+        if a.startswith("-"):
+            continue
+        ext = re.search(r"\.([a-z0-9]{1,5})$", a, re.I)
+        if ext and re.search(r"[a-z]", ext.group(1), re.I) and not _NOT_ROM.search(a):
+            found = a
+    return found
+
+
+def name_from_file(base: Any) -> Optional[str]:
+    """A game's name from a file name (no extension, codes, regions, versions), or None when it doesn't say one."""
+    stem = re.sub(r"\.[\w]{1,5}$", "", str(base or "")).replace("_", " ")
+    stem = re.sub(r"^\s*[A-Z]{4}[-_]?\d{5}\s*[-–]\s*", "", stem)
+    stem = re.sub(r"\s*[-–]\s*[A-Z]{4}[-_]?\d{5}\s*$", "", stem)
+    name = clean_title(stem)
+    if len(name) < 2 or not re.search(r"[^\W\d_]{2,}", name) or _GENERIC_FILE.match(name) or _TITLE_ID.match(name):
+        return None
+    return name
+
+
+def name_from_path(path: Any) -> Optional[str]:
+    """The game from a loaded file's path: its name, or (for EBOOT.BIN, .rpx, default.xex) the game's folder."""
+    parts = [p for p in re.split(r"[\\/]+", str(path or "")) if p]
+    base = parts[-1] if parts else ""
+    if not _FOLDER_GAME_FILE.search(base):
+        return name_from_file(base)
+    for i in range(len(parts) - 2, max(-1, len(parts) - 5), -1):
+        if _GAME_SUBDIR.match(parts[i]):
+            continue
+        m = re.match(r"^[A-Z]{4}\d{5}-?\[(.*)\]$", parts[i])
+        return name_from_file(m.group(1) if m else parts[i])
+    return None
+
+
+def hash_key(raw: str) -> str:
+    """A key as it leaves here: hashed (the program's and file's names stay on the Deck)."""
+    import hashlib
+    return "k" + hashlib.sha256(raw.encode("utf-8")).hexdigest()[:24]
+
+
+def last_history_item(text: str) -> Optional[Dict[str, Optional[str]]]:
+    """RetroArch's most recent content (content_history.lpl, JSON): {path, label}, or None."""
+    try:
+        it = (json.loads(text).get("items") or [None])[0]
+    except (ValueError, AttributeError):
+        return None
+    if not it or not it.get("path"):
+        return None
+    label = it.get("label")
+    return {"path": str(it["path"]).split("#")[0], "label": str(label) if label and label != "N/A" else None}
+
+
+def emulator_of(names: List[str]) -> Optional[Tuple[str, str]]:
+    """(id, name) of the emulator a process is, from its program names, or None."""
+    for raw in names:
+        n = re.sub(r"\.(exe|appimage|x86_64)$", "", os.path.basename(str(raw or "").replace("\\", "/")), flags=re.I).lower()
+        for i, name, rx in _EMU_RES:
+            if n and rx.match(n):
+                return i, name
+    return None
+
+
+def find_emulator_game(proc_root: str = "/proc", home: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    """The newest emulator process and its game: {emulator, name, key, fromFile}, or None (no emulator running, or one
+    in its menus with nothing loaded). key: hashed, the file's when there is one."""
+    best = None
+    try:
+        pids = [p for p in os.listdir(proc_root) if p.isdigit()]
+    except OSError:
+        return None
+    for pid in pids:
+        base = os.path.join(proc_root, pid)
+        try:
+            with open(os.path.join(base, "cmdline"), "rb") as f:
+                args = [a.decode("utf-8", "replace") for a in f.read().split(b"\0") if a]
+        except OSError:
+            continue
+        if not args:
+            continue
+        try:
+            exe = os.readlink(os.path.join(base, "exe"))
+        except OSError:
+            exe = ""
+        emu = emulator_of([exe, args[0]] + ([args[1]] if len(args) > 1 and re.search(r"(?i)(wine|proton)", args[0]) else []))
+        if not emu:
+            continue
+        try:
+            started = os.stat(base).st_ctime
+        except OSError:
+            started = 0
+        if not best or started > best[0]:
+            best = (started, emu, args)
+    if not best:
+        return None
+    started, (emu_id, emu_name), args = best
+    rom = rom_from_args(args[1:])
+    label = None
+    if not rom and emu_id == "retroarch":
+        for rel in (".config/retroarch", ".var/app/org.libretro.RetroArch/config/retroarch"):
+            f = os.path.join(home or os.path.expanduser("~"), rel, "playlists", "builtin", "content_history.lpl")
+            try:
+                if os.stat(f).st_mtime < started - 2:
+                    continue
+                with open(f, "r", encoding="utf-8") as fh:
+                    it = last_history_item(fh.read())
+            except OSError:
+                continue
+            if it:
+                rom, label = it["path"], it["label"]
+                break
+    if not rom:
+        return None  # in its own menus: nothing loaded yet
+    file_base = [p for p in re.split(r"[\\/]+", rom) if p][-1]
+    name = (label and name_from_file(label)) or name_from_path(rom)
+    return {"emulator": emu_name, "name": name, "key": hash_key(f"{emu_id}|f:{_loose(file_base)}"), "fromFile": True}
+
+
+LEARNED_MAX = 300
+
+
 class Plugin:
     # ---- lifecycle ---------------------------------------------------------------------------
 
@@ -576,6 +780,7 @@ class Plugin:
                 "model": self.state["settings"]["model"],
                 "include_screenshot": bool(self.state["settings"]["include_screenshot"]),
                 "hint_mode": bool(self.state["settings"].get("hint_mode", False)),
+                "auto_switch": bool(self.state["settings"].get("auto_switch", True)),
             },
             "tools": {
                 "gamescopectl": bool(_which("gamescopectl", env)),
@@ -596,6 +801,8 @@ class Plugin:
             s["include_screenshot"] = patch["include_screenshot"]
         if isinstance(patch.get("hint_mode"), bool):
             s["hint_mode"] = patch["hint_mode"]
+        if isinstance(patch.get("auto_switch"), bool):
+            s["auto_switch"] = patch["auto_switch"]
         if patch.get("locale") in VALID_LOCALES:
             s["locale"] = patch["locale"]
         if isinstance(patch.get("guide_sites"), list):
@@ -626,6 +833,37 @@ class Plugin:
             data.setdefault("isGuest", self.state.get("auth") is None)
             return {"ok": True, "quota": _quota_from(data), "notice": notice}
         return {"ok": False, "error": data.get("error") or f"Server error ({status})"}
+
+    async def emulator_game(self) -> Dict[str, Any]:
+        """The emulator running now and its game, for a non-Steam shortcut: {emulator, name, key, ask} (ask: no name yet,
+        "Which game is this?"; notGame: the player said it isn't one), or {} when none is."""
+        home = None
+        try:
+            home = getattr(decky, "DECKY_USER_HOME", None) or pwd.getpwnam(decky.DECKY_USER).pw_dir
+        except (KeyError, AttributeError, TypeError):
+            pass
+        found = await asyncio.get_running_loop().run_in_executor(None, find_emulator_game, "/proc", home)
+        if not found:
+            return {}
+        said = (self.state.get("learned_games") or {}).get(found["key"])
+        if said is not None:
+            return {**found, "name": said or None, "ask": False, "notGame": not said, "learned": True}
+        return {**found, "ask": not found["name"]}
+
+    async def learn_game(self, key: str, name: Optional[str]) -> bool:
+        """The player's answer to "Which game is this?" for a file (a hashed key), remembered on this Deck; "" = not a
+        game. The newest answers are kept."""
+        key = str(key or "")
+        if not re.match(r"^k[0-9a-f]{24}$", key):
+            return False
+        learned = dict(self.state.get("learned_games") or {})
+        learned.pop(key, None)
+        learned[key] = str(name or "").strip()[:120]
+        for k in list(learned)[: max(0, len(learned) - LEARNED_MAX)]:
+            del learned[k]
+        self.state["learned_games"] = learned
+        self._save()
+        return True
 
     async def test_screenshot(self) -> Dict[str, Any]:
         """Diagnostic: capture but don't send. Returns size/timing, never the image."""

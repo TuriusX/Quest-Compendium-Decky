@@ -2,6 +2,7 @@
 // (The panel unmounts whenever the menu closes; this state lives as long as the Steam UI does.)
 import { useEffect, useState } from "react";
 import type { Quota, Turn } from "./api";
+import { swapConversation } from "./running";
 
 export interface ChatState {
   history: Turn[];
@@ -13,7 +14,8 @@ export interface ChatState {
   /** A guest's last question today: the sign-in card (link with your phone) shows under the answer. */
   signInNudge: boolean;
   quota: Quota | null;
-  gameKey: number | null;
+  /** The game this conversation is about (src/game.ts RunningGame.key), or null for none. */
+  gameKey: string | null;
   /** The question currently being answered, shown while waiting (kept after an error so it can be retried). */
   pending: string | null;
   /** An answer just arrived and the panel hasn't moved focus to it yet. */
@@ -44,9 +46,24 @@ export function setChat(patch: Partial<ChatState>): void {
   listeners.forEach((l) => l());
 }
 
-export function resetConversation(gameKey: number | null): void {
+export function resetConversation(gameKey: string | null): void {
   setChat({ history: [], error: null, notice: null, screenshotNote: null, limitReached: false, signInNudge: false, gameKey, pending: null, freshAnswer: false });
 }
+
+/**
+ * Each game's conversation while Steam runs (owner, Oct 30 2026; the Deck's "tabs"): switching to a game keeps the
+ * current conversation for its game and brings back the new game's, if it had one (src/running.ts swapConversation:
+ * at most 8 games, their latest screenshots only). Returns whether one came back.
+ */
+const saved = new Map<string, Turn[]>();
+export function switchConversation(gameKey: string | null): boolean {
+  const back = swapConversation(saved, state.gameKey, keepRecentShots(state.history), gameKey);
+  setChat({ history: back ?? [], error: null, notice: null, screenshotNote: null, limitReached: false, signInNudge: false, gameKey, pending: null, freshAnswer: false });
+  return !!back?.length;
+}
+
+/** Whether this game has a conversation kept from earlier. */
+export const hasConversation = (gameKey: string | null): boolean => !!saved.get(gameKey ?? "")?.length;
 
 /** Tick a marked point off (or back on) in one answer; the ticks stay with the conversation. */
 export function togglePoint(turnIndex: number, point: number): void {

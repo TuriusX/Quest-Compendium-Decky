@@ -31,6 +31,15 @@ const CSS = `
 }
 .qc-chip-gold { background: rgba(232, 184, 74, 0.2); color: ${GOLD}; }
 
+/* The running game: "Switched to X", "Playing X · Switch" (automatic switching off), "Which game is this?" */
+.qc-game-note { display: flex; align-items: center; gap: 8px; width: 100%; min-width: 0; font-size: 12px; color: #a7f3d0; background: rgba(16, 185, 129, 0.12); border-radius: 8px; padding: 6px 10px; box-sizing: border-box; }
+.qc-game-note > span { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.qc-game-btn { flex: 0 0 auto; width: auto !important; min-width: 0 !important; padding: 4px 12px !important; font-size: 12px !important; }
+.qc-game-ask { display: flex; flex-direction: column; gap: 6px; width: 100%; font-size: 12px; color: #e6e1f7; }
+.qc-game-ask-q { font-weight: 600; }
+.qc-game-ask-row { display: flex; gap: 6px; }
+.qc-game-ask-row > * { flex: 1 1 0; min-width: 0 !important; }
+
 /* Status strip under the header card: game · place · collected, with the quota chip on the right */
 .qc-strip { display: flex; align-items: center; gap: 8px; width: 100%; min-width: 0; font-size: 12px; color: #b9b2d6; }
 .qc-strip-info { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

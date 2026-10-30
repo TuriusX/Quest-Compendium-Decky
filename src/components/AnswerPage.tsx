@@ -1,7 +1,7 @@
 import { DialogButton, Focusable } from "@decky/ui";
 import { useCurrentGame } from "../game";
 import { useT } from "../i18n";
-import { resetConversation, useChat } from "../store";
+import { getChat, resetConversation, useChat } from "../store";
 import { ThemeStyle } from "../theme";
 import { AnswerBlocks } from "./AnswerBlocks";
 import { MarkedShot } from "./MarkedShot";
@@ -66,7 +66,7 @@ export function AnswerPage() {
         {chat.busy && <div className="qc-note qc-muted" style={{ margin: "16px 8px" }}>{t("conv.thinking")}</div>}
         {turns.length > 0 && (
           <div style={{ marginTop: 20, maxWidth: 320 }}>
-            <DialogButton onClick={() => resetConversation(game?.appId ?? null)}>{t("conv.new")}</DialogButton>
+            <DialogButton onClick={() => resetConversation(getChat().gameKey)}>{t("conv.new")}</DialogButton>
           </div>
         )}
       </div>

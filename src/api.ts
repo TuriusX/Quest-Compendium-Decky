@@ -10,6 +10,8 @@ export interface Settings {
   include_screenshot: boolean;
   /** Hint mode: "Just a hint" among the quick questions (off by default). */
   hint_mode?: boolean;
+  /** A game that starts brings back its own conversation (on by default; off: the current one stays, with Switch). */
+  auto_switch?: boolean;
   /** "auto" follows the Steam language. */
   locale?: "auto" | "en" | "es" | "pt" | "de" | "fr" | "ru" | "ja" | "ko" | "zh";
   /** Guide sites shown in the Guides tab (domains). */
@@ -223,6 +225,10 @@ export const cancelLink = callable<[], boolean>("cancel_link");
 export const sendEmailLink = callable<[email: string, userCode: string, lang: string], { ok: boolean; error?: string }>("send_email_link");
 export const unlink = callable<[], boolean>("unlink");
 export const testScreenshot = callable<[], ScreenshotTest>("test_screenshot");
+/** The emulator a non-Steam shortcut is running and its game (main.py find_emulator_game); {} when none is. */
+export const emulatorGame = callable<[], { emulator?: string; name?: string | null; key?: string; ask?: boolean; notGame?: boolean }>("emulator_game");
+/** "Which game is this?" answered for an emulator's file ("" = not a game), remembered on this Deck. */
+export const learnGame = callable<[key: string, name: string], boolean>("learn_game");
 /** Report an AI answer for review (Microsoft Store / Steam policy on generated content). */
 /** Hold to talk: record from the Deck's microphone (pw-record), then stop and get it back as a data URL. */
 export const startRecording = callable<[], { ok: boolean; error?: string }>("start_recording");

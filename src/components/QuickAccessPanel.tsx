@@ -9,19 +9,20 @@ import {
 } from "@decky/ui";
 import { useEffect, useRef, useState } from "react";
 import { FaCog, FaComments, FaPlus } from "react-icons/fa";
-import { ask, AskRequest, AnswerModel, getQuota, getState, PluginState, saveSettings, Turn } from "../api";
+import { ask, AskRequest, AnswerModel, getQuota, getState, learnGame, PluginState, saveSettings, Turn } from "../api";
 import { balancesOf, deviceTimeZone, modelOf, questionsLine, settingOf, startingModel } from "../answerModel";
 import { ModelToggle } from "./ModelToggle";
 import { UpdateNotice } from "./UpdateNotice";
 import { useUpdate } from "../update";
-import { currentGame, useCurrentGame } from "../game";
+import { currentGame, refreshGame, useCurrentGame } from "../game";
+import { followGame } from "../running";
 import { lastPlace, rememberPlace } from "../qcGuides";
 import { guideContextFor } from "../guideHere";
 import { MissablesHere } from "./MissablesHere";
 import { setTab, useBrowser } from "../browser";
 import { aiLanguageName, setLocaleSetting, useT } from "../i18n";
 import { ANSWER_ROUTE, openPage, SETTINGS_ROUTE } from "../routes";
-import { getChat, keepRecentShots, lastAnswerTurn, lastMarkedAnswer, lastQuestion, mergeQuota, resetConversation, setChat, useChat } from "../store";
+import { getChat, keepRecentShots, lastAnswerTurn, lastMarkedAnswer, lastQuestion, mergeQuota, resetConversation, setChat, switchConversation, useChat } from "../store";
 import { PURPLE, SCENE, ThemeStyle } from "../theme";
 import { AnswerBlocks } from "./AnswerBlocks";
 import { ReportButton, ReportedNote } from "./ReportAnswer";
@@ -127,11 +128,38 @@ export function QuickAccessPanel() {
     }
   }, [bal.pro, bal.fast]);
 
-  // A new game means a new conversation.
+  // Following the game that starts (owner, Oct 30 2026; the desktop app's rule, with each game's conversation as the
+  // Deck's tab): a game that had a conversation gets it back ("Switched to X" for a few seconds); a new one starts its
+  // own (nothing to open: the panel follows the running game). With "Follow the game you start" off, a conversation
+  // with questions in it stays, and Switch moves to the running game's. A game waiting for "Which game is this?"
+  // changes nothing until it's answered.
+  const [switchedTo, setSwitchedTo] = useState<string | null>(null);
+  const [pendingSwitch, setPendingSwitch] = useState<string | null>(null);
+  const followKey = game?.ask ? undefined : game?.key ?? null;
+  const switchTo = (key: string | null) => {
+    setPendingSwitch(null);
+    if (switchConversation(key) && key && game) setSwitchedTo(game.name);
+  };
   useEffect(() => {
-    const key = game?.appId ?? null;
-    if (getChat().gameKey !== key) resetConversation(key);
-  }, [game?.appId]);
+    if (!ps) return;
+    const step = followGame(followKey, getChat().gameKey, { auto: ps.settings.auto_switch !== false, hasHistory: getChat().history.length > 0 });
+    if (step === "switch") switchTo(followKey!);
+    else if (step === "offer") setPendingSwitch(followKey!);
+    else if (followKey !== undefined) setPendingSwitch(null);
+  }, [followKey, !!ps]);
+  useEffect(() => {
+    if (!switchedTo) return;
+    const id = setTimeout(() => setSwitchedTo(null), 4000);
+    return () => clearTimeout(id);
+  }, [switchedTo]);
+  // "Which game is this?" (an emulator's file with no name in it): asked once, remembered for that file on this Deck.
+  const [whichName, setWhichName] = useState("");
+  const answerWhich = async (name: string) => {
+    if (!game?.ask) return;
+    await learnGame(game.ask.key, name).catch(() => false);
+    setWhichName("");
+    refreshGame();
+  };
 
   // A new answer takes focus once (autoFocus only acts when the blocks mount), then the flag is cleared.
   useEffect(() => {
@@ -147,12 +175,14 @@ export function QuickAccessPanel() {
     const q = question.trim();
     if (!q || getChat().busy || !ps) return;
     setPrompt("");
-    const liveGame = currentGame() ?? game;
+    const running = currentGame() ?? game;
+    // Only the game's name and Steam app go with a question (none while "Which game is this?" is unanswered).
+    const liveGame = running && !running.ask ? { name: running.name, appId: running.appId } : null;
     const req: AskRequest = {
       question: q,
       mode: ps.settings.mode,
       // A screenshot is only useful while a game is actually running.
-      includeScreenshot: (opts.shot || ps.settings.include_screenshot) && ps.tools.gamescopectl && liveGame !== null,
+      includeScreenshot: (opts.shot || ps.settings.include_screenshot) && ps.tools.gamescopectl && running !== null,
       // Only the words go back to the server (not the screenshots kept for the answer page).
       history: getChat().history.map(({ role, text }) => ({ role, text })),
       game: liveGame,
@@ -477,12 +507,37 @@ export function QuickAccessPanel() {
             <div className="qc-brand">
               <Logo size={36} />
               <div className="qc-brand-text">
-                <div className="qc-brand-title">{game ? game.name : t("card.noGame")}</div>
+                <div className="qc-brand-title">{game?.ask ? t("game.whichGame") : game ? game.name : t("card.noGame")}</div>
                 <div className="qc-brand-sub">{game ? t("card.askScreen") : t("card.askAnything")}</div>
               </div>
             </div>
           </div>
         </PanelSectionRow>
+        {switchedTo && (
+          <PanelSectionRow>
+            <div className="qc-game-note" role="status">✓ {t("game.switched", { game: switchedTo })}</div>
+          </PanelSectionRow>
+        )}
+        {pendingSwitch && game && !game.ask && (
+          <PanelSectionRow>
+            <Focusable className="qc-game-note qc-game-switch" flow-children="horizontal">
+              <span>▶ {t("game.playing", { game: game.name })}</span>
+              <DialogButton className="qc-game-btn" onClick={() => switchTo(pendingSwitch)}>{t("game.switch")}</DialogButton>
+            </Focusable>
+          </PanelSectionRow>
+        )}
+        {game?.ask && (
+          <PanelSectionRow>
+            <div className="qc-game-ask">
+              <div className="qc-game-ask-q">{t("game.whichGameIn", { emulator: game.ask.emulator })}</div>
+              <TextField value={whichName} onChange={(e) => setWhichName(e.target.value)} label={t("game.namePlaceholder")} />
+              <Focusable className="qc-game-ask-row" flow-children="horizontal">
+                <DialogButton disabled={!whichName.trim()} onClick={() => void answerWhich(whichName.trim())}>{t("game.save")}</DialogButton>
+                <DialogButton onClick={() => void answerWhich("")}>{t("game.notGame")}</DialogButton>
+              </Focusable>
+            </div>
+          </PanelSectionRow>
+        )}
         {/* A newer version is out (installed by hand, so it doesn't update itself): how to get it. */}
         {update && (
           <PanelSectionRow>
@@ -555,7 +610,7 @@ export function QuickAccessPanel() {
                       <FaComments size={12} />
                       {t("btn.conversation")}
                     </DialogButton>
-                    <DialogButton disabled={chat.busy} onClick={() => resetConversation(game?.appId ?? null)}>
+                    <DialogButton disabled={chat.busy} onClick={() => resetConversation(getChat().gameKey)}>
                       <FaPlus size={11} />
                       {t("btn.new")}
                     </DialogButton>
