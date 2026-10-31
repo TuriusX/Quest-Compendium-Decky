@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.16.0
+- **Follows the game you start.** Start a different game and Quest Compendium switches to it with "Switched to …" and a
+  fresh conversation. Go back to an earlier game and its conversation comes back.
+- **More than Steam games.** Non-Steam shortcuts and emulators are recognized too: EmuDeck, ES-DE, RetroArch and
+  standalone emulators, including Flatpak and AppImage builds and Windows emulators run through Proton. The game is read
+  from the file the emulator loaded, or from RetroArch's history, else the shortcut's own name (without tags like "(GC)").
+- **"Which game is this?"** If a file doesn't say which game it is, Quest Compendium asks once and remembers your answer
+  for that file.
+- **Stays on your Deck.** Detection runs on the Deck. Only the game's name is used.
+- **New setting: "Follow the game you start".** Turn it off to keep your current conversation. A **Switch** button
+  appears when a different game starts.
+
 ## 0.15.4
 - **The same guide as the website.** The guide screens now show what questcompendium.com shows: every section, everything
   that's live (no more "coming soon" for places and quests the site already has), the same short names ("Ciri"),
