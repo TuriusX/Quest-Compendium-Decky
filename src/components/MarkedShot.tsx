@@ -7,7 +7,15 @@ import { useT } from "../i18n";
  * collected), and the list of what each number is. The Steam Deck can't draw over a running game, so this is where
  * markers show up on the Deck.
  */
-export function MarkedShot({ shot, points, done = [] }: { shot?: string; points: ShotPoint[]; done?: number[] }) {
+export function MarkedShot({ shot, points, done = [], checking = false, removed = [] }: {
+  shot?: string;
+  points: ShotPoint[];
+  done?: number[];
+  /** The marker check is running: drawn dashed and dimmed until it says which are really there. */
+  checking?: boolean;
+  /** Marked things the check couldn't see on the screenshot (left out of the markers). */
+  removed?: string[];
+}) {
   const t = useT();
   // A fight's top targets (kill order) get a red badge and a stronger frame; guide entries found on screen are amber.
   const badge = (i: number, extra = "") => (
@@ -15,8 +23,8 @@ export function MarkedShot({ shot, points, done = [] }: { shot?: string; points:
   );
   return (
     <Focusable className="qc-shot-wrap" focusClassName="qc-focused" noFocusRing>
-      {shot && (
-        <div className="qc-shot">
+      {shot && points.length > 0 && (
+        <div className={checking ? "qc-shot qc-shot-checking" : "qc-shot"}>
           <img src={shot} alt={t("shot.alt")} />
           {points.map((p, i) => (
             <span key={i} className={p.rank ? "qc-mk qc-mk-rank" : p.guideId ? "qc-mk qc-mk-guide" : "qc-mk"} style={{ left: `${p.x * 100}%`, top: `${p.y * 100}%` }}>
@@ -26,6 +34,8 @@ export function MarkedShot({ shot, points, done = [] }: { shot?: string; points:
           ))}
         </div>
       )}
+      {checking && <p className="qc-mk-note">{t("shot.checking")}</p>}
+      {removed.length > 0 && <p className="qc-mk-note">{t("shot.unmarked", { list: removed.join(", ") })}</p>}
       <ol className="qc-mk-list">
         {points.map((p, i) => (
           <li key={i}>

@@ -50,6 +50,8 @@ export interface ShotPoint {
   note?: string;
   /** The player can lose it for good by moving on. */
   missable?: boolean;
+  /** What kind of thing it is (item, character, door...). */
+  category?: string;
   /** A fight: kill order of the top 2-3 targets (1 = first), drawn stronger. */
   rank?: number;
   /** A guide entry the answer found on screen (guide-backed marker): ticking the marker ticks the entry. */
@@ -99,6 +101,10 @@ export interface Turn {
   story?: string;
   /** Answers only: indexes of the points the player has ticked off. */
   donePoints?: number[];
+  /** Answers only: the marker check is running for this answer's markers (drawn dimmed until it's done). */
+  checkId?: string;
+  /** Answers only: marked things the check couldn't see on the screenshot (left out of the markers). */
+  removedMarkers?: string[];
   /** Answers only: the question went with a screenshot ("Show me where on screen" is offered). */
   sawShot?: boolean;
   /** Answers only: the player reported it (Report this answer), and why. */
@@ -218,6 +224,11 @@ export interface UpdateInfo {
 }
 export const checkUpdate = callable<[], UpdateInfo>("check_update");
 export const ask = callable<[req: AskRequest], AskResult>("ask");
+/** The precision pass (main.py check_markers): which marked things the close-ups really show, and exactly where. */
+export const checkMarkers = callable<
+  [req: { crops: { image: string; label: string; where?: string; category?: string; guide?: boolean }[]; game?: string }],
+  { ok: boolean; found?: { index: number; x: number; y: number }[]; checked?: number }
+>("check_markers");
 export const startLink = callable<[], LinkStart>("start_link");
 export const pollLink = callable<[], LinkPoll>("poll_link");
 export const cancelLink = callable<[], boolean>("cancel_link");

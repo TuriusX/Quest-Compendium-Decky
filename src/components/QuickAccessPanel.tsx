@@ -25,6 +25,7 @@ import { ANSWER_ROUTE, openPage, SETTINGS_ROUTE } from "../routes";
 import { getChat, keepRecentShots, lastAnswerTurn, lastMarkedAnswer, lastQuestion, mergeQuota, resetConversation, setChat, switchConversation, useChat } from "../store";
 import { PURPLE, SCENE, ThemeStyle } from "../theme";
 import { AnswerBlocks } from "./AnswerBlocks";
+import { checkAnswerMarkers } from "../markerCheck";
 import { ReportButton, ReportedNote } from "./ReportAnswer";
 import { VoteButtons } from "./VoteButtons";
 import { Logo } from "./Brand";
@@ -229,6 +230,8 @@ export function QuickAccessPanel() {
         if (res.shot && res.points?.length) {
           answerTurn.shot = res.shot;
           answerTurn.points = res.points;
+          // Checked before they count: close-ups of each spot, markers that aren't really there left out.
+          answerTurn.checkId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
         }
         // The quest log: its title and steps (in a fight, the battle plan).
         if (res.title) answerTurn.title = res.title;
@@ -239,6 +242,11 @@ export function QuickAccessPanel() {
         patch.pending = null;
         patch.freshAnswer = true;
         patch.history = keepRecentShots([...getChat().history, { role: "user", text: q }, answerTurn]);
+        if (answerTurn.checkId && answerTurn.shot && answerTurn.points) {
+          const { checkId, shot, points } = answerTurn;
+          // After the answer is stored (the check finds it again by its checkId).
+          setTimeout(() => void checkAnswerMarkers(checkId, shot, points, liveGame?.name ?? ""), 0);
+        }
       } else {
         patch.error = res.error ?? t("answer.error");
       }

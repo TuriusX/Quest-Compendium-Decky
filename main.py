@@ -65,6 +65,8 @@ MAX_HISTORY_TURNS = 10
 MAX_HISTORY_CHARS = 4000
 MAX_IMAGE_BYTES = 6 * 1024 * 1024
 SCREENSHOT_MAX_WIDTH = 1280
+MAX_CHECK_CROPS = 8           # the precision pass checks every marker an answer can have (8 in a fight)
+MAX_CROP_CHARS = 600_000      # one 768 px JPEG close-up is far smaller
 
 # In-plugin reader browser
 PAGE_TIMEOUT_S = 20
@@ -237,6 +239,10 @@ def _points_from(data: Any) -> List[Dict[str, Any]]:
                 point["note"] = note
             if p.get("missable") is True:
                 point["missable"] = True
+            # What kind of thing it is (item, character, door...): the marker check looks for people more strictly.
+            category = str(p.get("category") or "").strip()
+            if re.fullmatch(r"[a-z]{2,12}", category):
+                point["category"] = category
             rank = _to_int(p.get("rank"))
             if rank and 1 <= rank <= 3:
                 point["rank"] = rank
@@ -871,6 +877,52 @@ class Plugin:
         if shot["ok"]:
             return {"ok": True, "bytes": shot["bytes"], "mime": shot["mime"], "ms": shot["ms"]}
         return {"ok": False, "error": shot["error"]}
+
+    async def check_markers(self, req: Dict[str, Any]) -> Dict[str, Any]:
+        """The precision pass, as on the desktop: close-ups of each marked spot (cropped by the panel) go to /api/refine,
+        which says which marked things it can actually see and exactly where. ok False: the check couldn't run (offline,
+        not allowed, busy), so the panel keeps every marker as it was."""
+        crops = []
+        for c in (req.get("crops") if isinstance(req, dict) else None) or []:
+            if not isinstance(c, dict):
+                continue
+            image = str(c.get("image") or "")
+            label = str(c.get("label") or "").strip()[:40]
+            if label and image.startswith("data:image/jpeg;base64,") and len(image) <= MAX_CROP_CHARS:
+                crop = {"image": image, "label": label}
+                where = str(c.get("where") or "").strip()[:100]
+                if where:
+                    crop["where"] = where
+                category = str(c.get("category") or "").strip()
+                if re.fullmatch(r"[a-z]{2,12}", category):
+                    crop["category"] = category
+                if c.get("guide") is True:
+                    crop["guide"] = True
+                crops.append(crop)
+        crops = crops[:MAX_CHECK_CROPS]
+        if not crops:
+            return {"ok": False}
+        token, _is_guest, _notice = await self._bearer()
+        if token is None:
+            return {"ok": False}
+        game = str(req.get("game") or "").strip()[:120]
+        # The app and version go along: any markers the check removes are noted with them (the owner's Quality page).
+        body = {"crops": crops, "game": game, "client": "deck", "appVersion": str(decky.DECKY_PLUGIN_VERSION)[:24]}
+        status, data = await self._http("POST", "/api/refine", body=body, token=token, timeout_s=SHORT_TIMEOUT_S)
+        if status != 200 or not isinstance(data.get("found"), list):
+            return {"ok": False}
+        found = []
+        for f in data["found"]:
+            try:
+                i, x, y = int(f.get("index")), float(f.get("x")), float(f.get("y"))
+            except (TypeError, ValueError, AttributeError):
+                continue
+            if 0 <= i < len(crops) and 0 <= x <= 1 and 0 <= y <= 1:
+                found.append({"index": i, "x": x, "y": y})
+        checked = _to_int(data.get("checked"))
+        # Older servers checked the first 5 and didn't say so.
+        checked = min(len(crops), checked if checked is not None else 5)
+        return {"ok": True, "found": found, "checked": checked}
 
     async def ask(self, req: Dict[str, Any]) -> Dict[str, Any]:
         if self._ask_lock.locked():

@@ -255,6 +255,11 @@ const CSS = `
 .qc-mk-rank .qc-mk-num { top: -50px; }
 .qc-mk-list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 14px; color: #e6e1f7; }
 .qc-mk-list li { display: flex; align-items: center; gap: 6px; }
+/* Being checked: dashed, dimmed frames and a blinking number until the check says which are really there. */
+.qc-shot-checking .qc-mk-frame { border-style: dashed; opacity: 0.7; }
+.qc-shot-checking .qc-mk-num { animation: qc-blink 1s steps(2) infinite; }
+@keyframes qc-blink { 50% { opacity: 0.35; } }
+.qc-mk-note { margin: 6px 0 0; font-size: 12px; color: #a9a3bf; }
 
 /* Tabs: a quiet segmented control; the active tab is marked by an underline, not a filled button. */
 .qc-tabs { display: flex; gap: 2px; width: 100%; padding: 2px; box-sizing: border-box; border-radius: 8px; background: rgba(255, 255, 255, 0.04); }

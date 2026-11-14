@@ -5,6 +5,7 @@ import { getChat, resetConversation, useChat } from "../store";
 import { ThemeStyle } from "../theme";
 import { AnswerBlocks } from "./AnswerBlocks";
 import { MarkedShot } from "./MarkedShot";
+import { isChecking } from "../markerCheck";
 import { QuestLog } from "./QuestLog";
 import { MissablesHere } from "./MissablesHere";
 import { PageHeader } from "./Brand";
@@ -48,7 +49,9 @@ export function AnswerPage() {
                 <ReportedNote turnIndex={i} />
               ) : (
                 <>
-                  {t.points && t.points.length > 0 && <MarkedShot shot={t.shot} points={t.points} done={t.donePoints} />}
+                  {((t.points && t.points.length > 0) || !!t.removedMarkers?.length) && (
+                    <MarkedShot shot={t.shot} points={t.points ?? []} done={t.donePoints} checking={isChecking(t.checkId)} removed={t.removedMarkers} />
+                  )}
                   <AnswerBlocks text={t.text} chunk={420} />
                   {/* The answer's quest log (steps, or a fight's battle plan); ticks are shared with the panel. */}
                   <QuestLog turn={t} turnIndex={i} />
