@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.17.0
+- **Videos and pictures under answers.** When a video or picture helps, it shows under the answer: a short video for a
+  route, a boss fight or a puzzle, a picture for what something looks like or exactly where it is. Nothing is added for
+  lore or build questions. **Watch** opens the video full screen over your game, and B brings you back. Other videos
+  that cover the same thing are listed below it. **Not right** removes one that doesn't fit.
+- **Markers you can trust.** An answer's markers are checked against your screenshot before they settle: anything that
+  isn't really there is left out and named instead, and the rest move onto the exact spot.
+
 ## 0.16.0
 - **Follows the game you start.** Start a different game and Quest Compendium switches to it with "Switched to …" and a
   fresh conversation. Go back to an earlier game and its conversation comes back.
