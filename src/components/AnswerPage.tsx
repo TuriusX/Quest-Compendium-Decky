@@ -1,7 +1,8 @@
 import { DialogButton, Focusable } from "@decky/ui";
 import { useCurrentGame } from "../game";
 import { useT } from "../i18n";
-import { getChat, resetConversation, useChat } from "../store";
+import { getChat, hideVisual, resetConversation, useChat } from "../store";
+import { DeckVisual } from "./DeckVisual";
 import { ThemeStyle } from "../theme";
 import { AnswerBlocks } from "./AnswerBlocks";
 import { MarkedShot } from "./MarkedShot";
@@ -50,6 +51,8 @@ export function AnswerPage() {
                 <>
                   {t.points && t.points.length > 0 && <MarkedShot shot={t.shot} points={t.points} done={t.donePoints} />}
                   <AnswerBlocks text={t.text} chunk={420} />
+                  {/* Visual answers: the video or picture found for this answer (after it arrived). */}
+                  {t.visual && !t.visualHidden && <DeckVisual visual={t.visual} visualRef={t.visualRef} onWrong={() => hideVisual(i)} />}
                   {/* The answer's quest log (steps, or a fight's battle plan); ticks are shared with the panel. */}
                   <QuestLog turn={t} turnIndex={i} />
                   {/* The latest answer: what the guide marks missable in its place, not ticked yet. */}

@@ -107,6 +107,24 @@ export function markVote(turnIndex: number, vote: Turn["vote"], reason?: string)
   setChat({ history });
 }
 
+/** Visual answers: the video or picture found for an answer (by its visualId, since more turns may have come since). */
+export function setTurnVisual(visualId: string, visual: Turn["visual"], ref?: string | null): void {
+  const i = state.history.findIndex((x) => x.visualId === visualId);
+  if (i < 0) return;
+  const history = [...state.history];
+  history[i] = { ...history[i], visual, ...(ref ? { visualRef: ref } : {}) };
+  setChat({ history });
+}
+
+/** "Not right" on an answer's visual: it isn't shown again. */
+export function hideVisual(turnIndex: number): void {
+  const turn = state.history[turnIndex];
+  if (!turn?.visual) return;
+  const history = [...state.history];
+  history[turnIndex] = { ...turn, visualHidden: true };
+  setChat({ history });
+}
+
 /** "Show anyway" on an answer hidden after a report. */
 export function showReported(turnIndex: number): void {
   const turn = state.history[turnIndex];

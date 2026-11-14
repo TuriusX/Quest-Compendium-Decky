@@ -79,9 +79,21 @@ export interface PluginState {
   version: string;
 }
 
+/** Visual answers (owner, Nov 14 2026): one video (with 2-3 other videos) or picture for an answer (the server's /api/visual). */
+export type VideoChoice = { videoId: string; title: string; channel: string; seconds: number; start: number; thumb?: string; note?: string };
+export type DeckVisual =
+  | (VideoChoice & { kind: "video"; alts?: VideoChoice[] })
+  | { kind: "picture"; source: "ours" | "wiki"; url: string; alt: string; credit?: string; link?: string; map?: boolean };
+
 export interface Turn {
   role: "user" | "assistant";
   text: string;
+  /** Answers only: its video or picture, found after the answer arrived (visualId finds the answer again). */
+  visual?: DeckVisual;
+  visualRef?: string;
+  visualId?: string;
+  /** The player said "Not right": the visual isn't shown again. */
+  visualHidden?: boolean;
   /** Answers only: the screenshot the answer is about, with the spots the AI marked on it. */
   shot?: string;
   points?: ShotPoint[];
@@ -218,6 +230,8 @@ export interface UpdateInfo {
 }
 export const checkUpdate = callable<[], UpdateInfo>("check_update");
 export const ask = callable<[req: AskRequest], AskResult>("ask");
+export const visual = callable<[req: { game: string; question: string; answer: string }], { ok: boolean; visual: DeckVisual | null; ref?: string | null }>("visual");
+export const visualEvent = callable<[req: { type: "played" | "opened" | "wrong"; ref?: string }], { ok: boolean }>("visual_event");
 export const startLink = callable<[], LinkStart>("start_link");
 export const pollLink = callable<[], LinkPoll>("poll_link");
 export const cancelLink = callable<[], boolean>("cancel_link");
