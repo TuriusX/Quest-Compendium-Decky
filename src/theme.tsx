@@ -242,6 +242,23 @@ const CSS = `
 }
 .qc-q.qc-focused, .qc-q.gpfocus { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.7); }
 .qc-a { background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 16px 16px 16px 4px; padding: 8px 4px; }
+/* Visual answers (Nov 14 2026): the video or picture under an answer (DeckVisual.tsx). */
+.qc-vis { display: block; margin: 8px 8px 10px; border: 1px solid rgba(139, 92, 246, 0.35); background: rgba(12, 10, 20, 0.55); overflow: hidden; }
+.qc-vis-thumb { position: relative; display: block; width: 100%; aspect-ratio: 16 / 9; background: #000; }
+.qc-vis-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.qc-vis-len { position: absolute; right: 6px; bottom: 6px; padding: 1px 5px; background: rgba(0, 0, 0, 0.8); color: #fff; font: 600 12px/1.4 monospace; }
+.qc-vis-start { position: absolute; left: 6px; bottom: 6px; padding: 1px 5px; background: rgba(0, 0, 0, 0.8); color: #fff; font-size: 12px; }
+.qc-vis-title { padding: 6px 8px 0; font-size: 13px; line-height: 1.3; color: #f2efff; font-weight: 600; }
+.qc-vis-meta { padding: 2px 8px 6px; font-size: 11.5px; color: #a8a3bd; }
+.qc-vis-pic { display: block; width: 100%; max-height: 200px; object-fit: contain; background: #000; }
+.qc-vis-row { display: flex; align-items: center; gap: 8px; padding: 4px 6px; margin: 0 4px; border-radius: 3px; }
+.qc-vis-row img { width: 72px; aspect-ratio: 16 / 9; object-fit: cover; flex: none; }
+.qc-vis-row-t { font-size: 12px; line-height: 1.25; color: #e6e1f7; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.qc-vis-row-m { font-size: 11px; color: #8e89a3; }
+.qc-vis-row.qc-focused { background: rgba(139, 92, 246, 0.25); outline: 2px solid ${PURPLE}; }
+.qc-vis-others { padding: 6px 4px 6px; border-top: 1px solid rgba(255, 255, 255, 0.08); }
+.qc-vis-others-h { padding: 0 6px 4px; font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: #8e89a3; }
+.qc-vis-note { padding: 4px 8px 8px; font-size: 11px; color: #8e89a3; text-align: center; }
 /* Marked screenshot in answers: numbered spots the AI pointed at */
 .qc-shot-wrap { display: block; margin: 4px 8px 10px; }
 .qc-shot { position: relative; display: block; max-width: 100%; border: 1px solid rgba(139, 92, 246, 0.45); overflow: hidden; }

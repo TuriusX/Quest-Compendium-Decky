@@ -9,7 +9,7 @@ import {
 } from "@decky/ui";
 import { useEffect, useRef, useState } from "react";
 import { FaCog, FaComments, FaPlus } from "react-icons/fa";
-import { ask, AskRequest, AnswerModel, getQuota, getState, learnGame, PluginState, saveSettings, Turn } from "../api";
+import { ask, AskRequest, AnswerModel, getQuota, getState, learnGame, PluginState, saveSettings, Turn, visual } from "../api";
 import { balancesOf, deviceTimeZone, modelOf, questionsLine, settingOf, startingModel } from "../answerModel";
 import { ModelToggle } from "./ModelToggle";
 import { UpdateNotice } from "./UpdateNotice";
@@ -22,7 +22,7 @@ import { MissablesHere } from "./MissablesHere";
 import { setTab, useBrowser } from "../browser";
 import { aiLanguageName, setLocaleSetting, useT } from "../i18n";
 import { ANSWER_ROUTE, openPage, SETTINGS_ROUTE } from "../routes";
-import { getChat, keepRecentShots, lastAnswerTurn, lastMarkedAnswer, lastQuestion, mergeQuota, resetConversation, setChat, switchConversation, useChat } from "../store";
+import { getChat, keepRecentShots, lastAnswerTurn, lastMarkedAnswer, lastQuestion, mergeQuota, resetConversation, setChat, setTurnVisual, switchConversation, useChat } from "../store";
 import { PURPLE, SCENE, ThemeStyle } from "../theme";
 import { AnswerBlocks } from "./AnswerBlocks";
 import { checkAnswerMarkers } from "../markerCheck";
@@ -239,6 +239,8 @@ export function QuickAccessPanel() {
         if (res.combat) answerTurn.combat = true;
         if (res.place?.name) answerTurn.place = res.place.name;
         if (res.place?.story) answerTurn.story = storyPhrase(res.place.story);
+        // Visual answers: found after the answer is stored; this id finds the answer again.
+        answerTurn.visualId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
         patch.pending = null;
         patch.freshAnswer = true;
         patch.history = keepRecentShots([...getChat().history, { role: "user", text: q }, answerTurn]);
@@ -251,6 +253,13 @@ export function QuickAccessPanel() {
         patch.error = res.error ?? t("answer.error");
       }
       setChat(patch);
+      const fresh = patch.history?.[patch.history.length - 1];
+      if (fresh?.visualId && liveGame?.name) {
+        const vid = fresh.visualId;
+        void visual({ game: liveGame.name, question: q, answer: fresh.text })
+          .then((r) => { if (r?.visual) setTurnVisual(vid, r.visual, r.ref); })
+          .catch(() => {});
+      }
     } catch {
       setChat({ busy: false, error: t("backend.down") });
     }

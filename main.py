@@ -924,6 +924,43 @@ class Plugin:
         checked = min(len(crops), checked if checked is not None else 5)
         return {"ok": True, "found": found, "checked": checked}
 
+    async def visual(self, req: Dict[str, Any]) -> Dict[str, Any]:
+        """Visual answers (owner, Nov 14 2026): the video or picture for an answer that has arrived, from the server's
+        /api/visual (the answer itself never waits for it). {ok, visual, ref}; visual is None when nothing helps."""
+        question = str(req.get("question") or "").strip()[:MAX_QUESTION_CHARS]
+        answer = str(req.get("answer") or "").strip()[:6000]
+        game = str(req.get("game") or "").strip()[:120]
+        if not question or not answer or not game:
+            return {"ok": True, "visual": None}
+        token, _is_guest, _notice = await self._bearer()
+        if token is None:
+            return {"ok": False, "visual": None}
+        status, data = await self._http(
+            "POST", "/api/visual",
+            body={"game": game, "question": question, "answer": answer, "client": "deck"},
+            token=token, timeout_s=60,
+        )
+        if status != 200 or not isinstance(data, dict):
+            return {"ok": False, "visual": None}
+        v = data.get("visual")
+        if not isinstance(v, dict) or v.get("kind") not in ("video", "picture"):
+            return {"ok": True, "visual": None}
+        return {"ok": True, "visual": v, "ref": data.get("ref") if isinstance(data.get("ref"), str) else None}
+
+    async def visual_event(self, req: Dict[str, Any]) -> Dict[str, Any]:
+        """Played, opened (counted for /stats) or "Not right" (that visual isn't picked for this question again)."""
+        kind = req.get("type")
+        if kind not in ("played", "opened", "wrong"):
+            return {"ok": False}
+        token, _is_guest, _notice = await self._bearer()
+        if token is None:
+            return {"ok": False}
+        body: Dict[str, Any] = {"type": kind}
+        if isinstance(req.get("ref"), str) and re.fullmatch(r"[0-9a-f]{40}", req["ref"]):
+            body["ref"] = req["ref"]
+        await self._http("POST", "/api/visual/event", body=body, token=token, timeout_s=15)
+        return {"ok": True}
+
     async def ask(self, req: Dict[str, Any]) -> Dict[str, Any]:
         if self._ask_lock.locked():
             return {"ok": False, "error": "Still working on your last question."}
