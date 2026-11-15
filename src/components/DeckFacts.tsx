@@ -18,7 +18,7 @@ const rarityColor = (r: string, fallback = '#c4b0ff') => RARITY.find(([re]) => r
 
 const OPEN_KEY = "qc-deck-facts-open";
 const readOpen = (): Record<string, boolean> => { try { return JSON.parse(localStorage.getItem(OPEN_KEY) || "{}") || {}; } catch { return {}; } };
-const SHOW = 5;
+const SHOW = 10;
 
 export function DeckFacts({ game, place }: { game: string; place: string | null }) {
   const t = useT();
