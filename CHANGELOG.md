@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.17.2
+- **Wiki pages for the things you ask about.** Ask about a specific item, weapon, spell, character, enemy or place
+  ("what does the Blood of Lathander do?") and you get its picture with a link to its wiki page, or the link on its own
+  when there's no good picture. The link opens over your game, and B brings you back.
+
 ## 0.17.1
 - **Videos and pictures show in the side panel.** The video or picture for an answer now appears right under the answer
   in the Quick Access panel, a few seconds after the answer arrives. Before, it only showed when you opened the full

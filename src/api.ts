@@ -85,7 +85,11 @@ export interface PluginState {
 export type VideoChoice = { videoId: string; title: string; channel: string; seconds: number; start: number; thumb?: string; note?: string };
 export type DeckVisual =
   | (VideoChoice & { kind: "video"; alts?: VideoChoice[] })
-  | { kind: "picture"; source: "ours" | "wiki"; url: string; alt: string; credit?: string; link?: string; map?: boolean };
+  | { kind: "picture"; source: "ours" | "wiki"; url: string; alt: string; credit?: string; link?: string; map?: boolean; page?: WikiPage }
+  /** A question about one named thing with no picture good enough: its wiki page alone. */
+  | { kind: "link"; page: WikiPage };
+/** A wiki page shown as a link row under the answer (owner, Nov 14 2026). */
+export type WikiPage = { url: string; title: string; site: string };
 
 export interface Turn {
   role: "user" | "assistant";

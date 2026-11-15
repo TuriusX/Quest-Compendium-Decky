@@ -945,7 +945,7 @@ class Plugin:
         if status != 200 or not isinstance(data, dict):
             return {"ok": False, "visual": None}
         v = data.get("visual")
-        if not isinstance(v, dict) or v.get("kind") not in ("video", "picture"):
+        if not isinstance(v, dict) or v.get("kind") not in ("video", "picture", "link"):
             return {"ok": True, "visual": None}
         return {"ok": True, "visual": v, "ref": data.get("ref") if isinstance(data.get("ref"), str) else None}
 

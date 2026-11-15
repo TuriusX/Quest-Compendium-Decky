@@ -1,6 +1,6 @@
 import { DialogButton, Focusable } from "@decky/ui";
 import { useState } from "react";
-import { visualEvent, type DeckVisual as Visual, type VideoChoice } from "../api";
+import { visualEvent, type DeckVisual as Visual, type VideoChoice, type WikiPage } from "../api";
 import { openInSteamBrowser } from "../browser";
 import { useT } from "../i18n";
 
@@ -30,14 +30,39 @@ export function DeckVisual({ visual, visualRef, onWrong }: { visual: Visual; vis
   );
   if (wrong) return <div className="qc-vis qc-vis-note">{t("visual.thanks")}</div>;
 
+  // The thing's wiki page (owner, Nov 14 2026): a row that opens it in Steam's browser, over the game (B returns to it).
+  const pageRow = (p: WikiPage) => (
+    <Focusable className="qc-vis-row qc-vis-wiki" focusClassName="qc-focused" noFocusRing
+      onActivate={() => { void visualEvent({ type: "opened", ref: visualRef }).catch(() => {}); openInSteamBrowser(p.url); }}
+      onClick={() => { void visualEvent({ type: "opened", ref: visualRef }).catch(() => {}); openInSteamBrowser(p.url); }}>
+      <span className="qc-vis-book" aria-hidden="true">📖</span>
+      <div style={{ minWidth: 0 }}>
+        <div className="qc-vis-row-t">{p.title}</div>
+        <div className="qc-vis-row-m">{t("visual.wikiOpen", { site: p.site })}</div>
+      </div>
+    </Focusable>
+  );
+
+  if (visual.kind === "link") {
+    return (
+      <Focusable className="qc-vis" flow-children="vertical">
+        <div style={{ padding: "6px 0" }}>{pageRow(visual.page)}</div>
+        <Focusable style={{ display: "flex", gap: 6, padding: "0 8px 8px" }} flow-children="horizontal">
+          {notRight}
+        </Focusable>
+      </Focusable>
+    );
+  }
+
   if (visual.kind === "picture") {
     return (
-      <Focusable className="qc-vis" focusClassName="qc-focused" noFocusRing>
+      <Focusable className="qc-vis" flow-children="vertical">
         <img className="qc-vis-pic" src={visual.url} alt={visual.alt} />
         <div className="qc-vis-meta">
           {visual.map ? t("visual.map") : t("visual.picture")} · {visual.alt}
-          {visual.source === "wiki" && visual.credit ? ` · ${visual.credit.split(":")[0]}` : ""}
+          {visual.source === "wiki" && visual.credit && !visual.page ? ` · ${visual.credit.split(":")[0]}` : ""}
         </div>
+        {visual.page && <div className="qc-vis-others" style={{ paddingTop: 4 }}>{pageRow(visual.page)}</div>}
         <Focusable style={{ display: "flex", gap: 6, padding: "0 8px 8px" }} flow-children="horizontal">
           {notRight}
         </Focusable>
