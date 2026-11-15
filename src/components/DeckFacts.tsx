@@ -91,13 +91,13 @@ export function DeckFacts({ game, place }: { game: string; place: string | null 
                           {(g.missable || g.lost) && <span className="qc-facts-miss">{t("logfacts.missable")}</span>}
                           {unconf(g.confirmed)}
                         </span>
-                        {g.why && <span className="qc-facts-sub">{g.why}</span>}
                         {(g.lost || g.lockout) && <span className="qc-facts-warn">{g.lost ? t("logfacts.goneAt", { when: g.lost }) : g.lockout}</span>}
                       </span>
                     </DialogButton>
                     {open && (
                       <div className="qc-card">
                         {g.card?.pic && <img className="qc-card-pic" src={g.card.pic} alt={g.name} />}
+                        {g.why && <span className="qc-facts-sub">{g.why}</span>}
                         {g.where && <span className="qc-facts-sub"><b>{t("card.where")}</b> {g.where}</span>}
                         {g.how && <span className="qc-facts-sub"><b>{t("card.how")}</b> {g.how}</span>}
                         <Focusable className="qc-card-btns" flow-children="horizontal">
