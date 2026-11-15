@@ -246,6 +246,11 @@ export const checkMarkers = callable<
   { ok: boolean; found?: { index: number; x: number; y: number }[]; checked?: number }
 >("check_markers");
 export const visual = callable<[req: { game: string; question: string; answer: string; shotOnly?: boolean }], { ok: boolean; visual: DeckVisual | null; ref?: string | null }>("visual");
+/** Help me here (roadmap item 30): where in the guide the player is, from a screenshot, and what they're doing. */
+export const locate = callable<
+  [req: { game: string; guideKey?: string; areas: { name: string; story?: string }[] }],
+  { ok: boolean; area?: string; confident?: boolean; story?: string; doing?: { objective?: string; talkingTo?: string; activity?: string; names?: string[] } | null; error?: string; limitReached?: boolean }
+>("locate");
 export const visualEvent = callable<[req: { type: "played" | "opened" | "wrong"; ref?: string }], { ok: boolean }>("visual_event");
 export const startLink = callable<[], LinkStart>("start_link");
 export const pollLink = callable<[], LinkPoll>("poll_link");

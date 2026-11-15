@@ -46,6 +46,10 @@ const CSS = `
 .qc-strip-info b { color: #e6e1f7; font-weight: 600; }
 .qc-strip-sep { opacity: 0.5; margin: 0 5px; }
 .qc-strip > .qc-chip { flex: 0 0 auto; white-space: nowrap; }
+.qc-help-row { display: flex; gap: 8px; width: 100%; }
+.qc-help-row > .qc-help-btn { flex: 1 1 auto; width: auto !important; min-width: 0 !important; padding: 4px 10px !important; font-size: 13px !important; font-weight: 700; border: 1px solid #a87ffb !important; background: rgba(168,127,251,.12) !important; color: #d9c8ff !important; border-radius: 6px !important; }
+.qc-help-row > .qc-sub-btn { flex: 0 0 auto; width: auto !important; min-width: 0 !important; padding: 4px 12px !important; font-size: 13px !important; font-weight: 700; white-space: nowrap; background: #a87ffb !important; color: #0b0a10 !important; border-radius: 6px !important; }
+.qc-help-row > .gpfocus, .qc-help-row > :focus { outline: 2px solid #fff; box-shadow: 0 0 10px rgba(168,127,251,.7); }
 
 .qc-presets { display: flex; gap: 6px; width: 100%; }
 .qc-presets > * { flex: 1 1 0; min-width: 0 !important; padding: 8px 4px !important; font-size: 12px !important; line-height: 1.2 !important; }

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.17.3
+- **Help me here.** A new button under the game's name: one press looks at your screen, finds where you are in the
+  game's guide and what you're doing, and shows a video or picture for it. It says what it found in the conversation,
+  or why it couldn't (try again with the map or journal open). It has its own daily allowance, so it doesn't use up
+  your questions.
+- **Subscribe.** On the free plan, a Subscribe button sits next to Help me here. It shows a QR code: scan it with your
+  phone to get Premium, and it shows up on your Deck by itself.
+
 ## 0.17.2
 - **Wiki pages for the things you ask about.** Ask about a specific item, weapon, spell, character, enemy or place
   ("what does the Blood of Lathander do?") and you get its picture with a link to its wiki page, or the link on its own

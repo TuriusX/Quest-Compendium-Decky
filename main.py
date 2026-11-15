@@ -949,6 +949,39 @@ class Plugin:
             return {"ok": True, "visual": None}
         return {"ok": True, "visual": v, "ref": data.get("ref") if isinstance(data.get("ref"), str) else None}
 
+    async def locate(self, req: Dict[str, Any]) -> Dict[str, Any]:
+        """Help me here (owner, Nov 15 2026; roadmap item 30): a screenshot of the game, and the server's /api/locate-me
+        reads where in the guide the player is and what they're doing. {ok, area, confident, story, doing, error,
+        limitReached}. Its own daily allowance, separate from questions."""
+        game = str(req.get("game") or "").strip()[:120]
+        areas = [
+            {"name": str(a.get("name") or "")[:80], "story": str(a.get("story") or "")[:160]}
+            for a in (req.get("areas") or []) if isinstance(a, dict) and a.get("name")
+        ][:400]
+        if not game or not areas:
+            return {"ok": False, "error": "noGuide"}
+        token, _is_guest, _notice = await self._bearer()
+        if token is None:
+            return {"ok": False, "error": "signin"}
+        shot = await self._capture()
+        if not shot.get("ok"):
+            return {"ok": False, "error": shot.get("error") or "screenshot"}
+        status, data = await self._http(
+            "POST", "/api/locate-me",
+            body={"imageBase64": f"data:{shot['mime']};base64,{shot['b64']}", "game": game,
+                  "guideKey": str(req.get("guideKey") or "")[:120], "areas": areas, "doing": True},
+            token=token, timeout_s=60,
+        )
+        if not isinstance(data, dict):
+            return {"ok": False, "error": "server"}
+        if status == 429:
+            return {"ok": False, "limitReached": True, "error": str(data.get("error") or "")[:300]}
+        if status != 200:
+            return {"ok": False, "error": str(data.get("error") or "server")[:300]}
+        doing = data.get("doing") if isinstance(data.get("doing"), dict) else None
+        return {"ok": True, "area": str(data.get("area") or "unknown"), "confident": data.get("confident") is True,
+                "story": str(data.get("story") or ""), "doing": doing}
+
     async def visual_event(self, req: Dict[str, Any]) -> Dict[str, Any]:
         """Played, opened (counted for /stats) or "Not right" (that visual isn't picked for this question again)."""
         kind = req.get("type")

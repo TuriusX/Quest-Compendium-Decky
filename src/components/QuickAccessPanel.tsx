@@ -9,7 +9,7 @@ import {
 } from "@decky/ui";
 import { useEffect, useRef, useState } from "react";
 import { FaCog, FaComments, FaPlus } from "react-icons/fa";
-import { ask, AskRequest, AnswerModel, getQuota, getState, learnGame, PluginState, saveSettings, Turn, visual } from "../api";
+import { ask, AskRequest, AnswerModel, getQuota, getState, guideFind, learnGame, locate, PluginState, saveSettings, Turn, visual } from "../api";
 import { balancesOf, deviceTimeZone, modelOf, questionsLine, settingOf, startingModel } from "../answerModel";
 import { ModelToggle } from "./ModelToggle";
 import { UpdateNotice } from "./UpdateNotice";
@@ -20,7 +20,7 @@ import { lastPlace, rememberPlace } from "../qcGuides";
 import { guideContextFor } from "../guideHere";
 import { MissablesHere } from "./MissablesHere";
 import { setTab, useBrowser } from "../browser";
-import { aiLanguageName, setLocaleSetting, useT } from "../i18n";
+import { aiLanguageName, getLocale, setLocaleSetting, useT } from "../i18n";
 import { ANSWER_ROUTE, openPage, SETTINGS_ROUTE } from "../routes";
 import { getChat, hideVisual, keepRecentShots, lastAnswerTurn, lastMarkedAnswer, lastQuestion, mergeQuota, resetConversation, setChat, setTurnVisual, switchConversation, useChat } from "../store";
 import { DeckVisual } from "./DeckVisual";
@@ -66,6 +66,10 @@ export function QuickAccessPanel() {
   const [ps, setPs] = useState<PluginState | null>(null);
   const [prompt, setPrompt] = useState("");
   const [backendDown, setBackendDown] = useState(false);
+  // Subscribe (owner, Nov 15 2026): on its own row under the strip, so the game's name keeps its room; it opens the
+  // Premium QR code right under it.
+  const [showSub, setShowSub] = useState(false);
+  const [helping, setHelping] = useState(false);
   const update = useUpdate();
   // Pro / Fast next to Send: the saved pick when it has questions left, else the other one (with a short note).
   const [answerModel, setAnswerModel] = useState<AnswerModel>("pro");
@@ -173,6 +177,44 @@ export function QuickAccessPanel() {
    * opts.quick: a quick question's id (its label is the question; the server adds what it asks for).
    * opts.audio: hold to talk's recording (the question is spoken; a screenshot goes with it).
    */
+  /**
+   * Help me here (owner, Nov 15 2026; roadmap item 30): a screenshot of the game, where in its guide the player is and
+   * what they're doing, then a video or picture for that objective, all said in a short note in the conversation.
+   * Locate me's own daily allowance, not a question.
+   */
+  const helpHere = async () => {
+    if (helping || getChat().busy) return;
+    const running = currentGame() ?? game;
+    const say = (text: string, goal = "") => {
+      const turn: Turn = { role: "assistant", text, model: t("help.label") };
+      if (goal) turn.visualId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      setChat({ history: keepRecentShots([...getChat().history, turn]), freshAnswer: true, error: null });
+      return turn.visualId;
+    };
+    if (!running || running.ask) { say(t("help.noGame")); return; }
+    setHelping(true);
+    try {
+      const g = await guideFind(running.name, getLocale()).catch(() => null);
+      if (!g?.ok || !g.key || !g.areas?.length) { say(t("help.noGuide")); return; }
+      const r = await locate({ game: running.name, guideKey: g.key, areas: g.areas.map((a) => ({ name: a.name, story: a.story })) });
+      if (!r.ok) { say(r.limitReached ? (r.error || t("help.limit")) : t("help.fail")); return; }
+      if (!r.area || r.area === "unknown") { say(t("help.unknown")); return; }
+      if (!r.confident) { say(t("help.unsure", { place: r.area })); return; }
+      rememberPlace(running.name, r.area);
+      const goal = String(r.doing?.objective || r.doing?.activity || "").trim();
+      const vid = say(goal ? t("help.done", { place: r.area, goal }) : t("help.doneNoGoal", { place: r.area }), goal);
+      if (vid && goal) {
+        void visual({ game: running.name, question: `How do I ${goal.replace(/[.?!]+$/, "")}?`, answer: goal })
+          .then((v) => { if (v?.visual) setTurnVisual(vid, v.visual, v.ref); })
+          .catch(() => {});
+      }
+    } catch {
+      say(t("help.fail"));
+    } finally {
+      setHelping(false);
+    }
+  };
+
   const submit = async (question: string, opts: { shot?: boolean; quick?: QuickId; audio?: string } = {}) => {
     const q = question.trim();
     if (!q || getChat().busy || !ps) return;
@@ -594,6 +636,19 @@ export function QuickAccessPanel() {
             </span>
           </div>
         </PanelSectionRow>
+        <PanelSectionRow>
+          <Focusable className="qc-help-row" flow-children="horizontal">
+            <DialogButton className="qc-help-btn" disabled={helping} onClick={() => void helpHere()}>
+              {helping ? t("help.working") : t("help.button")}
+            </DialogButton>
+            {q && !q.isPremium && (
+              <DialogButton className="qc-sub-btn" onClick={() => setShowSub((v) => !v)}>
+                {t("premium.subscribe")}
+              </DialogButton>
+            )}
+          </Focusable>
+        </PanelSectionRow>
+        {showSub && q && !q.isPremium && <PremiumQR linked={!!ps?.linked} startOpen />}
         {backendDown && (
           <PanelSectionRow>
             <div className="qc-note qc-err">{t("backend.down")}</div>
