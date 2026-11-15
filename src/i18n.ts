@@ -266,6 +266,7 @@ const en: Dict = {
   "answer.error": "Something went wrong.",
   "premium.about": "About Premium",
   "premium.get": "Get Premium",
+  "card.unchecked": "Not yet checked against sources",
   "card.where": "Where:",
   "card.how": "How:",
   "card.gotIt": "Got it",

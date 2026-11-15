@@ -56,7 +56,6 @@ export function DeckFacts({ game, place }: { game: string; place: string | null 
   const isOpen = (id: string) => open[id] === true;
   const toggle = (id: string) => setOpen((o) => { const n = { ...o, [id]: !isOpen(id) }; try { localStorage.setItem(OPEN_KEY, JSON.stringify(n)); } catch { /* this session only */ } return n; });
   const done = key && slug ? readDone(key, slug) : new Set<string>();
-  const unconf = (c?: boolean) => (c === false ? <span className="qc-facts-unc">{t("logfacts.unconfirmed")}</span> : null);
   const head = (id: string, title: string, count: number) => (
     <DialogButton className="qc-facts-head" onClick={() => toggle(id)}>
       <span>{isOpen(id) ? "▾" : "▸"} {title}</span><span className="qc-facts-n">{count}</span>
@@ -89,7 +88,6 @@ export function DeckFacts({ game, place }: { game: string; place: string | null 
                           <b>{g.name}</b>
                           {g.rarity && <span className="qc-facts-rar" style={{ color: rarityColor(g.rarity) }}> {g.rarity}</span>}
                           {(g.missable || g.lost) && <span className="qc-facts-miss">{t("logfacts.missable")}</span>}
-                          {unconf(g.confirmed)}
                         </span>
                         {(g.lost || g.lockout) && <span className="qc-facts-warn">{g.lost ? t("logfacts.goneAt", { when: g.lost }) : g.lockout}</span>}
                       </span>
@@ -100,6 +98,7 @@ export function DeckFacts({ game, place }: { game: string; place: string | null 
                         {g.why && <span className="qc-facts-sub">{g.why}</span>}
                         {g.where && <span className="qc-facts-sub"><b>{t("card.where")}</b> {g.where}</span>}
                         {g.how && <span className="qc-facts-sub"><b>{t("card.how")}</b> {g.how}</span>}
+                        {g.confirmed === false && <span className="qc-card-note">{t("card.unchecked")}</span>}
                         <Focusable className="qc-card-btns" flow-children="horizontal">
                           <DialogButton className="qc-card-btn" onClick={() => setEntryDone(key, slug, g.id, !on)}>{on ? t("card.notYet") : t("card.gotIt")}</DialogButton>
                           {g.card?.page && (

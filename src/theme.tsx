@@ -66,6 +66,7 @@ const CSS = `
 .qc-facts-item { display: flex; flex-direction: column; gap: 4px; }
 .qc-card { display: flex; flex-direction: column; gap: 4px; margin: 0 0 4px 22px; padding: 8px; border-left: 2px solid rgba(168,127,251,.5); background: rgba(255,255,255,.03); border-radius: 0 6px 6px 0; }
 .qc-card-pic { display: block; max-width: 100%; max-height: 120px; object-fit: contain; align-self: center; }
+.qc-card-note { font-size: 11px; font-style: italic; color: #8b84a8; }
 .qc-card-btns { display: flex; gap: 6px; margin-top: 4px; }
 .qc-card-btns > .qc-card-btn { flex: 1 1 auto; width: auto !important; min-width: 0 !important; padding: 3px 8px !important; font-size: 12px !important; }
 .qc-facts-ach { display: flex; flex-direction: column; font-size: 13px; padding: 4px 8px; box-sizing: border-box; min-width: 0; }
