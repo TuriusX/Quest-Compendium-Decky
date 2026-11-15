@@ -2,6 +2,7 @@ import { DialogButton, Focusable, PanelSectionRow } from "@decky/ui";
 import { useEffect, useState } from "react";
 import { areaFacts, AreaFactsResult, guideFind } from "../api";
 import { getLocale, useT } from "../i18n";
+import { openInSteamBrowser } from "../browser";
 import { onDoneChange, readDone, samePlace, setEntryDone } from "../qcGuides";
 
 /**
@@ -27,6 +28,8 @@ export function DeckFacts({ game, place }: { game: string; place: string | null 
   const [open, setOpen] = useState<Record<string, boolean>>(readOpen);
   const [all, setAll] = useState<Record<string, boolean>>({});
   const [, setTick] = useState(0);
+  // The item card (item 30, step 2): pressing an item opens it inline, pressing again closes it.
+  const [openItem, setOpenItem] = useState<string | null>(null);
 
   useEffect(() => {
     setFacts(null);
@@ -76,8 +79,10 @@ export function DeckFacts({ game, place }: { game: string; place: string | null 
               <>
                 {(all.worth ? gear : gear.slice(0, SHOW)).map((g) => {
                   const on = done.has(g.id);
+                  const open = openItem === g.id;
                   return (
-                    <DialogButton key={g.id} className={on ? "qc-facts-row qc-facts-done" : "qc-facts-row"} onClick={() => setEntryDone(key, slug, g.id, !on)}>
+                    <div key={g.id} className="qc-facts-item">
+                    <DialogButton className={on ? "qc-facts-row qc-facts-done" : "qc-facts-row"} onClick={() => setOpenItem(open ? null : g.id)}>
                       <span className="qc-facts-box">{on ? "✓" : ""}</span>
                       <span className="qc-facts-txt">
                         <span className="qc-facts-line">
@@ -90,6 +95,20 @@ export function DeckFacts({ game, place }: { game: string; place: string | null 
                         {(g.lost || g.lockout) && <span className="qc-facts-warn">{g.lost ? t("logfacts.goneAt", { when: g.lost }) : g.lockout}</span>}
                       </span>
                     </DialogButton>
+                    {open && (
+                      <div className="qc-card">
+                        {g.card?.pic && <img className="qc-card-pic" src={g.card.pic} alt={g.name} />}
+                        {g.where && <span className="qc-facts-sub"><b>{t("card.where")}</b> {g.where}</span>}
+                        {g.how && <span className="qc-facts-sub"><b>{t("card.how")}</b> {g.how}</span>}
+                        <Focusable className="qc-card-btns" flow-children="horizontal">
+                          <DialogButton className="qc-card-btn" onClick={() => setEntryDone(key, slug, g.id, !on)}>{on ? t("card.notYet") : t("card.gotIt")}</DialogButton>
+                          {g.card?.page && (
+                            <DialogButton className="qc-card-btn" onClick={() => openInSteamBrowser(g.card!.page!.url)}>📖 {t("card.wiki", { site: g.card.page.site })}</DialogButton>
+                          )}
+                        </Focusable>
+                      </div>
+                    )}
+                    </div>
                   );
                 })}
                 {more("worth", gear.length)}

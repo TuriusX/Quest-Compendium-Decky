@@ -255,7 +255,7 @@ export const locate = callable<
 export interface AreaFactsResult {
   ok: boolean;
   worth?: {
-    gear: { id: string; name: string; kind?: string; rarity?: string; why?: string; where?: string; how?: string; missable?: boolean; lockout?: string; lost?: string; confirmed?: boolean }[];
+    gear: { id: string; name: string; kind?: string; rarity?: string; why?: string; where?: string; how?: string; missable?: boolean; lockout?: string; lost?: string; confirmed?: boolean; card?: { rid: string; page?: { url: string; title: string; site: string }; pic?: string } }[];
     quests: { id: string; name: string; giver?: string; reward?: string; confirmed?: boolean }[];
     people: { id: string; name: string; why?: string; where?: string; confirmed?: boolean }[];
     todo: { id: string; name: string; why?: string; confirmed?: boolean }[];

@@ -50,7 +50,7 @@ const CSS = `
 .qc-facts { display: flex; flex-direction: column; gap: 4px; width: 100%; min-width: 0; box-sizing: border-box; overflow: hidden; }
 .qc-facts > .qc-facts-head { width: auto !important; align-self: stretch; min-width: 0 !important; text-align: left !important; display: flex !important; justify-content: space-between; box-sizing: border-box; padding: 4px 8px !important; font-size: 12px !important; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; background: transparent !important; color: #b9b2d6 !important; }
 .qc-facts-n { font-weight: 600; letter-spacing: 0; color: #8b84a8; }
-.qc-facts > .qc-facts-row { width: auto !important; align-self: stretch; min-width: 0 !important; display: flex !important; gap: 8px; align-items: flex-start; text-align: left !important; box-sizing: border-box; padding: 5px 8px !important; font-size: 13px !important; background: rgba(255,255,255,.03) !important; white-space: normal !important; }
+.qc-facts .qc-facts-row { width: auto !important; align-self: stretch; min-width: 0 !important; display: flex !important; gap: 8px; align-items: flex-start; text-align: left !important; box-sizing: border-box; padding: 5px 8px !important; font-size: 13px !important; background: rgba(255,255,255,.03) !important; white-space: normal !important; }
 .qc-facts-done { opacity: .5; }
 .qc-facts-box { flex: 0 0 auto; width: 14px; height: 14px; margin-top: 2px; border: 1.5px solid #a1a1aa; border-radius: 3px; font-size: 10px; line-height: 12px; text-align: center; color: #0b0a10; }
 .qc-facts-done .qc-facts-box { background: #a87ffb; border-color: #a87ffb; }
@@ -63,6 +63,11 @@ const CSS = `
 .qc-facts-unc { margin-left: 6px; font-size: 10px; color: #a1a1aa; border: 1px dashed #71717a; border-radius: 8px; padding: 0 5px; }
 .qc-facts-sub { display: block; font-size: 12px; color: #a1a1aa; }
 .qc-facts-warn { display: block; font-size: 12px; color: #fcd34d; }
+.qc-facts-item { display: flex; flex-direction: column; gap: 4px; }
+.qc-card { display: flex; flex-direction: column; gap: 4px; margin: 0 0 4px 22px; padding: 8px; border-left: 2px solid rgba(168,127,251,.5); background: rgba(255,255,255,.03); border-radius: 0 6px 6px 0; }
+.qc-card-pic { display: block; max-width: 100%; max-height: 120px; object-fit: contain; align-self: center; }
+.qc-card-btns { display: flex; gap: 6px; margin-top: 4px; }
+.qc-card-btns > .qc-card-btn { flex: 1 1 auto; width: auto !important; min-width: 0 !important; padding: 3px 8px !important; font-size: 12px !important; }
 .qc-facts-ach { display: flex; flex-direction: column; font-size: 13px; padding: 4px 8px; box-sizing: border-box; min-width: 0; }
 .qc-facts > .qc-facts-more { width: auto !important; min-width: 0 !important; align-self: flex-start; padding: 2px 8px !important; font-size: 12px !important; color: #c4b0ff !important; background: transparent !important; }
 .qc-facts > .gpfocus, .qc-facts > :focus { outline: 2px solid #fff; }

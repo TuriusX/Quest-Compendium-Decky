@@ -1482,7 +1482,15 @@ class Plugin:
         status, data = await self._guide_http(path)
         if status != 200 or not isinstance(data, dict):
             return {"ok": False}
-        return {"ok": True, "worth": data.get("worth"), "achievements": data.get("achievements")}
+        worth = data.get("worth")
+        # Item cards' pictures are on our server (/api/wiki-pic/<hash>): the panel needs their full address.
+        if isinstance(worth, dict):
+            base = self._api_base().rstrip("/")
+            for g in worth.get("gear") or []:
+                card = g.get("card") if isinstance(g, dict) else None
+                if isinstance(card, dict) and isinstance(card.get("pic"), str) and card["pic"].startswith("/"):
+                    card["pic"] = base + card["pic"]
+        return {"ok": True, "worth": worth, "achievements": data.get("achievements")}
 
     async def guide_search_index(self, key: str, lang: str = "") -> Dict[str, Any]:
         """A guide's search index from the website (guides/{key}/search.json, in the plugin's language when translated)."""
