@@ -251,6 +251,18 @@ export const locate = callable<
   [req: { game: string; guideKey?: string; areas: { name: string; story?: string }[] }],
   { ok: boolean; area?: string; confident?: boolean; story?: string; doing?: { objective?: string; talkingTo?: string; activity?: string; names?: string[] } | null; error?: string; limitReached?: boolean }
 >("locate");
+/** An area's facts from the database for the quest log sections (roadmap item 30, step 2). */
+export interface AreaFactsResult {
+  ok: boolean;
+  worth?: {
+    gear: { id: string; name: string; kind?: string; rarity?: string; why?: string; where?: string; how?: string; missable?: boolean; lockout?: string; lost?: string; confirmed?: boolean }[];
+    quests: { id: string; name: string; giver?: string; reward?: string; confirmed?: boolean }[];
+    people: { id: string; name: string; why?: string; where?: string; confirmed?: boolean }[];
+    todo: { id: string; name: string; why?: string; confirmed?: boolean }[];
+  } | null;
+  achievements?: { name: string; how?: string; missable?: boolean; lost?: string; if?: string; rarity?: string }[] | null;
+}
+export const areaFacts = callable<[key: string, slug: string, lang?: string], AreaFactsResult>("area_facts");
 export const visualEvent = callable<[req: { type: "played" | "opened" | "wrong"; ref?: string }], { ok: boolean }>("visual_event");
 export const startLink = callable<[], LinkStart>("start_link");
 export const pollLink = callable<[], LinkPoll>("poll_link");

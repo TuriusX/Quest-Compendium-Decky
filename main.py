@@ -1474,6 +1474,16 @@ class Plugin:
             return {"ok": True, "page": data}
         return {"ok": False, "error": data.get("error") or f"Page unavailable (HTTP {status})."}
 
+    async def area_facts(self, key: str, slug: str, lang: str = "") -> Dict[str, Any]:
+        """An area's facts from the database (roadmap item 30, step 2): what's worth getting and doing there, and its
+        achievements with the point of no return that ends each. The server's /api/guides/<key>/<slug>/facts."""
+        q = self._guide_lang(lang)
+        path = f"/api/guides/{quote(str(key or '')[:120], safe='')}/{quote(str(slug or '')[:120], safe='')}/facts" + (f"?{q}" if q else "")
+        status, data = await self._guide_http(path)
+        if status != 200 or not isinstance(data, dict):
+            return {"ok": False}
+        return {"ok": True, "worth": data.get("worth"), "achievements": data.get("achievements")}
+
     async def guide_search_index(self, key: str, lang: str = "") -> Dict[str, Any]:
         """A guide's search index from the website (guides/{key}/search.json, in the plugin's language when translated)."""
         lang = str(lang or "").lower()

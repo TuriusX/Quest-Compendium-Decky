@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.17.4
+- **Worth getting here.** Under Help me here, for the place you're in: the best gear and spells found there, best first,
+  with the ones you can miss badged and when they're gone, plus how many quests start there and who's worth talking to.
+  Tick things off as you get them. Baldur's Gate 3 first, more games to follow.
+- **Achievements here.** The area's achievements, with the ones a coming point of no return ends listed first.
+- Both sections start folded so the panel stays short; open one and it stays open.
+
 ## 0.17.3
 - **Help me here.** A new button under the game's name: one press looks at your screen, finds where you are in the
   game's guide and what you're doing, and shows a video or picture for it. It says what it found in the conversation,

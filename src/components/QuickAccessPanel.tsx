@@ -37,6 +37,7 @@ import { SignInNudge } from "./SignInNudge";
 import { storyPhrase } from "../format";
 import { quickChips, quickLabelKey, type QuickId } from "../quick";
 import { PremiumQR } from "./PremiumQR";
+import { DeckFacts } from "./DeckFacts";
 import { startRecording, stopRecording } from "../api";
 import { GamepadButton } from "@decky/ui";
 
@@ -649,6 +650,8 @@ export function QuickAccessPanel() {
           </Focusable>
         </PanelSectionRow>
         {showSub && q && !q.isPremium && <PremiumQR linked={!!ps?.linked} startOpen />}
+        {/* Item 30, step 2: the area's database sections, folded by default (Now and the warning come first). */}
+        {game && !game.ask && <DeckFacts game={game.name} place={lastPlace(game.name)} />}
         {backendDown && (
           <PanelSectionRow>
             <div className="qc-note qc-err">{t("backend.down")}</div>
