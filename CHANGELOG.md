@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.17.1
+- **Videos and pictures show in the side panel.** The video or picture for an answer now appears right under the answer
+  in the Quick Access panel, a few seconds after the answer arrives. Before, it only showed when you opened the full
+  answer.
+- **Voice questions get videos and pictures too.** For a question you asked out loud, the video or picture now matches
+  what the answer is about.
+
 ## 0.17.0
 - **Videos and pictures under answers.** When a video or picture helps, it shows under the answer: a short video for a
   route, a boss fight or a puzzle, a picture for what something looks like or exactly where it is. Nothing is added for

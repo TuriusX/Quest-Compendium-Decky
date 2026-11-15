@@ -241,7 +241,7 @@ export const checkMarkers = callable<
   [req: { crops: { image: string; label: string; where?: string; category?: string; guide?: boolean }[]; game?: string }],
   { ok: boolean; found?: { index: number; x: number; y: number }[]; checked?: number }
 >("check_markers");
-export const visual = callable<[req: { game: string; question: string; answer: string }], { ok: boolean; visual: DeckVisual | null; ref?: string | null }>("visual");
+export const visual = callable<[req: { game: string; question: string; answer: string; shotOnly?: boolean }], { ok: boolean; visual: DeckVisual | null; ref?: string | null }>("visual");
 export const visualEvent = callable<[req: { type: "played" | "opened" | "wrong"; ref?: string }], { ok: boolean }>("visual_event");
 export const startLink = callable<[], LinkStart>("start_link");
 export const pollLink = callable<[], LinkPoll>("poll_link");

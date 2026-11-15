@@ -22,7 +22,8 @@ import { MissablesHere } from "./MissablesHere";
 import { setTab, useBrowser } from "../browser";
 import { aiLanguageName, setLocaleSetting, useT } from "../i18n";
 import { ANSWER_ROUTE, openPage, SETTINGS_ROUTE } from "../routes";
-import { getChat, keepRecentShots, lastAnswerTurn, lastMarkedAnswer, lastQuestion, mergeQuota, resetConversation, setChat, setTurnVisual, switchConversation, useChat } from "../store";
+import { getChat, hideVisual, keepRecentShots, lastAnswerTurn, lastMarkedAnswer, lastQuestion, mergeQuota, resetConversation, setChat, setTurnVisual, switchConversation, useChat } from "../store";
+import { DeckVisual } from "./DeckVisual";
 import { PURPLE, SCENE, ThemeStyle } from "../theme";
 import { AnswerBlocks } from "./AnswerBlocks";
 import { checkAnswerMarkers } from "../markerCheck";
@@ -256,7 +257,8 @@ export function QuickAccessPanel() {
       const fresh = patch.history?.[patch.history.length - 1];
       if (fresh?.visualId && liveGame?.name) {
         const vid = fresh.visualId;
-        void visual({ game: liveGame.name, question: q, answer: fresh.text })
+        // A voice question's text is the stand-in "Voice message": the server takes the topic from the answer.
+        void visual({ game: liveGame.name, question: q, answer: fresh.text, ...(opts.audio ? { shotOnly: true } : {}) })
           .then((r) => { if (r?.visual) setTurnVisual(vid, r.visual, r.ref); })
           .catch(() => {});
       }
@@ -469,6 +471,13 @@ export function QuickAccessPanel() {
               </div>
             )}
           </PanelSectionRow>
+          {/* Visual answers, under the answer where it's read (owner, Nov 14 2026: 0.17.0 showed them only on the full
+              answer page, so the panel never showed one). It arrives a few seconds after the answer. */}
+          {!last.turn.collapsed && last.turn.visual && !last.turn.visualHidden && (
+            <PanelSectionRow>
+              <DeckVisual visual={last.turn.visual} visualRef={last.turn.visualRef} onWrong={() => hideVisual(last.index)} />
+            </PanelSectionRow>
+          )}
           {!last.turn.collapsed && (
             <PanelSectionRow>
               <Focusable style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "flex-start" }} flow-children="horizontal">

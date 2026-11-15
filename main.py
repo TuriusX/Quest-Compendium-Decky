@@ -937,7 +937,9 @@ class Plugin:
             return {"ok": False, "visual": None}
         status, data = await self._http(
             "POST", "/api/visual",
-            body={"game": game, "question": question, "answer": answer, "client": "deck"},
+            # shotOnly: a voice question (its text is the stand-in "Voice message"): the topic comes from the answer.
+            body={"game": game, "question": question, "answer": answer, "client": "deck",
+                  "appVersion": str(decky.DECKY_PLUGIN_VERSION)[:24], **({"shotOnly": True} if req.get("shotOnly") is True else {})},
             token=token, timeout_s=60,
         )
         if status != 200 or not isinstance(data, dict):
