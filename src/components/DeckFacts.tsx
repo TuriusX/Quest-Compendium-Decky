@@ -11,6 +11,10 @@ import { onDoneChange, readDone, samePlace, setEntryDone } from "../qcGuides";
  * last set. Folded by default on the Deck (Now and the warning come first); each section remembers being opened.
  * Ticks are the Deck guide's own. Facts not yet confirmed say so.
  */
+const RARITY: [RegExp, string][] = [[/legendary|artifact|mythic|unique|exotic/i, '#f59e0b'], [/very\s*rare|epic/i, '#a855f7'], [/\brare\b/i, '#3b82f6'], [/uncommon/i, '#22c55e'], [/\bcommon\b/i, '#9ca3af']];
+/** A rarity's loot color ("Very Rare" purple, "Rare" blue...), or the default for a spell level and the like. */
+const rarityColor = (r: string, fallback = '#c4b0ff') => RARITY.find(([re]) => re.test(r))?.[1] || fallback;
+
 const OPEN_KEY = "qc-deck-facts-open";
 const readOpen = (): Record<string, boolean> => { try { return JSON.parse(localStorage.getItem(OPEN_KEY) || "{}") || {}; } catch { return {}; } };
 const SHOW = 5;
@@ -78,7 +82,7 @@ export function DeckFacts({ game, place }: { game: string; place: string | null 
                       <span className="qc-facts-txt">
                         <span className="qc-facts-line">
                           <b>{g.name}</b>
-                          {g.rarity && <span className="qc-facts-rar"> {g.rarity}</span>}
+                          {g.rarity && <span className="qc-facts-rar" style={{ color: rarityColor(g.rarity) }}> {g.rarity}</span>}
                           {(g.missable || g.lost) && <span className="qc-facts-miss">{t("logfacts.missable")}</span>}
                           {unconf(g.confirmed)}
                         </span>
