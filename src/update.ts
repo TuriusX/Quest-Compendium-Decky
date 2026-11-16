@@ -23,6 +23,25 @@ async function check() {
   }
 }
 
+/**
+ * Settings' "Check for updates": asks GitHub now (past the backend's cache). "newer" also clears an old "Not now", so
+ * the panel shows the notice again.
+ */
+export async function checkNow(): Promise<{ state: "current" | "newer" | "failed"; current?: string; latest?: string }> {
+  try {
+    const res = await checkUpdate(true);
+    if (!res?.ok) return { state: "failed", current: res?.current };
+    info = res;
+    if (res.newer) {
+      try { localStorage.removeItem(DISMISSED_KEY); } catch { /* ignore */ }
+    }
+    listeners.forEach((l) => l());
+    return { state: res.newer ? "newer" : "current", current: res.current, latest: res.latest };
+  } catch {
+    return { state: "failed" };
+  }
+}
+
 /** At plugin load: check now and every few hours. */
 export function startUpdateChecks(): void {
   void check();

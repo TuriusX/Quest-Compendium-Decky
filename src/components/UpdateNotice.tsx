@@ -1,7 +1,32 @@
 import { DialogButton, Focusable } from "@decky/ui";
 import { useState } from "react";
 import { useT } from "../i18n";
-import { dismissUpdate, installWithDecky, useUpdate } from "../update";
+import { checkNow, dismissUpdate, installWithDecky, useUpdate } from "../update";
+
+/**
+ * Settings' "Check for updates": asks GitHub now and says what it found: up to date (with the version), a newer
+ * version (the notice above then shows it, with Update now), or couldn't check.
+ */
+export function CheckForUpdates() {
+  const t = useT();
+  const [busy, setBusy] = useState(false);
+  const [said, setSaid] = useState("");
+  const go = async () => {
+    setBusy(true);
+    setSaid("");
+    const r = await checkNow();
+    setBusy(false);
+    setSaid(r.state === "current" ? t("update.upToDate", { v: r.current || r.latest || "" }) : r.state === "newer" ? t("update.title", { v: r.latest || "" }) : t("update.couldnt"));
+  };
+  return (
+    <Focusable className="qc-update-row" flow-children="horizontal" style={{ alignItems: "center", gap: 8, margin: "6px 0" }}>
+      <DialogButton disabled={busy} onClick={() => void go()} style={{ width: "auto", minWidth: 0 }}>
+        {busy ? t("update.checking") : t("update.check")}
+      </DialogButton>
+      {said && <div className="qc-note" style={{ fontSize: 12 }}>{said}</div>}
+    </Focusable>
+  );
+}
 
 /**
  * "Version X is out" when a newer release is on GitHub: Update now (Decky's own installer asks to confirm, then updates),

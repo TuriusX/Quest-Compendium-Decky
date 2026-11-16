@@ -242,7 +242,7 @@ export interface UpdateInfo {
   newer?: boolean;
   installUrl?: string;
 }
-export const checkUpdate = callable<[], UpdateInfo>("check_update");
+export const checkUpdate = callable<[force?: boolean], UpdateInfo>("check_update");
 export const ask = callable<[req: AskRequest], AskResult>("ask");
 /** The precision pass (main.py check_markers): which marked things the close-ups really show, and exactly where. */
 export const checkMarkers = callable<

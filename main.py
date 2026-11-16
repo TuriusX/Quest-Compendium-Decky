@@ -748,34 +748,50 @@ class Plugin:
 
     # ---- callable from the frontend ----------------------------------------------------------
 
-    async def check_update(self) -> Dict[str, Any]:
-        """Is there a newer release than this one? {ok, current, latest, newer, installUrl}. Cached for a few hours;
-        offline or any problem: {ok: False}, and the panel shows nothing."""
+    async def check_update(self, force: bool = False) -> Dict[str, Any]:
+        """Is there a newer release than this one? {ok, current, latest, newer, installUrl}. Cached for a few hours
+        (force: Settings' "Check for updates" asks GitHub now); offline or any problem: {ok: False}, and the panel shows
+        nothing. Every outcome is logged at warning level with the installed version, so a missing prompt can be told
+        apart from "already up to date" in ~/homebrew/logs."""
         now = time.time()
         cached = getattr(self, "_update_cache", None)
-        if cached and now < cached[0]:
+        if cached and now < cached[0] and not force:
             return cached[1]
         current = str(decky.DECKY_PLUGIN_VERSION or "")
         result: Dict[str, Any] = {"ok": False, "current": current}
+        why = ""
         try:
             timeout = aiohttp.ClientTimeout(total=10)
             connector = aiohttp.TCPConnector(ssl=self._ssl)
-            headers = {"Accept": "application/vnd.github+json", "User-Agent": f"QuestCompendiumDeck/{current}"}
+            headers = {"Accept": "application/vnd.github+json", "User-Agent": f"QuestCompendiumDeck/{current or 'unknown'}"}
             async with aiohttp.ClientSession(timeout=timeout, connector=connector) as session:
                 async with session.get(RELEASES_API, headers=headers) as resp:
                     data = await resp.json(content_type=None) if resp.status == 200 else None
+                    if resp.status != 200:
+                        why = f"GitHub answered {resp.status}" + (" (rate limited)" if resp.status in (403, 429) else "")
             tag = str((data or {}).get("tag_name") or "").strip()
             latest = tag[1:] if tag[:1] in ("v", "V") else tag
             if _version_tuple(latest):
+                # An installed version Decky didn't report (or an odd one) can't be compared: say so in the log, and
+                # offer the latest anyway rather than staying silent.
+                known = bool(_version_tuple(current))
                 result = {
                     "ok": True,
                     "current": current,
                     "latest": latest,
-                    "newer": bool(_version_tuple(current)) and _version_tuple(latest) > _version_tuple(current),
+                    "newer": (not known) or _version_tuple(latest) > _version_tuple(current),
                     "installUrl": INSTALL_URL,
                 }
-        except Exception as e:  # offline, rate-limited, unexpected reply: say nothing to the player
-            decky.logger.info(f"Update check skipped: {type(e).__name__}")
+                if not known:
+                    why = f"installed version unknown ({current!r})"
+            elif not why:
+                why = f"no version in the reply (tag {tag!r})"
+        except Exception as e:  # offline, certificate, unexpected reply: say nothing to the player
+            why = f"{type(e).__name__}: {str(e)[:120]}"
+        if result["ok"]:
+            decky.logger.warning(f"Update check: installed {current or '?'}, latest {result['latest']}, newer {result['newer']}{f' ({why})' if why else ''}{' [forced]' if force else ''}")
+        else:
+            decky.logger.warning(f"Update check failed: installed {current or '?'}: {why or 'unknown'}{' [forced]' if force else ''}")
         self._update_cache = (now + (UPDATE_CHECK_S if result["ok"] else UPDATE_RETRY_S), result)
         return result
 
