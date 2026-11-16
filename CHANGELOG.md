@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.17.6
+- **Check for updates.** In Settings: it tells you you're up to date (with your version), shows the new version with
+  Update now, or says it couldn't check.
+- **Your 👍 and 👎 now count for pictures and videos.** A 👍 on an answer keeps its picture or video around for
+  everyone; a 👎 helps replace one that didn't help.
+- **Two styles.** Standard and Roleplay. Min-Max is gone; if you used it, you're on Standard.
+- **More accurate Pro answers.** When you ask about something Quest Compendium has already checked, Pro answers use
+  those checked facts, so they're faster and get details right more often.
+
 ## 0.17.5
 - **Worth getting here for any game.** Not just games with a Quest Compendium guide: once Help me here or an answer
   knows where you are, the panel finds what's worth getting there (it says "Finding what's worth getting here…" for

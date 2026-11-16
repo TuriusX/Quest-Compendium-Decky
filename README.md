@@ -26,8 +26,9 @@ This is the Steam Deck companion to [Quest Compendium](https://github.com/Turius
   the right moment.
 - **Sources.** Under an answer, the wiki and guide pages it came from, opening in Steam's browser over the game.
 - **Marked screenshots.** Answers about your screen show the screenshot with the spots the AI points at, numbered.
-- **Fast or Pro, and three styles.** Fast for quick answers, Pro for harder ones. Standard, Min-Max (efficiency and
-  completion) or Roleplay (in-universe, spoiler-friendly hints).
+- **Fast or Pro, and two styles.** Fast for quick answers, Pro for harder ones. Standard, or Roleplay (in-universe,
+  spoiler-friendly hints).
+- **Check for updates.** In Settings, any time: up to date, or the new version with Update now.
 - **Controller-friendly.** Preset questions, hold to talk, the on-screen keyboard for your own, and full answers you can
   read by pressing down in the Quick Access panel. A full-screen view shows the whole conversation.
 - **Guides tab.** One-tap guide sites (GameFAQs, Neoseeker, Fandom, IGN, Reddit, YouTube, or your own) open in a guide
