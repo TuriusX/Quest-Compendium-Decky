@@ -1,26 +1,50 @@
 # Quest Compendium for Steam Deck
 
-An AI game guide in your Quick Access menu. Stuck? Tap a preset like **"I'm stuck, what should I do?"** or type a
-question, and Quest Compendium looks at your game and answers, without leaving the game.
+An AI game companion in your Quick Access menu. Stuck? Tap a question like **"What should I do next?"**, hold to talk,
+or type your own, and Quest Compendium looks at your game and answers, without leaving the game. For any game.
 
-This is the Steam Deck companion to [Quest Compendium](https://questcompendium.com), a Gemini-powered game guide
-for PC. It is a [Decky Loader](https://decky.xyz) plugin.
+This is the Steam Deck companion to [Quest Compendium](https://github.com/TuriusX/Quest-Compendium) for Windows
+([questcompendium.com](https://questcompendium.com)). It is a [Decky Loader](https://decky.xyz) plugin.
 
-<!-- Add screenshots here, e.g. ![Quick Access panel](docs/panel.jpg) -->
+<p>
+  <img src="docs/panel.jpg" width="360" alt="The Quick Access panel: Help me here, and what's worth getting in the area, with an item's card open">
+  <img src="docs/answer.jpg" width="360" alt="An answer with its sources: the wiki pages it came from">
+</p>
 
 ## Features
 
 - **Sees your game.** Sends one screenshot of the game layer (using gamescope's default screenshot mode), so answers
   match what's on screen. You can turn this off.
-- **Three styles.** Standard, Min-Max (efficiency and completion), and Roleplay (in-universe, spoiler-friendly hints).
-- **Controller-friendly.** Preset questions, the on-screen keyboard for your own, and full answers you can read by
-  pressing down in the Quick Access panel. A full-screen view shows the whole conversation.
+- **Help me here.** One press looks at your screen (the map, your journal, place names), works out where you are and
+  what you're doing, and shows a video or picture for it. It has its own daily allowance, so it doesn't use up your
+  questions.
+- **Worth getting here.** For the area you're in, the gear, spells, quests and people worth your time, best first, with
+  rarity in loot colours and a warning on anything you can miss. Press an item for its card: a picture, where and how
+  to get it, and its wiki page. Works for any game; only things trusted sources back are listed.
+- **Achievements here.** The area's Steam achievements, with the ones you're about to lose first.
+- **Pictures and videos.** When it helps, an answer comes with a wiki picture of the thing, or a video that starts at
+  the right moment.
+- **Sources.** Under an answer, the wiki and guide pages it came from, opening in Steam's browser over the game.
 - **Marked screenshots.** Answers about your screen show the screenshot with the spots the AI points at, numbered.
+- **Fast or Pro, and three styles.** Fast for quick answers, Pro for harder ones. Standard, Min-Max (efficiency and
+  completion) or Roleplay (in-universe, spoiler-friendly hints).
+- **Controller-friendly.** Preset questions, hold to talk, the on-screen keyboard for your own, and full answers you can
+  read by pressing down in the Quick Access panel. A full-screen view shows the whole conversation.
 - **Guides tab.** One-tap guide sites (GameFAQs, Neoseeker, Fandom, IGN, Reddit, YouTube, or your own) open in a guide
   browser that stays open while you play: jump back into the game, then **Resume guide** right where you left off.
 - **Works right away.** Try it as a guest with no sign-in. To use Premium, link your Quest Compendium account by
-  scanning a QR code with your phone.
+  scanning a QR code with your phone (the **Subscribe** button shows one for the Premium plans).
 - **Per-game conversations.** Follow-up questions keep context; a new game starts a fresh conversation.
+
+## Free and Premium
+
+| | Questions a day |
+|---|---|
+| Guest (no sign-in) | 1 Pro + 3 Fast |
+| Free (linked account) | 2 Pro + 5 Fast |
+| Premium, $4.99 a month or $39.99 a year | 8 Pro + 25 Fast, unused ones carry over (up to 100) |
+
+Your Premium plan is shared with the Windows app.
 
 ## Requirements
 
@@ -50,8 +74,12 @@ Alternatively, download `quest-compendium-decky.zip` from the [Releases](../../r
 ## Using it
 
 1. Start a game, open the Quick Access menu, and open Quest Compendium.
-2. Tap a preset question or type your own, then **Ask**. The Pro model is smarter but slower (it can take up to a minute).
-3. Tap **Read full answer** for a full-screen view you can scroll with the D-pad.
+2. Tap **Help me here** to find where you are, or tap a preset question, hold to talk or type your own, then **Ask**.
+   The Pro model is smarter but slower (it can take up to a minute).
+3. Tap **Read full answer** for a full-screen view you can scroll with the D-pad, with the answer's picture or video
+   and its sources.
+4. Once Help me here or an answer knows where you are, **Worth getting here** fills in under it. The first time anyone
+   asks about an area it says "Finding what's worth getting here…" for a moment.
 
 ### Linking your account
 
@@ -61,13 +89,16 @@ a small daily allowance.
 
 ## Privacy: what gets sent
 
-No game or question content leaves your Deck until you tap Ask.
+No screenshot or question leaves your Deck until you tap Ask or Help me here.
 
 - **When you ask:** your question, the name of the running game, up to your last 10 conversation turns, and (if
   "Include screenshot" is on) one screenshot are sent to the Quest Compendium server, which forwards them to
-  Google's Gemini API to produce the answer.
-- **When you open the panel:** a request checks your remaining daily queries. It identifies your guest ID or linked
-  account only and includes no game or question content.
+  Google's Gemini API to produce the answer. The answer's picture or video is then looked up from the question and
+  answer text.
+- **When you tap Help me here:** one screenshot and the name of the running game, to work out where you are.
+- **When you open the panel:** a request checks your remaining daily questions (your guest ID or linked account only).
+  If Help me here or an answer has found where you are, the game's name and that place's name are sent to look up
+  what's worth getting there (no screenshot, no question).
 - **Stored on your Deck:** your settings, a random guest ID, and (if linked) sign-in tokens, in Decky's settings folder for
   this plugin, readable only by your user. Unlink from the Account section to remove the tokens.
 - **Not in the plugin:** no analytics or tracking.
