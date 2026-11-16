@@ -1389,6 +1389,9 @@ class Plugin:
             "answer": str(f.get("answer") or "")[:6000],
             "client": "deck",
         }
+        # The saved visual the answer showed (the vote raises or lowers it); only its 40-character id.
+        if isinstance(f.get("visualRef"), str) and re.fullmatch(r"[0-9a-f]{40}", f["visualRef"]):
+            body["visualRef"] = f["visualRef"]
         token, is_guest, notice = await self._bearer()
         if token is None:
             return {"ok": False, "error": notice}

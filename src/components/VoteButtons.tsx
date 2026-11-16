@@ -21,6 +21,8 @@ export function VoteButtons({ info }: { info: ReportInfo }) {
     answerFeedback({
       messageId: `deck-${info.turnIndex}-${turn.text.length}`, vote, reason: reason ?? "", qtype: turn.qtype ?? "", model: turn.model ?? "",
       game: info.game, markers: !!turn.points?.length, question: info.question, answer: turn.text,
+      // The saved visual this answer showed: the vote raises or lowers it (living database step 2).
+      ...(turn.visualRef ? { visualRef: turn.visualRef } : {}),
     }).catch(() => ({ ok: false }));
   const press = (v: "up" | "down") => {
     const next = turn.vote === v ? undefined : v;

@@ -290,7 +290,7 @@ export const startRecording = callable<[], { ok: boolean; error?: string }>("sta
 export const stopRecording = callable<[], { ok: boolean; audio?: string; error?: string }>("stop_recording");
 /** 👍 / 👎 on an AI answer (or "none": taken back), for the answer-quality numbers. */
 export const answerFeedback = callable<
-  [fb: { messageId: string; vote: "up" | "down" | "none"; reason: string; qtype: string; model: string; game: string; markers: boolean; question: string; answer: string }],
+  [fb: { messageId: string; vote: "up" | "down" | "none"; reason: string; qtype: string; model: string; game: string; markers: boolean; question: string; answer: string; visualRef?: string }],
   { ok: boolean; error?: string }
 >("answer_feedback");
 export const reportAnswer = callable<
