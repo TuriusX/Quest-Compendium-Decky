@@ -193,6 +193,7 @@ export interface AskResult {
   notice?: string | null;
   /** Where the server thinks the player is, when it could tell. */
   place?: { name: string; story?: string };
+  worth?: WorthTicket;
 }
 
 export interface QuotaResult {
@@ -249,8 +250,13 @@ export const visual = callable<[req: { game: string; question: string; answer: s
 /** Help me here (roadmap item 30): where in the guide the player is, from a screenshot, and what they're doing. */
 export const locate = callable<
   [req: { game: string; guideKey?: string; areas: { name: string; story?: string }[] }],
-  { ok: boolean; area?: string; confident?: boolean; story?: string; doing?: { objective?: string; talkingTo?: string; activity?: string; names?: string[] } | null; error?: string; limitReached?: boolean }
+  { ok: boolean; area?: string; confident?: boolean; story?: string; doing?: { objective?: string; talkingTo?: string; activity?: string; names?: string[] } | null; error?: string; limitReached?: boolean; worth?: WorthTicket }
 >("locate");
+/** "Worth getting here" on demand (owner, Nov 15 2026): an area's status, with a one-time ticket to fill it. */
+export interface WorthTicket { key: string; slug: string; name: string; status: string; ticket?: string }
+export interface WorthResult extends AreaFactsResult { status?: string; key?: string; slug?: string; name?: string }
+export const worthArea = callable<[game: string, place: string], WorthResult>("worth_area");
+export const worthFill = callable<[ticket: string], WorthResult>("worth_fill");
 /** An area's facts from the database for the quest log sections (roadmap item 30, step 2). */
 export interface AreaFactsResult {
   ok: boolean;

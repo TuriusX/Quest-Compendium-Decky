@@ -1,9 +1,10 @@
 import { DialogButton, Focusable, PanelSectionRow } from "@decky/ui";
 import { useEffect, useState } from "react";
-import { areaFacts, AreaFactsResult, guideFind } from "../api";
+import { worthArea, worthFill, AreaFactsResult, WorthTicket } from "../api";
+import { onWorth, takeWorth } from "../worthBus";
 import { getLocale, useT } from "../i18n";
 import { openInSteamBrowser } from "../browser";
-import { onDoneChange, readDone, samePlace, setEntryDone } from "../qcGuides";
+import { onDoneChange, readDone, setEntryDone } from "../qcGuides";
 
 /**
  * The quest log's database sections on the Deck (owner, Nov 15 2026; roadmap item 30, step 2): "Worth getting here"
@@ -31,27 +32,57 @@ export function DeckFacts({ game, place }: { game: string; place: string | null 
   // The item card (item 30, step 2): pressing an item opens it inline, pressing again closes it.
   const [openItem, setOpenItem] = useState<string | null>(null);
 
+  // Being found right now (the server runs the area's pass): one quiet line until the list is in.
+  const [finding, setFinding] = useState(false);
+
+  // Any game, guide or not (owner, Nov 15 2026; server: worthOnDemand.ts): the area's list from the fact database; an
+  // area with no list yet is filled with the ticket Help me here or an answer handed over (worthBus). English first.
   useEffect(() => {
     setFacts(null);
-    if (!game || !place) return;
+    setFinding(false);
+    const lang = getLocale();
+    if (!game || !place || (lang && !lang.startsWith("en"))) return;
     let alive = true;
-    void (async () => {
-      const g = await guideFind(game, getLocale()).catch(() => null);
-      const area = g?.ok && g.key ? (g.areas || []).find((a) => samePlace(a.name, place)) : null;
-      if (!alive || !g?.key || !area) return;
-      const r = await areaFacts(g.key, area.slug, getLocale()).catch(() => null);
-      if (!alive || !r?.ok) return;
-      setKey(g.key);
-      setSlug(area.slug);
+    const show = (r: any) => {
+      if (!alive) return;
+      setFinding(false);
+      if (!r?.ok || r.status !== "ready" || !r.key) return;
+      setKey(r.key);
+      setSlug(r.slug);
       setFacts(r);
-    })();
-    return () => { alive = false; };
+    };
+    const run = async (w: WorthTicket | null, tries = 0): Promise<void> => {
+      if (!alive) return;
+      if (w?.ticket && w.status === "missing") {
+        setFinding(true);
+        return show(await worthFill(w.ticket).catch(() => null));
+      }
+      const r = await worthArea(game, place).catch(() => null);
+      if (!alive) return;
+      if (r?.status === "missing") { const t2 = takeWorth(place); if (t2) return run(t2); }
+      // Someone else is filling it: check again in a moment.
+      if (r?.status === "running" && tries < 30) { setFinding(true); setTimeout(() => void run(null, tries + 1), 4000); return; }
+      show(r);
+    };
+    void run(takeWorth(place));
+    const off = onWorth(() => { const w = takeWorth(place); if (w) void run(w); });
+    return () => { alive = false; off(); };
   }, [game, place]);
   useEffect(() => onDoneChange(() => setTick((n) => n + 1)), []);
 
   const w = facts?.worth;
   const gear = w?.gear || [];
   const achs = facts?.achievements || [];
+  if (finding && !facts) {
+    return (
+      <PanelSectionRow>
+        <div className="qc-facts">
+          <div className="qc-facts-head qc-facts-finding-head"><span>{t("logfacts.worth")}</span></div>
+          <div className="qc-facts-finding">{t("logfacts.finding")}</div>
+        </div>
+      </PanelSectionRow>
+    );
+  }
   if (!facts || (!gear.length && !w?.quests?.length && !w?.people?.length && !achs.length)) return null;
   const isOpen = (id: string) => open[id] === true;
   const toggle = (id: string) => setOpen((o) => { const n = { ...o, [id]: !isOpen(id) }; try { localStorage.setItem(OPEN_KEY, JSON.stringify(n)); } catch { /* this session only */ } return n; });

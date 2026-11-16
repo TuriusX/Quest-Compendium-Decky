@@ -23,7 +23,7 @@ import signal
 import tempfile
 import uuid
 import ipaddress
-from urllib.parse import quote, urlsplit
+from urllib.parse import quote, urlsplit, urlencode
 import ssl
 import time
 from asyncio.subprocess import DEVNULL, PIPE
@@ -958,8 +958,9 @@ class Plugin:
             {"name": str(a.get("name") or "")[:80], "story": str(a.get("story") or "")[:160]}
             for a in (req.get("areas") or []) if isinstance(a, dict) and a.get("name")
         ][:400]
-        if not game or not areas:
-            return {"ok": False, "error": "noGuide"}
+        # Any game (owner, Nov 15 2026): a guide's areas are a list to pick from; without one the server names the area.
+        if not game:
+            return {"ok": False, "error": "noGame"}
         token, _is_guest, _notice = await self._bearer()
         if token is None:
             return {"ok": False, "error": "signin"}
@@ -979,8 +980,56 @@ class Plugin:
         if status != 200:
             return {"ok": False, "error": str(data.get("error") or "server")[:300]}
         doing = data.get("doing") if isinstance(data.get("doing"), dict) else None
-        return {"ok": True, "area": str(data.get("area") or "unknown"), "confident": data.get("confident") is True,
-                "story": str(data.get("story") or ""), "doing": doing}
+        out = {"ok": True, "area": str(data.get("area") or "unknown"), "confident": data.get("confident") is True,
+               "story": str(data.get("story") or ""), "doing": doing}
+        worth = self._worth_ticket(data.get("worth"))
+        if worth:
+            out["worth"] = worth
+        return out
+
+    @staticmethod
+    def _worth_ticket(w: Any) -> Optional[Dict[str, Any]]:
+        """The area's "Worth getting here" status from the server, with a ticket to fill it (worthOnDemand.ts)."""
+        if not isinstance(w, dict) or not w.get("slug"):
+            return None
+        out = {k: str(w.get(k) or "")[:160] for k in ("key", "slug", "name", "status")}
+        if isinstance(w.get("ticket"), str) and re.fullmatch(r"[0-9a-f]{8,40}", w["ticket"]):
+            out["ticket"] = w["ticket"]
+        return out
+
+    def _worth_result(self, data: Any) -> Dict[str, Any]:
+        """An area's list for the panel: item cards' pictures get the server's full address."""
+        if not isinstance(data, dict):
+            return {"ok": False}
+        worth = data.get("worth")
+        if isinstance(worth, dict):
+            base = self._api_base().rstrip("/")
+            for g in worth.get("gear") or []:
+                card = g.get("card") if isinstance(g, dict) else None
+                if isinstance(card, dict) and isinstance(card.get("pic"), str) and card["pic"].startswith("/"):
+                    card["pic"] = base + card["pic"]
+        return {"ok": True, "status": str(data.get("status") or ""), "key": str(data.get("key") or ""), "slug": str(data.get("slug") or ""),
+                "name": str(data.get("name") or ""), "worth": worth, "achievements": data.get("achievements")}
+
+    async def worth_area(self, game: str, place: str) -> Dict[str, Any]:
+        """"Worth getting here" for a place, any game, guide or not (the server's GET /api/worth)."""
+        q = urlencode({"game": str(game or "")[:120], "place": str(place or "")[:120]})
+        status, data = await self._guide_http(f"/api/worth?{q}")
+        if status != 200:
+            return {"ok": False}
+        return self._worth_result(data)
+
+    async def worth_fill(self, ticket: str) -> Dict[str, Any]:
+        """Fill an area's list with the ticket Help me here or an answer gave (the server runs it while we wait)."""
+        if not re.fullmatch(r"[0-9a-f]{8,40}", str(ticket or "")):
+            return {"ok": False}
+        token, _is_guest, _notice = await self._bearer()
+        if token is None:
+            return {"ok": False}
+        status, data = await self._http("POST", "/api/worth/fill", body={"ticket": ticket}, token=token, timeout_s=150)
+        if status != 200:
+            return {"ok": False}
+        return self._worth_result(data)
 
     async def visual_event(self, req: Dict[str, Any]) -> Dict[str, Any]:
         """Played, opened (counted for /stats) or "Not right" (that visual isn't picked for this question again)."""
@@ -1124,6 +1173,10 @@ class Plugin:
                 story = str(place.get("story") or "").strip()[:120]
                 if story:
                     result["place"]["story"] = story
+            # The answer settled the player's area, which has no "Worth getting here" yet: its ticket.
+            worth = self._worth_ticket(data.get("worth"))
+            if worth:
+                result["worth"] = worth
         elif status == 429:
             result.update(ok=True, limitReached=True, text=data.get("text") or "Daily limit reached.")
             # A guest at their limit: the sign-in card (link with your phone) instead of Premium.
