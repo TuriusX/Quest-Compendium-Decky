@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.17.5
+- **Worth getting here for any game.** Not just games with a Quest Compendium guide: once Help me here or an answer
+  knows where you are, the panel finds what's worth getting there (it says "Finding what's worth getting here…" for
+  a moment the first time anyone asks about that area). Only things trusted sources back are listed.
+- **Help me here works for every game.** Without a guide it reads the area's name from your screen.
+- **Sources under answers.** The wiki and guide pages an answer came from (Fextralife, Fandom, IGN and others), to open
+  in Steam's browser.
+
 ## 0.17.4
 - **Worth getting here.** Under Help me here, for the place you're in: the best gear and spells found there, best first,
   with the ones you can miss badged and when they're gone, plus how many quests start there and who's worth talking to.

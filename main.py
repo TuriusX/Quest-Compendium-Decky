@@ -1177,6 +1177,13 @@ class Plugin:
             worth = self._worth_ticket(data.get("worth"))
             if worth:
                 result["worth"] = worth
+            # Sources under the answer (the pages it read, or wiki pages): https only, short names.
+            links = []
+            for l in data.get("sourceLinks") or []:
+                if isinstance(l, dict) and str(l.get("url") or "").startswith("https://") and l.get("title"):
+                    links.append({"url": str(l["url"])[:500], "title": str(l["title"])[:80], "site": str(l.get("site") or "")[:40]})
+            if links:
+                result["sourceLinks"] = links[:3]
         elif status == 429:
             result.update(ok=True, limitReached=True, text=data.get("text") or "Daily limit reached.")
             # A guest at their limit: the sign-in card (link with your phone) instead of Premium.

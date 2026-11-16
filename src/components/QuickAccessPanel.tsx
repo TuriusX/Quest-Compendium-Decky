@@ -282,6 +282,7 @@ export function QuickAccessPanel() {
         }
         // The quest log: its title and steps (in a fight, the battle plan).
         if (res.title) answerTurn.title = res.title;
+        if (res.sourceLinks?.length) answerTurn.sourceLinks = res.sourceLinks;
         if (res.steps?.length) answerTurn.steps = res.steps;
         if (res.combat) answerTurn.combat = true;
         if (res.place?.name) answerTurn.place = res.place.name;

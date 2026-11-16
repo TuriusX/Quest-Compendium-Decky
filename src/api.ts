@@ -105,6 +105,8 @@ export interface Turn {
   points?: ShotPoint[];
   /** Answers only: short quest name for what the player is doing. */
   title?: string;
+  /** Answers only: the sources under it (the pages it read, or wiki pages; Nov 16 2026). */
+  sourceLinks?: { url: string; title: string; site: string }[];
   /** Answers only: the quest log's 1-4 steps (in a fight, the battle plan). */
   steps?: QuestStep[];
   /** Answers only: indexes of the steps the player has ticked off. */
@@ -194,6 +196,7 @@ export interface AskResult {
   /** Where the server thinks the player is, when it could tell. */
   place?: { name: string; story?: string };
   worth?: WorthTicket;
+  sourceLinks?: { url: string; title: string; site: string }[];
 }
 
 export interface QuotaResult {

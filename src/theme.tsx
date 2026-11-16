@@ -68,6 +68,8 @@ const CSS = `
 .qc-card-pic { display: block; max-width: 100%; max-height: 120px; object-fit: contain; align-self: center; }
 .qc-facts-finding { font-size: 12px; color: #a39cc0; padding: 2px 4px 6px; }
 .qc-facts-finding-head { pointer-events: none; }
+.qc-sources { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+.qc-sources-h { font-size: 10.5px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8b84a8; padding: 0 2px; }
 .qc-card-note { font-size: 11px; font-style: italic; color: #8b84a8; }
 .qc-card-btns { display: flex; gap: 6px; margin-top: 4px; }
 .qc-card-btns > .qc-card-btn { flex: 1 1 auto; width: auto !important; min-width: 0 !important; padding: 3px 8px !important; font-size: 12px !important; }

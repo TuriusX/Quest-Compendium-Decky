@@ -3,6 +3,7 @@ import { useCurrentGame } from "../game";
 import { useT } from "../i18n";
 import { getChat, hideVisual, resetConversation, useChat } from "../store";
 import { DeckVisual } from "./DeckVisual";
+import { DeckSources } from "./DeckSources";
 import { ThemeStyle } from "../theme";
 import { AnswerBlocks } from "./AnswerBlocks";
 import { MarkedShot } from "./MarkedShot";
@@ -56,6 +57,8 @@ export function AnswerPage() {
                   <AnswerBlocks text={t.text} chunk={420} />
                   {/* Visual answers: the video or picture found for this answer (after it arrived). */}
                   {t.visual && !t.visualHidden && <DeckVisual visual={t.visual} visualRef={t.visualRef} onWrong={() => hideVisual(i)} />}
+                  {/* Sources: the pages the answer read, or the wiki pages of what it's about (not our own guide). */}
+                  {t.sourceLinks && t.sourceLinks.length > 0 && <DeckSources links={t.sourceLinks} skip={(t.visual as any)?.page?.url} />}
                   {/* The answer's quest log (steps, or a fight's battle plan); ticks are shared with the panel. */}
                   <QuestLog turn={t} turnIndex={i} />
                   {/* The latest answer: what the guide marks missable in its place, not ticked yet. */}
