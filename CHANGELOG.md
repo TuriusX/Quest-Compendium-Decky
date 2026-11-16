@@ -7,6 +7,7 @@
 - **Help me here works for every game.** Without a guide it reads the area's name from your screen.
 - **Sources under answers.** The wiki and guide pages an answer came from (Fextralife, Fandom, IGN and others), to open
   in Steam's browser.
+- **Tidier answers.** The "missable here" box under answers is gone; missables show in Worth getting here.
 
 ## 0.17.4
 - **Worth getting here.** Under Help me here, for the place you're in: the best gear and spells found there, best first,
