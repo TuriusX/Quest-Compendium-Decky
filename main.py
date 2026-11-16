@@ -76,7 +76,12 @@ BROWSER_UA = (
     "Chrome/126.0 Safari/537.36"
 )
 
-VALID_MODES = ("standard", "minmax", "roleplay")
+# Min-Max was removed (owner, Nov 16 2026, as on the desktop): a style saved as Min-Max is Standard.
+VALID_MODES = ("standard", "roleplay")
+
+
+def _mode(m: Any) -> str:
+    return m if m in VALID_MODES else "standard"
 VALID_MODELS = ("pro", "flash")
 VALID_LOCALES = ("auto", "en", "es", "pt", "de", "fr", "ru", "ja", "ko", "zh")
 # The language names the server puts in the AI's instructions ("Respond entirely in ...").
@@ -782,7 +787,7 @@ class Plugin:
             "email": (auth or {}).get("email"),
             "relinkNeeded": bool(self.state.get("relink_needed")),
             "settings": {
-                "mode": self.state["settings"]["mode"],
+                "mode": _mode(self.state["settings"]["mode"]),
                 "model": self.state["settings"]["model"],
                 "include_screenshot": bool(self.state["settings"]["include_screenshot"]),
                 "hint_mode": bool(self.state["settings"].get("hint_mode", False)),
@@ -1057,7 +1062,7 @@ class Plugin:
             return {"ok": False, "error": "Type a question first."}
 
         s = self.state["settings"]
-        mode = req.get("mode") if req.get("mode") in VALID_MODES else s["mode"]
+        mode = req.get("mode") if req.get("mode") in VALID_MODES else _mode(s["mode"])
 
         history: List[Dict[str, str]] = []
         for turn in (req.get("history") or [])[-MAX_HISTORY_TURNS:]:

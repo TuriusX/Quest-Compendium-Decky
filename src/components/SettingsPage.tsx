@@ -11,7 +11,8 @@ import { DEFAULT_SITES } from "./BrowserTab";
 import { LinkView } from "./LinkView";
 import { UpdateNotice } from "./UpdateNotice";
 
-const MODES: Mode[] = ["standard", "minmax", "roleplay"];
+// Min-Max was removed (owner, Nov 16 2026, as on the desktop).
+const MODES: Mode[] = ["standard", "roleplay"];
 
 /** Settings and account, moved out of the Quick Access panel so the panel stays focused on asking and reading. */
 export function SettingsPage() {
