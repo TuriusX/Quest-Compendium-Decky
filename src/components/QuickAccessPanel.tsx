@@ -54,19 +54,68 @@ function ManaBar({ value, max }: { value: number; max: number }) {
   );
 }
 
+// Stands for the questions countdown in the status strip's parts (it ticks on its own: TopUp).
+const TOPUP = "\u0000topup";
+
+/**
+ * The questions countdown ("Pro 1 · Fast 3 · ⏱ 5:26:41"), ticking every second by itself so the rest of the panel
+ * (the answer, the quest log) isn't drawn again each second.
+ */
+function TopUp({ quota }: { quota: ReturnType<typeof getChat>["quota"] }) {
+  const t = useT();
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    const iv = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(iv);
+  }, []);
+  return <>{questionsLine(quota, t, now)}</>;
+}
+
+/**
+ * The typed question and Ask (owner, Nov 16 2026): the text lives here, so typing on the touch keyboard only redraws
+ * this box, not the whole conversation (follow-up typing was choppy and missed touches).
+ */
+function AskBox({ followUp, busy, ready, onAsk }: { followUp: boolean; busy: boolean; ready: boolean; onAsk: (q: string) => void }) {
+  const t = useT();
+  const [prompt, setPrompt] = useState("");
+  const send = () => {
+    if (!prompt.trim() || busy || !ready) return;
+    onAsk(prompt);
+    setPrompt("");
+  };
+  return (
+    <>
+      <PanelSectionRow>
+        <TextField
+          label={followUp ? t("ask.followup") : t("ask.type")}
+          value={prompt}
+          disabled={busy}
+          onChange={(e) => setPrompt(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") send();
+          }}
+        />
+      </PanelSectionRow>
+      <PanelSectionRow>
+        <ButtonItem layout="below" disabled={busy || !ready || !prompt.trim()} onClick={send}>
+          {busy ? t("ask.sending") : t("ask.button")}
+        </ButtonItem>
+      </PanelSectionRow>
+    </>
+  );
+}
+
 export function QuickAccessPanel() {
   const t = useT();
   const game = useCurrentGame();
   const chat = useChat();
-  // The questions countdown ticks every second while the panel is open.
-  const [secondNow, setSecondNow] = useState(Date.now);
-  useEffect(() => {
-    const iv = setInterval(() => setSecondNow(Date.now()), 1000);
-    return () => clearInterval(iv);
-  }, []);
   const browser = useBrowser();
   const [ps, setPs] = useState<PluginState | null>(null);
-  const [prompt, setPrompt] = useState("");
+  // Asking, Help me here and a new answer bring the answer area into view (it's above the question box).
+  const answerTop = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (chat.busy || chat.freshAnswer || chat.error) answerTop.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }, [chat.busy, chat.freshAnswer, chat.error]);
   const [backendDown, setBackendDown] = useState(false);
   // Subscribe (owner, Nov 15 2026): on its own row under the strip, so the game's name keeps its room; it opens the
   // Premium QR code right under it.
@@ -221,7 +270,6 @@ export function QuickAccessPanel() {
   const submit = async (question: string, opts: { shot?: boolean; quick?: QuickId; audio?: string } = {}) => {
     const q = question.trim();
     if (!q || getChat().busy || !ps) return;
-    setPrompt("");
     const running = currentGame() ?? game;
     // Only the game's name and Steam app go with a question (none while "Which game is this?" is unanswered).
     const liveGame = running && !running.ask ? { name: running.name, appId: running.appId } : null;
@@ -328,7 +376,7 @@ export function QuickAccessPanel() {
   const points = last?.turn.points ?? [];
   const collected = points.length ? t("status.collected", { n: (last?.turn.donePoints ?? []).length, m: points.length }) : null;
   // The questions left and when the next ones arrive ("Pro 1 · Fast 3 · ⏱ 5:26:41"), as the desktop app's pill.
-  const nextTopUp = questionsLine(chat.quota, t, secondNow);
+  const nextTopUp = questionsLine(chat.quota, t, Date.now()) ? TOPUP : null;
   const info = game ? [game.name, last?.turn.place || t("status.placeUnknown"), last?.turn.place ? last?.turn.story : null, collected, nextTopUp] : [collected, nextTopUp];
   // Next turn (a fight): a fresh screenshot and a short question for whoever acts now; its answer replaces the plan.
   const canNextTurn = !!ps?.tools.gamescopectl && !!game;
@@ -406,26 +454,11 @@ export function QuickAccessPanel() {
         </PanelSectionRow>
       )}
       <PanelSectionRow>
-        <TextField
-          label={answer ? t("ask.followup") : t("ask.type")}
-          value={prompt}
-          disabled={chat.busy}
-          onChange={(e) => setPrompt(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && prompt.trim() && !chat.busy) void submit(prompt);
-          }}
-        />
-      </PanelSectionRow>
-      <PanelSectionRow>
         {/* Pro / Fast for the next question, with the questions left of each (as in the desktop app). */}
         <ModelToggle value={answerModel} onChange={chooseModel} pro={bal.pro} fast={bal.fast} disabled={chat.busy || !ps} />
         {modelNote && <div className="qc-note qc-muted" style={{ marginTop: 4 }}>{modelNote}</div>}
       </PanelSectionRow>
-      <PanelSectionRow>
-        <ButtonItem layout="below" disabled={chat.busy || !ps || !prompt.trim()} onClick={() => submit(prompt)}>
-          {chat.busy ? t("ask.sending") : t("ask.button")}
-        </ButtonItem>
-      </PanelSectionRow>
+      <AskBox followUp={!!answer} busy={chat.busy} ready={!!ps} onAsk={(q) => void submit(q)} />
     </PanelSection>
   );
 
@@ -486,7 +519,7 @@ export function QuickAccessPanel() {
       )}
       {chat.limitReached && nextTopUp && (
         <PanelSectionRow>
-          <div className="qc-note qc-muted">{nextTopUp}</div>
+          <div className="qc-note qc-muted"><TopUp quota={chat.quota} /></div>
         </PanelSectionRow>
       )}
       {/* Out of questions: Get Premium, a QR code to buy it on a phone (the Deck can't take payments). */}
@@ -623,7 +656,7 @@ export function QuickAccessPanel() {
               {infoParts.map((part, i) => (
                 <span key={i}>
                   {i > 0 && <span className="qc-strip-sep">·</span>}
-                  {i === 0 && game ? <b>{part}</b> : part}
+                  {part === TOPUP ? <TopUp quota={chat.quota} /> : i === 0 && game ? <b>{part}</b> : part}
                 </span>
               ))}
             </span>
@@ -686,6 +719,7 @@ export function QuickAccessPanel() {
         <BrowserTab />
       ) : (
         <>
+          <div ref={answerTop} />
           {answerSection}
           {askSection}
 
