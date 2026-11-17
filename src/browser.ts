@@ -143,10 +143,18 @@ const domainOf = (url: string): string => {
 
 // ---- Real browser (Steam's) ---------------------------------------------------------------------------------
 
-/** Open a page in Steam's built-in browser (a full browser: every site works). */
+/**
+ * Open a page in Steam's built-in browser (a full browser: every site works). Once per press: rows that answer to
+ * both A (onActivate) and a tap (onClick) can fire twice, and a second open while the first loads leaves Steam's
+ * browser black (a video plays with sound only). The page opens a moment after the side menu has closed.
+ */
+let lastOpen = { url: "", at: 0 };
 export function openInSteamBrowser(url: string): void {
+  const now = Date.now();
+  if (url === lastOpen.url && now - lastOpen.at < 1500) return;
+  lastOpen = { url, at: now };
   Navigation.CloseSideMenus();
-  Navigation.NavigateToExternalWeb(url);
+  setTimeout(() => Navigation.NavigateToExternalWeb(url), 150);
 }
 
 const SITE_LABELS: Record<string, string> = {

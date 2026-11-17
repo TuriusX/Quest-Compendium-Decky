@@ -1,7 +1,7 @@
 import { DialogButton, Focusable } from "@decky/ui";
 import { useState } from "react";
 import { visualEvent, type DeckVisual as Visual, type VideoChoice, type WikiPage } from "../api";
-import { openInSteamBrowser } from "../browser";
+import { openWeb as openInSteamBrowser } from "../guideBrowser";
 import { useT } from "../i18n";
 
 /**

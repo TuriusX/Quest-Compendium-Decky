@@ -1,6 +1,6 @@
 import { Focusable } from "@decky/ui";
 import { useT } from "../i18n";
-import { openInSteamBrowser } from "../browser";
+import { openWeb as openInSteamBrowser } from "../guideBrowser";
 
 export type SourceLink = { url: string; title: string; site: string };
 

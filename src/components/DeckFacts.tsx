@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { worthArea, worthFill, AreaFactsResult, WorthTicket } from "../api";
 import { onWorth, takeWorth } from "../worthBus";
 import { getLocale, useT } from "../i18n";
-import { openInSteamBrowser } from "../browser";
+import { openWeb as openInSteamBrowser } from "../guideBrowser";
 import { onDoneChange, readDone, setEntryDone } from "../qcGuides";
 
 /**

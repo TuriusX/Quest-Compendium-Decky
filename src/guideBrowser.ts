@@ -110,6 +110,18 @@ function ensureBrowser(): SteamBrowser | null {
   }
 }
 
+/**
+ * Open a link from an answer (its wiki page, a source, a video) in the guide browser, which shows pages and video
+ * over a game, with B back to the game and "Resume guide" to return; Steam's browser where it's unsupported.
+ */
+let lastWeb = { url: "", at: 0 };
+export function openWeb(url: string): void {
+  const now = Date.now();
+  if (url === lastWeb.url && now - lastWeb.at < 1500) return; // A and a tap on the same row: once
+  lastWeb = { url, at: now };
+  openGuide(url);
+}
+
 /** Open a guide page in the guide browser (or Steam's browser if unsupported) and show it. */
 export function openGuide(url: string): void {
   if (!guideBrowserSupported()) {
