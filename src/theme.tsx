@@ -353,6 +353,16 @@ const CSS = `
 /* Desk scene strip */
 .qc-scene { display: block; width: 100%; height: 64px; object-fit: cover; object-position: 22% 62%; image-rendering: pixelated; opacity: 0.7; border: 1px solid rgba(139, 92, 246, 0.35); border-radius: 6px; }
 
+/* The plugin's video player (VideoPage.tsx): a slim bar, the player filling the rest, other videos under it */
+.qc-video-page { margin-top: 40px; height: calc(100% - 40px); display: flex; flex-direction: column; box-sizing: border-box; background: #000; }
+.qc-video-bar { display: flex; align-items: center; gap: 8px; padding: 6px 16px; background: #120e22; border-bottom: 1px solid rgba(139, 92, 246, 0.35); }
+.qc-video-title { flex: 1 1 auto; min-width: 0; font-size: 13px; font-weight: 600; color: #f4f1ff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.qc-video-btn { flex: 0 0 auto; width: auto !important; min-width: 0 !important; padding: 4px 12px !important; font-size: 12px !important; max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.qc-video-frame { flex: 1 1 auto; min-height: 0; position: relative; }
+.qc-video-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.qc-video-others { display: flex; align-items: center; gap: 8px; padding: 6px 16px; background: #120e22; }
+.qc-video-others-h { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #b9b2d6; flex: none; }
+
 /* Guide browser page: slim toolbar + live page filling the rest */
 .qc-guide-page { margin-top: 40px; height: calc(100% - 40px); display: flex; flex-direction: column; box-sizing: border-box; }
 .qc-guide-bar { display: flex; align-items: center; gap: 8px; padding: 8px 16px; background: #120e22; border-bottom: 1px solid rgba(139, 92, 246, 0.35); }

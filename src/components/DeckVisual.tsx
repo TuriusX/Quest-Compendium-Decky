@@ -3,6 +3,7 @@ import { useState } from "react";
 import { visualEvent, type DeckVisual as Visual, type VideoChoice, type WikiPage } from "../api";
 import { openInSteamBrowser } from "../browser";
 import { useT } from "../i18n";
+import { openVideo } from "./VideoPage";
 
 /**
  * Visual answers on the Deck (owner, Nov 14 2026): the video or picture found for an answer, under it.
@@ -15,7 +16,7 @@ const mmss = (s: number) => {
   const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = String(s % 60).padStart(2, "0");
   return h ? `${h}:${String(m).padStart(2, "0")}:${x}` : `${m}:${x}`;
 };
-const watchUrl = (v: VideoChoice) => `https://www.youtube.com/watch?v=${v.videoId}${v.start > 0 ? `&t=${Math.round(v.start)}s` : ""}`;
+// Videos play in the plugin's own player (VideoPage.tsx), with the answer's other videos.
 const KINDS = ["guide", "walkthrough", "quick", "cheese", "run"];
 
 export function DeckVisual({ visual, visualRef, onWrong }: { visual: Visual; visualRef?: string; onWrong: () => void }) {
@@ -71,7 +72,7 @@ export function DeckVisual({ visual, visualRef, onWrong }: { visual: Visual; vis
   }
 
   const others = (visual.alts || []).slice(0, 3);
-  const open = (v: VideoChoice) => { void visualEvent({ type: "played", ref: visualRef }).catch(() => {}); openInSteamBrowser(watchUrl(v)); };
+  const open = (v: VideoChoice) => { void visualEvent({ type: "played", ref: visualRef }).catch(() => {}); openVideo(v, [visual, ...(visual.alts || [])]); };
   return (
     <Focusable className="qc-vis" flow-children="vertical">
       <div className="qc-vis-thumb">

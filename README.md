@@ -23,12 +23,15 @@ This is the Steam Deck companion to [Quest Compendium](https://github.com/Turius
   to get it, and its wiki page. Works for any game; only things trusted sources back are listed.
 - **Achievements here.** The area's Steam achievements, with the ones you're about to lose first.
 - **Pictures and videos.** When it helps, an answer comes with a wiki picture of the thing, or a video that starts at
-  the right moment.
+  the right moment and plays full screen in the plugin's own player (Steam's browser as an option). No game needs to
+  be running.
 - **Sources.** Under an answer, the wiki and guide pages it came from, opening in Steam's browser over the game.
 - **Marked screenshots.** Answers about your screen show the screenshot with the spots the AI points at, numbered.
 - **Fast or Pro, and two styles.** Fast for quick answers, Pro for harder ones. Standard, or Roleplay (in-universe,
   spoiler-friendly hints).
 - **Check for updates.** In Settings, any time: up to date, or the new version with Update now.
+- **Light on your Deck.** With the Quick Access menu closed, the plugin does next to nothing. Settings has a
+  Performance check (Steam's frame times and the plugin's memory, measured on the Deck, nothing sent).
 - **Controller-friendly.** Preset questions, hold to talk, the on-screen keyboard for your own, and full answers you can
   read by pressing down in the Quick Access panel. A full-screen view shows the whole conversation.
 - **Guides tab.** One-tap guide sites (GameFAQs, Neoseeker, Fandom, IGN, Reddit, YouTube, or your own) open in a guide
@@ -95,7 +98,9 @@ No screenshot or question leaves your Deck until you tap Ask or Help me here.
 - **When you ask:** your question, the name of the running game, up to your last 10 conversation turns, and (if
   "Include screenshot" is on) one screenshot are sent to the Quest Compendium server, which forwards them to
   Google's Gemini API to produce the answer. The answer's picture or video is then looked up from the question and
-  answer text.
+  answer text (with the game's name: the running game, else the conversation's or the last one you played, which is
+  remembered on your Deck).
+- **When you press Watch:** the video plays from YouTube's privacy-enhanced player (youtube-nocookie.com).
 - **When you tap Help me here:** one screenshot and the name of the running game, to work out where you are.
 - **When you open the panel:** a request checks your remaining daily questions (your guest ID or linked account only).
   If Help me here or an answer has found where you are, the game's name and that place's name are sent to look up

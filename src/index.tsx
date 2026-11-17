@@ -8,6 +8,7 @@ import { QC_GUIDES_ROUTE } from "./qcGuides";
 import { BookIcon, Logo } from "./components/Brand";
 import { QuickAccessPanel } from "./components/QuickAccessPanel";
 import { SettingsPage } from "./components/SettingsPage";
+import { VIDEO_ROUTE, VideoPage } from "./components/VideoPage";
 import { destroyGuideBrowser, GUIDE_ROUTE } from "./guideBrowser";
 import { ANSWER_ROUTE, SETTINGS_ROUTE } from "./routes";
 import { startUpdateChecks, stopUpdateChecks } from "./update";
@@ -17,6 +18,7 @@ const ROUTES: [string, () => ReactElement][] = [
   [SETTINGS_ROUTE, SettingsPage],
   [GUIDE_ROUTE, GuidePage],
   [QC_GUIDES_ROUTE, QcGuidesFullPage],
+  [VIDEO_ROUTE, VideoPage],
 ];
 
 export default definePlugin(() => {

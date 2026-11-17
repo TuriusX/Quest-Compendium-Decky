@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.18.0
+- **Videos play in Quest Compendium.** Watch opens the video full screen on Quest Compendium's own page, starting at
+  the moment that matters, with Play / Pause and the answer's other videos. B returns to the game. If a video won't
+  play there, Open in Steam's browser is one press away.
+- **Pictures and videos without a game running.** Ask about a game from the Steam home screen and the answer still
+  gets its video or picture: for the game you name, the conversation's game, or the last one you played.
+- **Smoother typing.** Typing a follow-up on the touch keyboard no longer stutters once there's a conversation.
+- **Answers come into view.** After you ask, the "thinking" note and then the answer scroll into view by themselves.
+- **Lighter on your Deck.** With the Quick Access menu closed, Quest Compendium stops checking the game and the
+  question countdown, so Steam stays smooth after a long session. Conversations you switch away from keep only their
+  latest screenshot.
+- **Performance check.** In Settings: measures how smoothly Steam is drawing for 5 seconds, and the memory Quest
+  Compendium holds. Nothing is sent.
+- Links open once per press (pressing A on a row could open it twice).
+
 ## 0.17.6
 - **Check for updates.** In Settings: it tells you you're up to date (with your version), shows the new version with
   Update now, or says it couldn't check.
