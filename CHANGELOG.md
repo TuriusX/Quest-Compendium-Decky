@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.19.3
+- **See what to look for.** Each marked spot in the checklist and the full answer has a close-up from your screenshot.
+- **Clearer marker names.** Markers say what the thing is instead of "Loot this" or "Proceed here".
+
 ## 0.19.2
 - **Try Premium free for 7 days.** The Premium card now offers the free trial of monthly Premium (one per account,
   cancel any time before it ends and you won't be charged), and from November 26 to January 4 the holiday deal on
