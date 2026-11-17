@@ -4,6 +4,7 @@ import type { Turn } from "../api";
 import { useT } from "../i18n";
 import { setEntryDone } from "../qcGuides";
 import { togglePoint } from "../store";
+import { CloseUp } from "./CloseUp";
 
 // Guide-backed markers say "position may be off" the first time one is shown, then just "From the guide".
 const GUIDE_SEEN_KEY = "qc-guide-marker-seen";
@@ -63,6 +64,8 @@ export function PointChecklist({ turn, turnIndex }: { turn: Turn; turnIndex: num
             }}
           >
             <span className={badge}>{isDone ? "✓" : i + 1}</span>
+            {/* What it looks like: a close-up from the answer's screenshot (markers v2). */}
+            {turn.shot && <CloseUp src={turn.shot} x={p.x} y={p.y} />}
             <span className="qc-pt-text">
               <span className="qc-pt-label">{p.label}</span>
               {sub && <span className="qc-pt-sub">{sub}</span>}

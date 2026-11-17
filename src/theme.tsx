@@ -122,6 +122,8 @@ const CSS = `
   padding: 6px 8px !important; min-width: 0 !important; background: rgba(255, 255, 255, 0.04) !important; }
 .qc-pts > .qc-pt.gpfocus { background: rgba(168, 127, 251, 0.24) !important; }
 .qc-pt-text { display: flex; flex-direction: column; min-width: 0; }
+/* A marked thing's close-up from the screenshot (markers v2) */
+.qc-closeup { display: block; flex-shrink: 0; border-radius: 4px; border: 1px solid rgba(255, 255, 255, 0.16); background-color: #000; background-repeat: no-repeat; }
 .qc-pt-label { font-size: 13px; font-weight: 600; line-height: 1.3; color: #f4f1ff; }
 .qc-pt-sub { font-size: 12px; line-height: 1.35; color: #b9b2d6; margin-top: 1px; }
 .qc-pt-done .qc-pt-label { opacity: 0.55; text-decoration: line-through; }

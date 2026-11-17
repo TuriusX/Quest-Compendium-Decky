@@ -1,6 +1,7 @@
 import { Focusable } from "@decky/ui";
 import type { ShotPoint } from "../api";
 import { useT } from "../i18n";
+import { CloseUp } from "./CloseUp";
 
 /**
  * The screenshot an answer is about, with the spots the AI marked on it (square numbered badges, grey with a tick once
@@ -40,6 +41,7 @@ export function MarkedShot({ shot, points, done = [], checking = false, removed 
         {points.map((p, i) => (
           <li key={i}>
             {badge(i)}
+            {shot && <CloseUp src={shot} x={p.x} y={p.y} size={36} />}
             {p.label}
           </li>
         ))}
