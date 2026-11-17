@@ -9,6 +9,8 @@ import { BookIcon, Logo } from "./components/Brand";
 import { QuickAccessPanel } from "./components/QuickAccessPanel";
 import { SettingsPage } from "./components/SettingsPage";
 import { VIDEO_ROUTE, VideoPage } from "./components/VideoPage";
+import { READER_ROUTE, ReaderPage } from "./components/ReaderPage";
+import { PICTURE_ROUTE, PicturePage } from "./components/PicturePage";
 import { destroyGuideBrowser, GUIDE_ROUTE } from "./guideBrowser";
 import { ANSWER_ROUTE, SETTINGS_ROUTE } from "./routes";
 import { startUpdateChecks, stopUpdateChecks } from "./update";
@@ -19,6 +21,8 @@ const ROUTES: [string, () => ReactElement][] = [
   [GUIDE_ROUTE, GuidePage],
   [QC_GUIDES_ROUTE, QcGuidesFullPage],
   [VIDEO_ROUTE, VideoPage],
+  [READER_ROUTE, ReaderPage],
+  [PICTURE_ROUTE, PicturePage],
 ];
 
 export default definePlugin(() => {

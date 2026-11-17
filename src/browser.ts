@@ -54,7 +54,8 @@ export interface PageDoc {
   note?: string;
 }
 
-export type Tab = "companion" | "browser";
+/** The panel's tabs: Ask ("companion"), Quest log and Guides ("browser"). */
+export type Tab = "companion" | "log" | "browser";
 type View = "home" | "results" | "page";
 
 interface Snapshot {

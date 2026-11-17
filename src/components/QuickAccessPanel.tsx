@@ -25,12 +25,11 @@ import { aiLanguageName, getLocale, setLocaleSetting, useT } from "../i18n";
 import { ANSWER_ROUTE, openPage, SETTINGS_ROUTE } from "../routes";
 import { getChat, hideVisual, keepRecentShots, lastAnswerTurn, lastMarkedAnswer, lastQuestion, mergeQuota, resetConversation, setChat, setTurnVisual, switchConversation, useChat } from "../store";
 import { DeckVisual } from "./DeckVisual";
-import { PURPLE, SCENE, ThemeStyle } from "../theme";
+import { ThemeStyle } from "../theme";
 import { AnswerBlocks } from "./AnswerBlocks";
 import { checkAnswerMarkers } from "../markerCheck";
 import { ReportButton, ReportedNote } from "./ReportAnswer";
 import { VoteButtons } from "./VoteButtons";
-import { Logo } from "./Brand";
 import { BrowserTab } from "./BrowserTab";
 import { PointChecklist } from "./PointChecklist";
 import { QuestLog } from "./QuestLog";
@@ -43,15 +42,38 @@ import { startRecording, stopRecording } from "../api";
 import { GamepadButton } from "@decky/ui";
 import { useQuickAccessVisible } from "@decky/api";
 
-/** Segmented "mana" bar for the daily questions, like the desktop app's header. */
-function ManaBar({ value, max }: { value: number; max: number }) {
-  const filled = max > 0 ? Math.max(0, Math.min(10, Math.ceil((value / max) * 10))) : 0;
+// How long an answer usually takes (seconds), for the working state's bar: a guide, not a promise.
+const TYPICAL_S: Record<AnswerModel, number> = { pro: 25, fast: 8 };
+
+/**
+ * "Working on it" (owner, Nov 16 2026 redesign): what's happening (the screenshot taken, the answer being written by
+ * Pro or Fast), the seconds so far against the usual time, and that the answer waits here. It takes focus, so the
+ * panel scrolls to it and the D-pad is on the answer when it lands. Ticks only while it shows.
+ */
+function Working({ shot, model }: { shot: boolean; model: AnswerModel }) {
+  const t = useT();
+  const [start] = useState(Date.now);
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    const iv = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(iv);
+  }, []);
+  const secs = Math.floor((now - start) / 1000);
+  const typical = TYPICAL_S[model];
+  const pct = Math.min(95, Math.round((secs / typical) * 100));
   return (
-    <span className="qc-mana" aria-hidden="true">
-      {Array.from({ length: 10 }, (_, i) => (
-        <span key={i} style={{ background: i < filled ? PURPLE : "rgba(255,255,255,0.14)" }} />
-      ))}
-    </span>
+    <Focusable className="qc-working" focusClassName="qc-focused" noFocusRing autoFocus>
+      {shot && (
+        <div className="qc-step qc-step-done"><i aria-hidden="true" />{t("work.shot")}</div>
+      )}
+      <div className="qc-step qc-step-now">
+        <i aria-hidden="true" />
+        <span>{t("work.asking", { model: model === "pro" ? "Pro" : "Fast" })}</span>
+        <span className="qc-step-time">{secs} s · {t("work.typical", { s: typical })}</span>
+      </div>
+      <div className="qc-bar"><b style={{ width: `${pct}%` }} /></div>
+      <div className="qc-note qc-muted">{t("work.leave")}</div>
+    </Focusable>
   );
 }
 
@@ -126,6 +148,8 @@ export function QuickAccessPanel() {
   // Premium QR code right under it.
   const [showSub, setShowSub] = useState(false);
   const [helping, setHelping] = useState(false);
+  // The question being worked on: whether a screenshot went with it, and which model answers (the working state).
+  const [working, setWorking] = useState<{ shot: boolean; model: AnswerModel }>({ shot: false, model: "pro" });
   const update = useUpdate();
   // Pro / Fast next to Send: the saved pick when it has questions left, else the other one (with a short note).
   const [answerModel, setAnswerModel] = useState<AnswerModel>("pro");
@@ -292,6 +316,7 @@ export function QuickAccessPanel() {
       ...(opts.quick ? { quick: opts.quick } : {}),
       ...(opts.audio ? { audio: opts.audio } : {}),
     };
+    setWorking({ shot: !!req.includeScreenshot, model: answerModel });
     setChat({ busy: true, pending: q, error: null, notice: null, screenshotNote: null, limitReached: false, signInNudge: false, freshAnswer: false });
     try {
       // Where the player last was (not confirmed) and that guide area's ticks: the answer uses that guide page and can
@@ -376,16 +401,25 @@ export function QuickAccessPanel() {
   const asked = lastQuestion(chat);
   const earlier = Math.max(0, chat.history.filter((turn) => turn.role === "user").length - 1);
   const q = chat.quota;
-  // Answer-first: once there's a question in flight, an answer or a problem, it sits right under the header.
+  // Answer-first: once there's a question in flight, an answer or a problem, it sits right under Help me here.
   const showAnswerSection = chat.busy || !!answer || !!chat.error || !!chat.notice || !!chat.screenshotNote;
   const canRetry = !!chat.error && !chat.busy && !chat.limitReached && !!chat.pending;
 
-  // Status strip: game · place · story beat · collected.
+  // The header's second line: place · story beat · collected · next questions.
   const points = last?.turn.points ?? [];
   const collected = points.length ? t("status.collected", { n: (last?.turn.donePoints ?? []).length, m: points.length }) : null;
-  // The questions left and when the next ones arrive ("Pro 1 · Fast 3 · ⏱ 5:26:41"), as the desktop app's pill.
   const nextTopUp = questionsLine(chat.quota, t, Date.now()) ? TOPUP : null;
-  const info = game ? [game.name, last?.turn.place || t("status.placeUnknown"), last?.turn.place ? last?.turn.story : null, collected, nextTopUp] : [collected, nextTopUp];
+  // (The questions left are in the chip; the countdown shows when they run out.)
+  const subParts = (game ? [last?.turn.place || t("card.askScreen"), last?.turn.place ? last?.turn.story : null, collected] : [t("card.askAnything"), collected])
+    .filter((s): s is string => !!s);
+  // The quest log (its own tab): the latest answer that has one.
+  const logTurn = (() => {
+    for (let i = chat.history.length - 1; i >= 0; i--) {
+      const h = chat.history[i];
+      if (h.role === "assistant" && (h.steps?.length || h.title)) return { turn: h, index: i };
+    }
+    return null;
+  })();
   // Next turn (a fight): a fresh screenshot and a short question for whoever acts now; its answer replaces the plan.
   const canNextTurn = !!ps?.tools.gamescopectl && !!game;
   const nextTurn = () => submit(t("log.nextTurnQ"), { shot: true });
@@ -413,85 +447,49 @@ export function QuickAccessPanel() {
   // The chips that fit (as in the desktop app): starters before an answer, two follow-ups after it ("Show me where on
   // screen" needs an answer about a screenshot and a fresh screenshot of the game now). Hints only with hint mode on.
   const chips = quickChips({ asked: !!answer, combat: !!last?.turn.combat, canShowWhere: canNextTurn && !!last?.turn.sawShot, hintMode: !!ps?.settings.hint_mode });
-  const followUps = chips.shown;
-  const infoParts = info.filter((s): s is string => !!s);
+  const tab = browser.tab;
 
-  const askSection = (
-    <PanelSection title={t("ask.title")}>
-      {!answer && !chat.busy && (
-        <PanelSectionRow>
-          <img className="qc-scene" src={SCENE} alt="" />
-        </PanelSectionRow>
-      )}
-      <PanelSectionRow>
-        <Focusable className="qc-presets" flow-children="horizontal">
-          {(answer ? [] : chips.shown).map((id) => (
-            <DialogButton key={id} disabled={chat.busy || !ps} onClick={() => askQuick(id)}>
-              {t(quickLabelKey(id))}
-            </DialogButton>
-          ))}
-        </Focusable>
-      </PanelSectionRow>
-      <PanelSectionRow>
-        {/* The same quick questions as the desktop app; picking one asks it right away. */}
-        <DropdownItem
-          label={t("more.label")}
-          strDefaultLabel={t("more.pick")}
-          rgOptions={chips.extra.map((id) => ({ data: id, label: t(quickLabelKey(id)) }))}
-          selectedOption={null}
-          disabled={chat.busy || !ps}
-          onChange={(opt) => askQuick(opt.data as QuickId)}
-        />
-      </PanelSectionRow>
-      {canTalk && (
-        <PanelSectionRow>
-          <DialogButton
-            disabled={chat.busy || !ps}
-            onButtonDown={(e: any) => { if (e?.detail?.button === GamepadButton.OK) { lastPadAt.current = Date.now(); void talkStart(); } }}
-            onButtonUp={(e: any) => { if (e?.detail?.button === GamepadButton.OK) { lastPadAt.current = Date.now(); void talkEnd(); } }}
-            onClick={() => {
-              if (Date.now() - lastPadAt.current < 800) return;
-              if (talking) void talkEnd();
-              else void talkStart();
-            }}
-            style={talking ? { outline: "2px solid #a87ffb" } : undefined}
-          >
-            {talking ? t("talk.listening") : t("talk.button")}
-          </DialogButton>
-          {talkError && <div className="qc-note qc-muted" style={{ marginTop: 4 }}>{talkError}</div>}
-        </PanelSectionRow>
-      )}
-      <PanelSectionRow>
-        {/* Pro / Fast for the next question, with the questions left of each (as in the desktop app). */}
-        <ModelToggle value={answerModel} onChange={chooseModel} pro={bal.pro} fast={bal.fast} disabled={chat.busy || !ps} />
-        {modelNote && <div className="qc-note qc-muted" style={{ marginTop: 4 }}>{modelNote}</div>}
-      </PanelSectionRow>
-      <AskBox followUp={!!answer} busy={chat.busy} ready={!!ps} onAsk={(q) => void submit(q)} />
-    </PanelSection>
+  // ---- Header: the game, where you are, and the questions left (one card, two lines) ----
+  const header = (
+    <PanelSectionRow>
+      <div className="qc-head">
+        <div className="qc-head-text">
+          <div className="qc-head-game">{game?.ask ? t("game.whichGame") : game ? game.name : t("card.noGame")}</div>
+          <div className="qc-head-sub">
+            {subParts.map((part, i) => (
+              <span key={i}>
+                {i > 0 && <span className="qc-strip-sep">·</span>}
+                {part}
+              </span>
+            ))}
+          </div>
+        </div>
+        <span className={q?.isPremium ? "qc-chip qc-chip-gold" : "qc-chip"}>
+          {/* Both counts when the server sends them (Pro / Fast), else the older single count. */}
+          {!q ? t("card.checking") : bal.pro !== null && bal.fast !== null ? t("status.models", { pro: bal.pro, fast: bal.fast }) : t("status.left", { n: q.left ?? "?" })}
+        </span>
+      </div>
+    </PanelSectionRow>
   );
 
-  const answerSection = showAnswerSection && (
-    <PanelSection title={t("answer.title")}>
-      {chat.busy && (
-        <PanelSectionRow>
-          <div>
-            {chat.pending && (
-              <div className="qc-asked">
-                <b>{t("answer.asked")}</b> {chat.pending}
-              </div>
-            )}
-            {/* Focus lands here so Steam scrolls it into view, and the D-pad is already on the answer when it comes. */}
-            <Focusable className="qc-thinking" focusClassName="qc-focused" noFocusRing autoFocus>
-              <span className="qc-dots" aria-hidden="true">
-                <span />
-                <span />
-                <span />
-              </span>
-              {t("answer.thinking")}
-            </Focusable>
+  // ---- Working on it: what's happening, how long it usually takes; scrolled into view and focused ----
+  const workingRow = chat.busy && (
+    <PanelSectionRow>
+      <div className="qc-working-wrap">
+        {chat.pending && (
+          <div className="qc-asked">
+            <b>{t("answer.asked")}</b> {chat.pending}
           </div>
-        </PanelSectionRow>
-      )}
+        )}
+        <Working shot={working.shot} model={working.model} />
+      </div>
+    </PanelSectionRow>
+  );
+
+  // ---- The answer (newest first), its picture or video, then votes, sources and the full answer on one row ----
+  const answerRows = showAnswerSection && (
+    <>
+      {workingRow}
       {chat.notice && (
         <PanelSectionRow>
           <div className="qc-note qc-warn">{chat.notice}</div>
@@ -512,13 +510,8 @@ export function QuickAccessPanel() {
                 <b>{t("answer.asked")}</b> {chat.pending}
               </div>
             )}
-            {/* Takes over focus from the thinking row, so Retry is one press down. */}
-            <Focusable
-              className={chat.limitReached ? "qc-block qc-note qc-warn" : "qc-block qc-note qc-err"}
-              focusClassName="qc-focused"
-              noFocusRing
-              autoFocus
-            >
+            {/* Takes over focus from the working row, so Retry is one press down. */}
+            <Focusable className={chat.limitReached ? "qc-block qc-note qc-warn" : "qc-block qc-note qc-err"} focusClassName="qc-focused" noFocusRing autoFocus>
               {chat.error}
             </Focusable>
             {canRetry && <DialogButton onClick={() => submit(chat.pending ?? "")}>{t("ask.retry")}</DialogButton>}
@@ -541,14 +534,6 @@ export function QuickAccessPanel() {
               </div>
             </PanelSectionRow>
           )}
-          {marked && (
-            <PanelSectionRow>
-              {/* The AI marked spots on the screenshot: they're drawn on it in the full answer. */}
-              <ButtonItem layout="below" onClick={() => openPage(ANSWER_ROUTE)}>
-                📍 {t(marked.points!.length === 1 ? "shot.marked1" : "shot.markedN", { n: marked.points!.length })}
-              </ButtonItem>
-            </PanelSectionRow>
-          )}
           <PanelSectionRow>
             {/* The full answer, one focus stop per paragraph: keep pressing down to read it all. */}
             {last.turn.collapsed ? (
@@ -559,8 +544,15 @@ export function QuickAccessPanel() {
               </div>
             )}
           </PanelSectionRow>
-          {/* Visual answers, under the answer where it's read (owner, Nov 14 2026: 0.17.0 showed them only on the full
-              answer page, so the panel never showed one). It arrives a few seconds after the answer. */}
+          {marked && (
+            <PanelSectionRow>
+              {/* The AI marked spots on the screenshot: they're drawn on it in the full answer. */}
+              <ButtonItem layout="below" onClick={() => openPage(ANSWER_ROUTE)}>
+                📍 {t(marked.points!.length === 1 ? "shot.marked1" : "shot.markedN", { n: marked.points!.length })}
+              </ButtonItem>
+            </PanelSectionRow>
+          )}
+          {/* Its picture or video: it arrives a few seconds after the answer. */}
           {!last.turn.collapsed && last.turn.visual && !last.turn.visualHidden && (
             <PanelSectionRow>
               <DeckVisual visual={last.turn.visual} visualRef={last.turn.visualRef} onWrong={() => hideVisual(last.index)} />
@@ -568,20 +560,13 @@ export function QuickAccessPanel() {
           )}
           {!last.turn.collapsed && (
             <PanelSectionRow>
-              <Focusable style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "flex-start" }} flow-children="horizontal">
+              <Focusable className="qc-mini" flow-children="horizontal">
                 <VoteButtons info={{ turn: last.turn, turnIndex: last.index, question: asked ?? "", game: game?.name ?? "" }} />
+                <DialogButton className="qc-mini-btn" onClick={() => openPage(ANSWER_ROUTE)}>
+                  {last.turn.sourceLinks?.length ? t("answer.fullSources", { n: last.turn.sourceLinks.length }) : t("answer.full")}
+                </DialogButton>
                 <ReportButton info={{ turn: last.turn, turnIndex: last.index, question: asked ?? "", game: game?.name ?? "" }} />
               </Focusable>
-            </PanelSectionRow>
-          )}
-          {(last.turn.steps?.length || last.turn.title) && (
-            <PanelSectionRow>
-              <QuestLog
-                turn={last.turn}
-                turnIndex={last.index}
-                onNextTurn={canNextTurn ? nextTurn : undefined}
-                nextTurnDisabled={chat.busy || !ps}
-              />
             </PanelSectionRow>
           )}
           {points.length > 0 && (
@@ -591,15 +576,6 @@ export function QuickAccessPanel() {
           )}
           {/* What the guide marks missable in the place this answer is about, not ticked yet (no question used). */}
           {game?.name && last.turn.place && <MissablesHere game={game.name} place={last.turn.place} row />}
-          <PanelSectionRow>
-            <Focusable className="qc-presets" flow-children="horizontal">
-              {followUps.map((id) => (
-                <DialogButton key={id} disabled={!ps} onClick={() => askQuick(id)}>
-                  {t(quickLabelKey(id))}
-                </DialogButton>
-              ))}
-            </Focusable>
-          </PanelSectionRow>
           {earlier > 0 && (
             <PanelSectionRow>
               <div className="qc-note qc-muted">{t(earlier === 1 ? "answer.earlier1" : "answer.earlierN", { n: earlier })}</div>
@@ -608,6 +584,80 @@ export function QuickAccessPanel() {
         </>
       )}
       {chat.signInNudge && !chat.busy && <SignInNudge />}
+    </>
+  );
+
+  // ---- The question box: quick questions, talk, type, Pro / Fast ----
+  const composer = (
+    <PanelSection>
+      <PanelSectionRow>
+        <Focusable className="qc-presets" flow-children="horizontal">
+          {chips.shown.map((id) => (
+            <DialogButton key={id} disabled={chat.busy || !ps} onClick={() => askQuick(id)}>
+              {t(quickLabelKey(id))}
+            </DialogButton>
+          ))}
+        </Focusable>
+      </PanelSectionRow>
+      {!answer && chips.extra.length > 0 && (
+        <PanelSectionRow>
+          {/* The same quick questions as the desktop app; picking one asks it right away. */}
+          <DropdownItem
+            label={t("more.label")}
+            strDefaultLabel={t("more.pick")}
+            rgOptions={chips.extra.map((id) => ({ data: id, label: t(quickLabelKey(id)) }))}
+            selectedOption={null}
+            disabled={chat.busy || !ps}
+            onChange={(opt) => askQuick(opt.data as QuickId)}
+          />
+        </PanelSectionRow>
+      )}
+      {canTalk && (
+        <PanelSectionRow>
+          <DialogButton
+            disabled={chat.busy || !ps}
+            onButtonDown={(e: any) => { if (e?.detail?.button === GamepadButton.OK) { lastPadAt.current = Date.now(); void talkStart(); } }}
+            onButtonUp={(e: any) => { if (e?.detail?.button === GamepadButton.OK) { lastPadAt.current = Date.now(); void talkEnd(); } }}
+            onClick={() => {
+              if (Date.now() - lastPadAt.current < 800) return;
+              if (talking) void talkEnd();
+              else void talkStart();
+            }}
+            className={talking ? "qc-talking" : undefined}
+          >
+            {talking ? t("talk.listening") : t("talk.button")}
+          </DialogButton>
+          {talkError && <div className="qc-note qc-muted" style={{ marginTop: 4 }}>{talkError}</div>}
+        </PanelSectionRow>
+      )}
+      <PanelSectionRow>
+        {/* Pro / Fast for the next question, with the questions left of each (as in the desktop app). */}
+        <ModelToggle value={answerModel} onChange={chooseModel} pro={bal.pro} fast={bal.fast} disabled={chat.busy || !ps} />
+        {modelNote && <div className="qc-note qc-muted" style={{ marginTop: 4 }}>{modelNote}</div>}
+      </PanelSectionRow>
+      <AskBox followUp={!!answer} busy={chat.busy} ready={!!ps} onAsk={(text) => void submit(text)} />
+    </PanelSection>
+  );
+
+  // ---- The quest log tab ----
+  const logTab = (
+    <PanelSection>
+      {logTurn ? (
+        <PanelSectionRow>
+          <QuestLog turn={logTurn.turn} turnIndex={logTurn.index} onNextTurn={canNextTurn ? nextTurn : undefined} nextTurnDisabled={chat.busy || !ps} />
+        </PanelSectionRow>
+      ) : (
+        <PanelSectionRow>
+          <div className="qc-empty">{t("log.empty")}</div>
+        </PanelSectionRow>
+      )}
+      <PanelSectionRow>
+        <Focusable className="qc-presets" flow-children="horizontal">
+          <DialogButton disabled={chat.busy || !ps} onClick={() => { setTab("companion"); void askQuick("next" as QuickId); }}>
+            {t(quickLabelKey("next" as QuickId))}
+          </DialogButton>
+        </Focusable>
+      </PanelSectionRow>
     </PanelSection>
   );
 
@@ -616,17 +666,7 @@ export function QuickAccessPanel() {
       <ThemeStyle />
 
       <PanelSection>
-        <PanelSectionRow>
-          <div className="qc-card">
-            <div className="qc-brand">
-              <Logo size={36} />
-              <div className="qc-brand-text">
-                <div className="qc-brand-title">{game?.ask ? t("game.whichGame") : game ? game.name : t("card.noGame")}</div>
-                <div className="qc-brand-sub">{game ? t("card.askScreen") : t("card.askAnything")}</div>
-              </div>
-            </div>
-          </div>
-        </PanelSectionRow>
+        {header}
         {switchedTo && (
           <PanelSectionRow>
             <div className="qc-game-note" role="status">✓ {t("game.switched", { game: switchedTo })}</div>
@@ -658,78 +698,54 @@ export function QuickAccessPanel() {
             <UpdateNotice />
           </PanelSectionRow>
         )}
-        <PanelSectionRow>
-          <div className="qc-strip">
-            <span className="qc-strip-info">
-              {infoParts.map((part, i) => (
-                <span key={i}>
-                  {i > 0 && <span className="qc-strip-sep">·</span>}
-                  {part === TOPUP ? <TopUp quota={chat.quota} /> : i === 0 && game ? <b>{part}</b> : part}
-                </span>
-              ))}
-            </span>
-            <span className={q?.isPremium ? "qc-chip qc-chip-gold" : "qc-chip"}>
-              {/* Both counts when the server sends them (Pro / Fast), else the older single count. */}
-              {!q ? t("card.checking") : bal.pro !== null && bal.fast !== null ? t("status.models", { pro: bal.pro, fast: bal.fast }) : t("status.left", { n: q.left ?? "?" })}
-              {q && bal.pro !== null && bal.fast !== null ? (
-                <ManaBar
-                  value={answerModel === "pro" ? bal.pro : bal.fast}
-                  max={Math.max(answerModel === "pro" ? bal.pro : bal.fast, (answerModel === "pro" ? q.dailyPro : q.dailyFast) ?? 1)}
-                />
-              ) : (
-                q && typeof q.left === "number" && <ManaBar value={q.left} max={q.daily ?? (q.isPremium ? 60 : 10)} />
-              )}
-            </span>
-          </div>
-        </PanelSectionRow>
-        <PanelSectionRow>
-          <Focusable className="qc-help-row" flow-children="horizontal">
-            <DialogButton className="qc-help-btn" disabled={helping} onClick={() => void helpHere()}>
-              {helping ? t("help.working") : t("help.button")}
-            </DialogButton>
-            {q && !q.isPremium && (
-              <DialogButton className="qc-sub-btn" onClick={() => setShowSub((v) => !v)}>
-                {t("premium.subscribe")}
-              </DialogButton>
-            )}
-          </Focusable>
-        </PanelSectionRow>
-        {showSub && q && !q.isPremium && <PremiumQR linked={!!ps?.linked} startOpen />}
-        {/* Item 30, step 2: the area's database sections, folded by default (Now and the warning come first). */}
-        {game && !game.ask && <DeckFacts game={game.name} place={lastPlace(game.name)} />}
         {backendDown && (
           <PanelSectionRow>
             <div className="qc-note qc-err">{t("backend.down")}</div>
           </PanelSectionRow>
         )}
-      </PanelSection>
-
-      <PanelSection>
         <PanelSectionRow>
           <Focusable className="qc-tabs" flow-children="horizontal">
-            <DialogButton
-              className={browser.tab === "companion" ? "qc-tab qc-tab-active" : "qc-tab"}
-              onClick={() => setTab("companion")}
-            >
-              {t("tab.companion")}
-            </DialogButton>
-            <DialogButton
-              className={browser.tab === "browser" ? "qc-tab qc-tab-active" : "qc-tab"}
-              onClick={() => setTab("browser")}
-            >
-              {t("tab.guides")}
-            </DialogButton>
+            {([["companion", t("tab.ask")], ["log", t("tab.log")], ["browser", t("tab.guides")]] as const).map(([id, label]) => (
+              <DialogButton key={id} className={tab === id ? "qc-tab qc-tab-active" : "qc-tab"} onClick={() => setTab(id)}>
+                {label}
+              </DialogButton>
+            ))}
           </Focusable>
         </PanelSectionRow>
       </PanelSection>
 
-      {browser.tab === "browser" ? (
+      {tab === "browser" ? (
         <BrowserTab />
+      ) : tab === "log" ? (
+        logTab
       ) : (
         <>
-          <div ref={answerTop} />
-          {answerSection}
-          {askSection}
+          <PanelSection>
+            <PanelSectionRow>
+              <Focusable className="qc-help-row" flow-children="horizontal">
+                <DialogButton className="qc-help-btn" disabled={helping} onClick={() => void helpHere()}>
+                  {helping ? t("help.working") : t("help.button")}
+                </DialogButton>
+                {q && !q.isPremium && (
+                  <DialogButton className="qc-sub-btn" onClick={() => setShowSub((v) => !v)}>
+                    {t("premium.subscribe")}
+                  </DialogButton>
+                )}
+              </Focusable>
+            </PanelSectionRow>
+            {showSub && q && !q.isPremium && <PremiumQR linked={!!ps?.linked} startOpen />}
+            <div ref={answerTop} />
+            {answerRows}
+          </PanelSection>
+
+          {composer}
+
+          {/* Item 30, step 2: the area's database sections, folded by default (Now and the warning come first). */}
+          {game && !game.ask && (
+            <PanelSection>
+              <DeckFacts game={game.name} place={lastPlace(game.name)} />
+            </PanelSection>
+          )}
 
           <PanelSection>
             <PanelSectionRow>

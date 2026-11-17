@@ -1,7 +1,8 @@
 import { DialogButton, Focusable } from "@decky/ui";
 import { useState } from "react";
 import { visualEvent, type DeckVisual as Visual, type VideoChoice, type WikiPage } from "../api";
-import { openInSteamBrowser } from "../browser";
+import { openReader } from "./ReaderPage";
+import { openPicture } from "./PicturePage";
 import { useT } from "../i18n";
 import { openVideo } from "./VideoPage";
 
@@ -34,8 +35,8 @@ export function DeckVisual({ visual, visualRef, onWrong }: { visual: Visual; vis
   // The thing's wiki page (owner, Nov 14 2026): a row that opens it in Steam's browser, over the game (B returns to it).
   const pageRow = (p: WikiPage) => (
     <Focusable className="qc-vis-row qc-vis-wiki" focusClassName="qc-focused" noFocusRing
-      onActivate={() => { void visualEvent({ type: "opened", ref: visualRef }).catch(() => {}); openInSteamBrowser(p.url); }}
-      onClick={() => { void visualEvent({ type: "opened", ref: visualRef }).catch(() => {}); openInSteamBrowser(p.url); }}>
+      onActivate={() => { void visualEvent({ type: "opened", ref: visualRef }).catch(() => {}); openReader(p.url); }}
+      onClick={() => { void visualEvent({ type: "opened", ref: visualRef }).catch(() => {}); openReader(p.url); }}>
       <span className="qc-vis-book" aria-hidden="true">📖</span>
       <div style={{ minWidth: 0 }}>
         <div className="qc-vis-row-t">{p.title}</div>
@@ -58,7 +59,12 @@ export function DeckVisual({ visual, visualRef, onWrong }: { visual: Visual; vis
   if (visual.kind === "picture") {
     return (
       <Focusable className="qc-vis" flow-children="vertical">
-        <img className="qc-vis-pic" src={visual.url} alt={visual.alt} />
+        {/* Press for the picture full screen, on a plugin page (no browser). */}
+        <Focusable className="qc-vis-pic-btn" focusClassName="qc-focused" noFocusRing
+          onActivate={() => openPicture(visual.url, visual.alt, visual.credit)}
+          onClick={() => openPicture(visual.url, visual.alt, visual.credit)}>
+          <img className="qc-vis-pic" src={visual.url} alt={visual.alt} />
+        </Focusable>
         <div className="qc-vis-meta">
           {visual.map ? t("visual.map") : t("visual.picture")} · {visual.alt}
           {visual.source === "wiki" && visual.credit && !visual.page ? ` · ${visual.credit.split(":")[0]}` : ""}

@@ -1,13 +1,13 @@
 import { Focusable } from "@decky/ui";
 import { useT } from "../i18n";
-import { openInSteamBrowser } from "../browser";
+import { openReader as openInSteamBrowser } from "./ReaderPage";
 
 export type SourceLink = { url: string; title: string; site: string };
 
 /**
  * Sources under an answer (owner, Nov 16 2026: the wikis and guides that are best for players, not our own guide): the
  * pages the answer read, or the wiki pages of what it's about. A page the answer's picture card already links isn't
- * repeated. Each opens in Steam's browser over the game (B returns).
+ * repeated. Each opens in the plugin's reader (Steam's browser one press away there).
  */
 export function DeckSources({ links, skip }: { links: SourceLink[]; skip?: string }) {
   const t = useT();
