@@ -215,6 +215,10 @@ def _quota_from(user_data: Any) -> Optional[Dict[str, Any]]:
         v = _to_int(user_data.get(src))
         if v is not None:
             out[key] = max(0, v)
+    # In a free trial of Premium: when it ends (ms), for "Your trial ends tomorrow" the day before.
+    trial_end = _to_int(user_data.get("premiumTrialEnd"))
+    if trial_end:
+        out["trialEnd"] = trial_end
     # Premium's carry-over: unused questions are kept, each model capped at bankCap (for the top-up countdown).
     if user_data.get("rollover") is True:
         out["rollover"] = True
@@ -860,6 +864,20 @@ class Plugin:
             data.setdefault("isGuest", self.state.get("auth") is None)
             return {"ok": True, "quota": _quota_from(data), "notice": notice}
         return {"ok": False, "error": data.get("error") or f"Server error ({status})"}
+
+    async def get_offers(self) -> Dict[str, Any]:
+        """Today's Premium offers for this player (the server's /api/offers): the monthly free trial if they can still
+        have one, and the holiday deal on yearly. Empty when the server can't say."""
+        token, _, _notice = await self._bearer()
+        if token is None:
+            return {"ok": False, "trial": None, "holiday": None}
+        status, data = await self._http("GET", "/api/offers", token=token)
+        if status == 200 and isinstance(data, dict):
+            trial = data.get("trial") if isinstance(data.get("trial"), dict) else None
+            holiday = data.get("holiday") if isinstance(data.get("holiday"), dict) else None
+            return {"ok": True, "trial": {"days": _to_int(trial.get("days")) or 7} if trial else None,
+                    "holiday": {"line": str(holiday.get("line") or "")} if holiday else None}
+        return {"ok": False, "trial": None, "holiday": None}
 
     async def emulator_game(self) -> Dict[str, Any]:
         """The emulator running now and its game, for a non-Steam shortcut: {emulator, name, key, ask} (ask: no name yet,

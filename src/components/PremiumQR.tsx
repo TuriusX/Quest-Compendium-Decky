@@ -1,6 +1,7 @@
 import { ButtonItem, PanelSectionRow } from "@decky/ui";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import qrcode from "qrcode-generator";
+import { getOffers } from "../api";
 import { t } from "../i18n";
 
 /**
@@ -17,9 +18,25 @@ function qrDataUrl(text: string): string {
   return qr.createDataURL(5, 4);
 }
 
+type Offers = { trial: { days: number } | null; holiday: { line: string } | null };
+
 /** "Get Premium" (a button), then the QR code with what to do. linked: the Deck uses an account (else link first). */
 export function PremiumQR({ linked, startOpen = false }: { linked: boolean; startOpen?: boolean }) {
   const [open, setOpen] = useState(startOpen);
+  // Today's offers (owner, Nov 2026): the monthly free trial for players who haven't had one, the holiday deal on yearly.
+  const [offers, setOffers] = useState<Offers>({ trial: null, holiday: null });
+  useEffect(() => {
+    if (!open) return;
+    let alive = true;
+    getOffers()
+      .then((o) => {
+        if (alive && o?.ok) setOffers({ trial: o.trial, holiday: o.holiday });
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [open]);
   if (!open) {
     return (
       <PanelSectionRow>
@@ -33,9 +50,21 @@ export function PremiumQR({ linked, startOpen = false }: { linked: boolean; star
     <PanelSectionRow>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
         <img src={qrDataUrl(PREMIUM_URL)} alt={t("premium.qrAlt")} style={{ width: 150, height: 150, imageRendering: "pixelated" }} />
+        {offers.trial && <div className="qc-note qc-offer">{t("premium.trial", { n: offers.trial.days })}</div>}
+        {offers.holiday && <div className="qc-note qc-offer">{t("premium.holiday")}</div>}
         <div className="qc-note">{t("premium.scan")}</div>
         <div className="qc-note qc-muted">{linked ? t("premium.sameAccount") : t("premium.linkFirst")}</div>
       </div>
+    </PanelSectionRow>
+  );
+}
+
+/** "Your trial ends tomorrow, then $4.99/month" in a free trial's last day (quota.trialEnd). */
+export function TrialEndsNote({ trialEnd, now = Date.now() }: { trialEnd?: number; now?: number }) {
+  if (!trialEnd || trialEnd <= now || trialEnd - now > 24 * 3_600_000) return null;
+  return (
+    <PanelSectionRow>
+      <div className="qc-note qc-offer" role="status">{t("premium.trialEnds")}</div>
     </PanelSectionRow>
   );
 }

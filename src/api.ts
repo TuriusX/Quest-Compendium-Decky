@@ -34,6 +34,8 @@ export interface Quota {
   /** Premium's carry-over: unused questions are kept, each model capped at bankCap. */
   rollover?: boolean;
   bankCap?: number;
+  /** In a free trial of Premium: when it ends (ms), for "Your trial ends tomorrow". */
+  trialEnd?: number;
 }
 
 /** The player's pick next to Send: Pro (the best answers) or Fast (quicker answers). */
@@ -233,6 +235,8 @@ export interface ScreenshotTest {
 export const getState = callable<[], PluginState>("get_state");
 export const saveSettings = callable<[patch: Partial<Settings>], boolean>("save_settings");
 export const getQuota = callable<[tz?: string], QuotaResult>("get_quota");
+/** Today's Premium offers for this player: the monthly free trial if they can still have one, the holiday deal on yearly. */
+export const getOffers = callable<[], { ok: boolean; trial: { days: number } | null; holiday: { line: string } | null }>("get_offers");
 
 /** A newer release on GitHub than the one installed (manual installs don't update by themselves). */
 export interface UpdateInfo {

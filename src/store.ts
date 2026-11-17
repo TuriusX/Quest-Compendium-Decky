@@ -175,6 +175,8 @@ export function mergeQuota(prev: Quota | null, next: Quota): Quota {
     ...(next.dailyPro ?? prev?.dailyPro) !== undefined ? { dailyPro: next.dailyPro ?? prev?.dailyPro } : {},
     ...(next.dailyFast ?? prev?.dailyFast) !== undefined ? { dailyFast: next.dailyFast ?? prev?.dailyFast } : {},
     ...(next.resetAt ?? prev?.resetAt) !== undefined ? { resetAt: next.resetAt ?? prev?.resetAt } : {},
+    // A free trial's end comes with status checks only: kept while the player is still Premium.
+    ...(next.isPremium && (next.trialEnd ?? prev?.trialEnd)) ? { trialEnd: next.trialEnd ?? prev?.trialEnd } : {},
   };
 }
 

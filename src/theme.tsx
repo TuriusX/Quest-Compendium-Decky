@@ -96,6 +96,7 @@ const CSS = `
 
 .qc-note { font-size: 12px; line-height: 1.4; }
 .qc-warn { color: #facc15; }
+.qc-offer { color: #6ee7b7; font-weight: 600; text-align: center; }
 .qc-err { color: #f87171; }
 .qc-muted { opacity: 0.75; }
 .qc-thinking { display: flex; align-items: center; gap: 10px; font-size: 12px; color: #d8d1f2; padding: 6px 8px; border-radius: 6px; }

@@ -36,7 +36,7 @@ import { QuestLog } from "./QuestLog";
 import { SignInNudge } from "./SignInNudge";
 import { storyPhrase } from "../format";
 import { quickChips, quickLabelKey, type QuickId } from "../quick";
-import { PremiumQR } from "./PremiumQR";
+import { PremiumQR, TrialEndsNote } from "./PremiumQR";
 import { DeckFacts } from "./DeckFacts";
 import { startRecording, stopRecording } from "../api";
 import { GamepadButton } from "@decky/ui";
@@ -705,6 +705,8 @@ export function QuickAccessPanel() {
             </div>
           </PanelSectionRow>
         )}
+        {/* A free trial's last day: it ends tomorrow, then $4.99/month. */}
+        <TrialEndsNote trialEnd={q?.trialEnd} />
         {/* A newer version is out (installed by hand, so it doesn't update itself): how to get it. */}
         {update && (
           <PanelSectionRow>

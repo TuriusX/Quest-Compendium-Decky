@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.19.2
+- **Try Premium free for 7 days.** The Premium card now offers the free trial of monthly Premium (one per account,
+  cancel any time before it ends and you won't be charged), and from November 26 to January 4 the holiday deal on
+  yearly: $29.99 for the first year.
+- **A reminder before your trial ends.** The day before, a note at the top of the panel says so.
+
 ## 0.19.1
 - **Typing with the touch keyboard works better.** The question box no longer misses key presses while you type.
 - **Install from DeckyHub.** Quest Compendium is on DeckyHub, which installs it and keeps it up to date.
