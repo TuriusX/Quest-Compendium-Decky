@@ -15,7 +15,7 @@ import { balancesOf, deviceTimeZone, modelOf, questionsLine, settingOf, starting
 import { ModelToggle } from "./ModelToggle";
 import { UpdateNotice } from "./UpdateNotice";
 import { useUpdate } from "../update";
-import { currentGame, refreshGame, useCurrentGame } from "../game";
+import { currentGame, fallbackGameName, refreshGame, useCurrentGame } from "../game";
 import { followGame } from "../running";
 import { lastPlace, rememberPlace } from "../qcGuides";
 import { guideContextFor } from "../guideHere";
@@ -355,10 +355,13 @@ export function QuickAccessPanel() {
       }
       setChat(patch);
       const fresh = patch.history?.[patch.history.length - 1];
-      if (fresh?.visualId && liveGame?.name) {
+      if (fresh?.visualId) {
         const vid = fresh.visualId;
+        // No running game needed: the server takes the game the question names first, then this one (the running
+        // game, else the conversation's, else the last played).
+        const visualGame = liveGame?.name || fallbackGameName(getChat().gameKey);
         // A voice question's text is the stand-in "Voice message": the server takes the topic from the answer.
-        void visual({ game: liveGame.name, question: q, answer: fresh.text, ...(opts.audio ? { shotOnly: true } : {}) })
+        void visual({ game: visualGame, question: q, answer: fresh.text, ...(opts.audio ? { shotOnly: true } : {}) })
           .then((r) => { if (r?.visual) setTurnVisual(vid, r.visual, r.ref); })
           .catch(() => {});
       }

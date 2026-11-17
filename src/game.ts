@@ -56,7 +56,29 @@ async function poll(): Promise<void> {
   const next = runningFrom(steam, emuAnswer);
   if (!same(current, next)) {
     current = next;
+    if (next && !next.ask && next.name) rememberGame(next.key, next.name);
     listeners.forEach((l) => l(current));
+  }
+}
+
+// The last game played, and each game's name by its conversation key, so an answer's picture or video works with no
+// game running (owner, Nov 16 2026: asked from the Steam home screen, "how to get the Nagakiba" got no video).
+const LAST_GAME_KEY = "qc-last-game";
+function rememberGame(key: string, name: string): void {
+  try {
+    localStorage.setItem(LAST_GAME_KEY, name);
+    localStorage.setItem(`qc-game-name:${key}`, name);
+  } catch {
+    /* convenience only */
+  }
+}
+
+/** The game an answer is about when none is running: the conversation's game, else the last one played. */
+export function fallbackGameName(conversationKey: string | null): string {
+  try {
+    return (conversationKey && localStorage.getItem(`qc-game-name:${conversationKey}`)) || localStorage.getItem(LAST_GAME_KEY) || "";
+  } catch {
+    return "";
   }
 }
 
