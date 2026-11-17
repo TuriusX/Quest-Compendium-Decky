@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.19.1
+- **Typing with the touch keyboard works better.** The question box no longer misses key presses while you type.
+- **Install from DeckyHub.** Quest Compendium is on DeckyHub, which installs it and keeps it up to date.
+- The logo now loads from questcompendium.com, and the plugin's security notes are in the README: no root, HTTPS
+  always checked, and what it reads on your Deck.
+
 ## 0.19.0
 - **A cleaner panel.** One card at the top with your game, where you are and your questions left, then three tabs:
   Ask, Quest log and Guides.
