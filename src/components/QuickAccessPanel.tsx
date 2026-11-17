@@ -103,27 +103,40 @@ function TopUp({ quota }: { quota: ReturnType<typeof getChat>["quota"] }) {
  */
 function AskBox({ followUp, busy, ready, onAsk }: { followUp: boolean; busy: boolean; ready: boolean; onAsk: (q: string) => void }) {
   const t = useT();
-  const [prompt, setPrompt] = useState("");
+  // The box keeps its own text (owner, Nov 16 2026: with Steam's touch keyboard, writing the text back into the box on
+  // every key dropped presses). React only learns whether it's empty (for Ask) and reads it when sending; a new key
+  // after sending gives an empty box.
+  const text = useRef("");
+  const [hasText, setHasText] = useState(false);
+  const [box, setBox] = useState(0);
   const send = () => {
-    if (!prompt.trim() || busy || !ready) return;
-    onAsk(prompt);
-    setPrompt("");
+    const q = text.current;
+    if (!q.trim() || busy || !ready) return;
+    onAsk(q);
+    text.current = "";
+    setHasText(false);
+    setBox((n) => n + 1);
   };
   return (
     <>
       <PanelSectionRow>
         <TextField
+          key={box}
           label={followUp ? t("ask.followup") : t("ask.type")}
-          value={prompt}
+          defaultValue=""
           disabled={busy}
-          onChange={(e) => setPrompt(e.target.value)}
+          onChange={(e) => {
+            text.current = (e.target as HTMLInputElement).value;
+            const has = !!text.current.trim();
+            setHasText((was) => (was === has ? was : has));
+          }}
           onKeyDown={(e) => {
             if (e.key === "Enter") send();
           }}
         />
       </PanelSectionRow>
       <PanelSectionRow>
-        <ButtonItem layout="below" disabled={busy || !ready || !prompt.trim()} onClick={send}>
+        <ButtonItem layout="below" disabled={busy || !ready || !hasText} onClick={send}>
           {busy ? t("ask.sending") : t("ask.button")}
         </ButtonItem>
       </PanelSectionRow>
