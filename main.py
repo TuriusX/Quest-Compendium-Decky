@@ -174,16 +174,16 @@ def _clean_env() -> Dict[str, str]:
 
     The Decky loader is a PyInstaller binary: it points LD_LIBRARY_PATH at its own bundled libs,
     which makes system binaries (ffmpeg, gamescopectl) load the wrong libraries. It can also leave
-    XDG_RUNTIME_DIR pointing at root's runtime dir. Rebuild both from the real user.
+    XDG_RUNTIME_DIR pointing at root's runtime dir. Rebuild both from the real user, and leave out every
+    other dynamic-loader variable (LD_*), so the tools run with the system's own libraries only.
     """
     env = dict(os.environ)
     env["XDG_RUNTIME_DIR"] = f"/run/user/{_target_uid()}"
     orig = env.pop("LD_LIBRARY_PATH_ORIG", None)
+    for key in [k for k in env if k.startswith("LD_")]:
+        del env[key]
     if orig is not None:
         env["LD_LIBRARY_PATH"] = orig
-    else:
-        env.pop("LD_LIBRARY_PATH", None)
-    env.pop("LD_PRELOAD", None)
     return env
 
 

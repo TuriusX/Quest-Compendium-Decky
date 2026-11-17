@@ -62,8 +62,15 @@ Your Premium plan is shared with the Windows app.
 
 ## Install
 
-This plugin is **not in the Decky Plugin Store**, so install it manually. Decky recommends caution with manual installs;
-the full source is in this repository.
+This plugin is **not in the Decky Plugin Store**. Install it from [DeckyHub](https://deckyhub.com) (an unofficial
+plugin store that installs straight from this repository's releases), or manually. Decky recommends caution with
+plugins from outside its store; the full source is in this repository.
+
+### From DeckyHub
+
+With DeckyHub installed, search for **Quest Compendium** and install it. DeckyHub keeps it up to date.
+
+### Manually
 
 1. In Gaming Mode, open the Quick Access menu, then Decky (plug icon), then the settings cog.
 2. Turn on **Developer Mode**. A **Developer** tab appears.
@@ -114,6 +121,20 @@ No screenshot or question leaves your Deck until you tap Ask or Help me here.
 - **Not in the plugin:** no analytics or tracking.
 
 The server's own data handling is described in the [Quest Compendium privacy policy](https://quest-compendium-890629309063.us-east1.run.app/privacy).
+
+## Security and permissions
+
+- **No root.** The plugin runs as your user (`plugin.json` asks for no flags).
+- **HTTPS is always checked.** Every connection verifies the server's certificate, using the system's certificate
+  bundle (or Python's own when that's missing). Certificate checking is never turned off.
+- **System tools it runs:** `gamescopectl` (the screenshot), `ffmpeg` (shrinking the screenshot) and `pw-record` or
+  `arecord` (hold to talk), only when you press Ask, Help me here, Test screenshot or hold to talk. They run with the dynamic-loader
+  variables (`LD_*`) removed, because Decky's own bundled libraries would otherwise be loaded into them; nothing is
+  added to your system, startup files or services.
+- **What it reads on your Deck:** the game layer's screenshot when you ask; for emulators, the running emulator's
+  process name and the game file it opened (`/proc`), so it knows which game it is (only the name is sent). It never
+  reads Steam login data, SSH keys or other secrets.
+- **Nothing hidden:** no encoded or packed code; the release ZIP is built from this repository by GitHub Actions.
 
 ## Troubleshooting
 

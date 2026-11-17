@@ -16,7 +16,8 @@ export function BookIcon() {
 }
 
 export function Logo({ size }: { size: number }) {
-  return <img className="qc-logo" src={LOGO} width={size} height={size} alt="" />;
+  // Offline the logo can't load: hide it rather than show a broken image.
+  return <img className="qc-logo" src={LOGO} width={size} height={size} alt="" onError={(e) => { (e.currentTarget as HTMLImageElement).style.visibility = "hidden"; }} />;
 }
 
 /** Header used on the full-screen pages: logo, title, optional subtitle, Back button, and any extra actions. */
