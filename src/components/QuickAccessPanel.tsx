@@ -41,6 +41,7 @@ import { PremiumQR } from "./PremiumQR";
 import { DeckFacts } from "./DeckFacts";
 import { startRecording, stopRecording } from "../api";
 import { GamepadButton } from "@decky/ui";
+import { useQuickAccessVisible } from "@decky/api";
 
 /** Segmented "mana" bar for the daily questions, like the desktop app's header. */
 function ManaBar({ value, max }: { value: number; max: number }) {
@@ -63,11 +64,14 @@ const TOPUP = "\u0000topup";
  */
 function TopUp({ quota }: { quota: ReturnType<typeof getChat>["quota"] }) {
   const t = useT();
+  const visible = useQuickAccessVisible();
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
+    if (!visible) return; // nothing ticks while the menu is closed
+    setNow(Date.now());
     const iv = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(iv);
-  }, []);
+  }, [visible]);
   return <>{questionsLine(quota, t, now)}</>;
 }
 
@@ -107,7 +111,8 @@ function AskBox({ followUp, busy, ready, onAsk }: { followUp: boolean; busy: boo
 
 export function QuickAccessPanel() {
   const t = useT();
-  const game = useCurrentGame();
+  const qamVisible = useQuickAccessVisible();
+  const game = useCurrentGame(qamVisible);
   const chat = useChat();
   const browser = useBrowser();
   const [ps, setPs] = useState<PluginState | null>(null);

@@ -71,23 +71,38 @@ export function refreshGame(): void {
   void poll();
 }
 
-/** The game currently running in Gaming Mode, re-checked every couple of seconds while anything shows it. */
-export function useCurrentGame(): RunningGame | null {
+// Who is showing the game right now: polling runs only while one of them is on screen (owner, Nov 16 2026: the
+// Quick Access panel can stay mounted while the menu is closed, and the plugin should do next to nothing then).
+const showing = new Set<(g: RunningGame | null) => void>();
+function syncTimer(): void {
+  if (showing.size && !timer) {
+    void poll();
+    timer = setInterval(() => void poll(), 2000);
+  } else if (!showing.size && timer) {
+    clearInterval(timer);
+    timer = null;
+  }
+}
+
+/**
+ * The game currently running in Gaming Mode, re-checked every couple of seconds while anything shows it. `visible`:
+ * false while the component is mounted but off screen (the Quick Access menu closed); checked again when it's back.
+ */
+export function useCurrentGame(visible = true): RunningGame | null {
   const [game, setGame] = useState<RunningGame | null>(current);
   useEffect(() => {
     listeners.add(setGame);
-    if (!timer) {
-      void poll();
-      timer = setInterval(() => void poll(), 2000);
-    }
     setGame(current);
     return () => {
       listeners.delete(setGame);
-      if (!listeners.size && timer) {
-        clearInterval(timer);
-        timer = null;
-      }
+      showing.delete(setGame);
+      syncTimer();
     };
   }, []);
+  useEffect(() => {
+    if (visible) showing.add(setGame);
+    else showing.delete(setGame);
+    syncTimer();
+  }, [visible]);
   return game;
 }

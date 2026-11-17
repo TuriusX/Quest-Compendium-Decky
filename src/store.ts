@@ -57,7 +57,8 @@ export function resetConversation(gameKey: string | null): void {
  */
 const saved = new Map<string, Turn[]>();
 export function switchConversation(gameKey: string | null): boolean {
-  const back = swapConversation(saved, state.gameKey, keepRecentShots(state.history), gameKey);
+  // A conversation put away keeps only its latest screenshot (each is a large image held in memory).
+  const back = swapConversation(saved, state.gameKey, keepRecentShots(state.history, 1), gameKey);
   setChat({ history: back ?? [], error: null, notice: null, screenshotNote: null, limitReached: false, signInNudge: false, gameKey, pending: null, freshAnswer: false });
   return !!back?.length;
 }

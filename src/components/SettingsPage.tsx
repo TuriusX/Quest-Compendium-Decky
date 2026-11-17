@@ -10,6 +10,7 @@ import { PageHeader } from "./Brand";
 import { DEFAULT_SITES } from "./BrowserTab";
 import { LinkView } from "./LinkView";
 import { CheckForUpdates, UpdateNotice } from "./UpdateNotice";
+import { PerfCheck } from "./PerfCheck";
 
 // Min-Max was removed (owner, Nov 16 2026, as on the desktop).
 const MODES: Mode[] = ["standard", "roleplay"];
@@ -67,6 +68,7 @@ export function SettingsPage() {
         {/* A newer version on GitHub: how to update (always shown here, even after "Not now" in the panel). */}
         <UpdateNotice inSettings />
         <CheckForUpdates />
+        <PerfCheck />
 
         {backendDown && (
           <div className="qc-note qc-err" style={{ margin: "8px 0" }}>
