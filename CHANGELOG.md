@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.19.0
+- **A cleaner panel.** One card at the top with your game, where you are and your questions left, then three tabs:
+  Ask, Quest log and Guides.
+- **You can see it working.** After you ask, the panel shows what's happening (the screenshot taken, the answer being
+  written by Pro or Fast) with the seconds so far and how long it usually takes. You can go back to the game; the
+  answer waits.
+- **The answer first.** The newest answer sits under Help me here, then its picture or video, then 👍 👎, the full
+  answer with its sources, and Report on one row.
+- **Quest log tab.** Your quest steps have their own tab instead of sitting under every answer.
+- **Pages open in Quest Compendium.** Wiki pages and an answer's sources open in a full-screen reader, scrolled with
+  the D-pad, even when Steam's browser won't draw. Steam's browser is still one press away.
+- **Pictures full screen.** Press an answer's picture to see it full screen.
+- The same purple as the Windows app.
+
 ## 0.18.0
 - **Videos play in Quest Compendium.** Watch opens the video full screen on Quest Compendium's own page, starting at
   the moment that matters, with Play / Pause and the answer's other videos. B returns to the game. If a video won't

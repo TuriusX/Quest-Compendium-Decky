@@ -25,7 +25,10 @@ This is the Steam Deck companion to [Quest Compendium](https://github.com/Turius
 - **Pictures and videos.** When it helps, an answer comes with a wiki picture of the thing, or a video that starts at
   the right moment and plays full screen in the plugin's own player (Steam's browser as an option). No game needs to
   be running.
-- **Sources.** Under an answer, the wiki and guide pages it came from, opening in Steam's browser over the game.
+- **Sources.** Under an answer, the wiki and guide pages it came from, opening in the plugin's own full-screen reader
+  (Steam's browser as an option). Pictures open full screen too.
+- **Quest log tab.** The steps from your latest answer, with Next turn in a fight. The panel's tabs: Ask, Quest log
+  and Guides.
 - **Marked screenshots.** Answers about your screen show the screenshot with the spots the AI points at, numbered.
 - **Fast or Pro, and two styles.** Fast for quick answers, Pro for harder ones. Standard, or Roleplay (in-universe,
   spoiler-friendly hints).
@@ -101,6 +104,7 @@ No screenshot or question leaves your Deck until you tap Ask or Help me here.
   answer text (with the game's name: the running game, else the conversation's or the last one you played, which is
   remembered on your Deck).
 - **When you press Watch:** the video plays from YouTube's privacy-enhanced player (youtube-nocookie.com).
+- **When you open a source or wiki page:** the plugin downloads that page (only that page) to show it in its reader.
 - **When you tap Help me here:** one screenshot and the name of the running game, to work out where you are.
 - **When you open the panel:** a request checks your remaining daily questions (your guest ID or linked account only).
   If Help me here or an answer has found where you are, the game's name and that place's name are sent to look up
