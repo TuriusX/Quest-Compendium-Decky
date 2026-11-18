@@ -285,6 +285,9 @@ const CSS = `
 .qc-vis-start { position: absolute; left: 6px; bottom: 6px; padding: 1px 5px; background: rgba(0, 0, 0, 0.8); color: #fff; font-size: 12px; }
 .qc-vis-title { padding: 6px 8px 0; font-size: 13px; line-height: 1.3; color: #f2efff; font-weight: 600; }
 .qc-vis-meta { padding: 2px 8px 6px; font-size: 11.5px; color: #a8a3bd; }
+/* Drawn answers (Nov 18 2026): an illustration is labelled on the picture itself (DeckDrawn.tsx). */
+.qc-drawn { position: relative; }
+.qc-drawn-tag { position: absolute; left: 6px; top: 6px; padding: 1px 6px; background: rgba(0, 0, 0, 0.78); color: #fff; font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; border-radius: 3px; }
 .qc-vis-pic { display: block; margin: 0 auto; max-width: 100%; max-height: 200px; object-fit: contain; }
 .qc-vis-row { display: flex; align-items: center; gap: 8px; padding: 4px 6px; margin: 0 4px; border-radius: 3px; }
 .qc-vis-row img { width: 72px; aspect-ratio: 16 / 9; object-fit: cover; flex: none; }

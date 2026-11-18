@@ -117,6 +117,24 @@ export function setTurnVisual(visualId: string, visual: Turn["visual"], ref?: st
   setChat({ history });
 }
 
+/** Drawn answers: the drawing for an answer (by its visualId, since more turns may have come since). */
+export function setTurnDrawn(visualId: string, d: Turn["drawn"]): void {
+  const i = state.history.findIndex((x) => x.visualId === visualId);
+  if (i < 0) return;
+  const history = [...state.history];
+  history[i] = { ...history[i], drawn: d };
+  setChat({ history });
+}
+
+/** "Not right" on an answer's drawing: it isn't shown again. */
+export function hideDrawn(turnIndex: number): void {
+  const turn = state.history[turnIndex];
+  if (!turn?.drawn) return;
+  const history = [...state.history];
+  history[turnIndex] = { ...turn, drawnHidden: true };
+  setChat({ history });
+}
+
 /** "Not right" on an answer's visual: it isn't shown again. */
 export function hideVisual(turnIndex: number): void {
   const turn = state.history[turnIndex];
@@ -189,6 +207,8 @@ export function keepRecentShots(history: Turn[], keep = 3): Turn[] {
       seen++;
       if (seen > keep) out[i] = { ...out[i], shot: undefined };
     }
+    // Drawings are pictures too (a few hundred KB): only the most recent ones are kept.
+    if (out[i].drawn && i < out.length - keep * 2) out[i] = { ...out[i], drawn: undefined };
   }
   return out;
 }

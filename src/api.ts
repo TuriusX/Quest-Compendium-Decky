@@ -92,6 +92,8 @@ export type DeckVisual =
   | { kind: "link"; page: WikiPage };
 /** A wiki page shown as a link row under the answer (owner, Nov 14 2026). */
 export type WikiPage = { url: string; title: string; site: string };
+/** Drawn answers (owner, Nov 18 2026): the answer drawn on the question's screenshot or a wiki picture, or an illustration. */
+export type DeckDrawn = { kind: "drawn"; url: string; on: "screen" | "wiki" | "illustration"; alt: string; page?: WikiPage };
 
 export interface Turn {
   role: "user" | "assistant";
@@ -102,6 +104,9 @@ export interface Turn {
   visualId?: string;
   /** The player said "Not right": the visual isn't shown again. */
   visualHidden?: boolean;
+  /** Answers only: its drawn picture (drawn answers, Nov 18 2026), found after the answer arrived. */
+  drawn?: DeckDrawn;
+  drawnHidden?: boolean;
   /** Answers only: the screenshot the answer is about, with the spots the AI marked on it. */
   shot?: string;
   points?: ShotPoint[];
@@ -254,6 +259,8 @@ export const checkMarkers = callable<
   { ok: boolean; found?: { index: number; x: number; y: number }[]; checked?: number }
 >("check_markers");
 export const visual = callable<[req: { game: string; question: string; answer: string; shotOnly?: boolean }], { ok: boolean; visual: DeckVisual | null; ref?: string | null }>("visual");
+/** Drawn answers: the answer drawn on the question's screenshot (the backend keeps it a few minutes), or none. */
+export const drawn = callable<[req: { game: string; question: string; answer: string; shotOnly?: boolean }], { ok: boolean; drawn: DeckDrawn | null }>("drawn");
 /** Help me here (roadmap item 30): where in the guide the player is, from a screenshot, and what they're doing. */
 export const locate = callable<
   [req: { game: string; guideKey?: string; areas: { name: string; story?: string }[] }],
@@ -276,7 +283,7 @@ export interface AreaFactsResult {
   achievements?: { name: string; how?: string; missable?: boolean; lost?: string; if?: string; rarity?: string }[] | null;
 }
 export const areaFacts = callable<[key: string, slug: string, lang?: string], AreaFactsResult>("area_facts");
-export const visualEvent = callable<[req: { type: "played" | "opened" | "wrong"; ref?: string }], { ok: boolean }>("visual_event");
+export const visualEvent = callable<[req: { type: "played" | "opened" | "wrong" | "drawnWrong"; ref?: string }], { ok: boolean }>("visual_event");
 export const startLink = callable<[], LinkStart>("start_link");
 export const pollLink = callable<[], LinkPoll>("poll_link");
 export const cancelLink = callable<[], boolean>("cancel_link");

@@ -1,7 +1,8 @@
 import { DialogButton, Focusable } from "@decky/ui";
 import { useCurrentGame } from "../game";
 import { useT } from "../i18n";
-import { getChat, hideVisual, resetConversation, useChat } from "../store";
+import { getChat, hideDrawn, hideVisual, resetConversation, useChat } from "../store";
+import { DeckDrawn } from "./DeckDrawn";
 import { DeckVisual } from "./DeckVisual";
 import { DeckSources } from "./DeckSources";
 import { ThemeStyle } from "../theme";
@@ -53,6 +54,8 @@ export function AnswerPage() {
                     <MarkedShot shot={t.shot} points={t.points ?? []} done={t.donePoints} checking={isChecking(t.checkId)} removed={t.removedMarkers} />
                   )}
                   <AnswerBlocks text={t.text} chunk={420} />
+                  {/* Drawn answers: the answer drawn on its screenshot or a wiki picture, or an illustration (first). */}
+                  {t.drawn && !t.drawnHidden && <DeckDrawn drawn={t.drawn} onWrong={() => hideDrawn(i)} />}
                   {/* Visual answers: the video or picture found for this answer (after it arrived). */}
                   {t.visual && !t.visualHidden && <DeckVisual visual={t.visual} visualRef={t.visualRef} onWrong={() => hideVisual(i)} />}
                   {/* Sources: the pages the answer read, or the wiki pages of what it's about (not our own guide). */}

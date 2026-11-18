@@ -988,6 +988,40 @@ class Plugin:
             return {"ok": True, "visual": None}
         return {"ok": True, "visual": v, "ref": data.get("ref") if isinstance(data.get("ref"), str) else None}
 
+    async def drawn(self, req: Dict[str, Any]) -> Dict[str, Any]:
+        """Drawn answers (owner, Nov 18 2026): the answer drawn on the question's screenshot (or a wiki picture), or an
+        illustration, from the server's /api/drawn, only when seeing it helps (the server decides; most answers get
+        none). After the answer, like visual(). {ok, drawn}; drawn is None when there's none."""
+        question = str(req.get("question") or "").strip()[:MAX_QUESTION_CHARS]
+        answer = str(req.get("answer") or "").strip()[:6000]
+        game = str(req.get("game") or "").strip()[:120]
+        if not question or not answer or not game:
+            return {"ok": True, "drawn": None}
+        token, _is_guest, _notice = await self._bearer()
+        if token is None:
+            return {"ok": False, "drawn": None}
+        shot = getattr(self, "_last_shot", None)
+        if not shot or time.time() - float(getattr(self, "_last_shot_at", 0) or 0) > 300:
+            shot = None
+        status, data = await self._http(
+            "POST", "/api/drawn",
+            body={"game": game, "question": question, "answer": answer, "client": "deck",
+                  **({"image": shot} if shot else {}), **({"shotOnly": True} if req.get("shotOnly") is True else {})},
+            token=token, timeout_s=90,
+        )
+        if status != 200 or not isinstance(data, dict):
+            return {"ok": False, "drawn": None}
+        d = data.get("drawn")
+        url = str(d.get("url") or "") if isinstance(d, dict) else ""
+        if not isinstance(d, dict) or d.get("kind") != "drawn" or d.get("on") not in ("screen", "wiki", "illustration") \
+                or not re.match(r"^data:image/(jpeg|png|webp);base64,", url) or len(url) > 3_000_000:
+            return {"ok": True, "drawn": None}
+        page = d.get("page") if isinstance(d.get("page"), dict) and str(d["page"].get("url") or "").startswith("https://") else None
+        out = {"kind": "drawn", "url": url, "on": d["on"], "alt": str(d.get("alt") or "")[:200]}
+        if page:
+            out["page"] = {"url": str(page["url"]), "title": str(page.get("title") or "")[:120], "site": str(page.get("site") or "")[:60]}
+        return {"ok": True, "drawn": out}
+
     async def locate(self, req: Dict[str, Any]) -> Dict[str, Any]:
         """Help me here (owner, Nov 15 2026; roadmap item 30): a screenshot of the game, and the server's /api/locate-me
         reads where in the guide the player is and what they're doing. {ok, area, confident, story, doing, error,
@@ -1073,7 +1107,7 @@ class Plugin:
     async def visual_event(self, req: Dict[str, Any]) -> Dict[str, Any]:
         """Played, opened (counted for /stats) or "Not right" (that visual isn't picked for this question again)."""
         kind = req.get("type")
-        if kind not in ("played", "opened", "wrong"):
+        if kind not in ("played", "opened", "wrong", "drawnWrong"):
             return {"ok": False}
         token, _is_guest, _notice = await self._bearer()
         if token is None:
@@ -1150,6 +1184,10 @@ class Plugin:
                 screenshot_state = "attached"
             else:
                 screenshot_state, screenshot_error = "failed", shot["error"]
+        # Drawn answers (owner, Nov 18 2026): this question's screenshot, kept in memory a few minutes for its drawing
+        # (drawn() below); a question without one clears it. Never written to disk.
+        self._last_shot = shot_url
+        self._last_shot_at = time.time()
 
         token, is_guest, notice = await self._bearer()
         if token is None:

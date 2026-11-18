@@ -10,7 +10,7 @@ import {
 import { offerWorth } from "../worthBus";
 import { useEffect, useRef, useState } from "react";
 import { FaCog, FaComments, FaPlus } from "react-icons/fa";
-import { ask, AskRequest, AnswerModel, getQuota, getState, guideFind, learnGame, locate, PluginState, saveSettings, Turn, visual } from "../api";
+import { ask, AskRequest, AnswerModel, getQuota, getState, guideFind, learnGame, locate, PluginState, saveSettings, Turn, visual, drawn } from "../api";
 import { balancesOf, deviceTimeZone, modelOf, questionsLine, settingOf, startingModel } from "../answerModel";
 import { ModelToggle } from "./ModelToggle";
 import { UpdateNotice } from "./UpdateNotice";
@@ -23,8 +23,9 @@ import { MissablesHere } from "./MissablesHere";
 import { setTab, useBrowser } from "../browser";
 import { aiLanguageName, getLocale, setLocaleSetting, useT } from "../i18n";
 import { ANSWER_ROUTE, openPage, SETTINGS_ROUTE } from "../routes";
-import { getChat, hideVisual, keepRecentShots, lastAnswerTurn, lastMarkedAnswer, lastQuestion, mergeQuota, resetConversation, setChat, setTurnVisual, switchConversation, useChat } from "../store";
+import { getChat, hideDrawn, hideVisual, keepRecentShots, lastAnswerTurn, lastMarkedAnswer, lastQuestion, mergeQuota, resetConversation, setChat, setTurnDrawn, setTurnVisual, switchConversation, useChat } from "../store";
 import { DeckVisual } from "./DeckVisual";
+import { DeckDrawn } from "./DeckDrawn";
 import { ThemeStyle } from "../theme";
 import { AnswerBlocks } from "./AnswerBlocks";
 import { checkAnswerMarkers } from "../markerCheck";
@@ -402,6 +403,11 @@ export function QuickAccessPanel() {
         void visual({ game: visualGame, question: q, answer: fresh.text, ...(opts.audio ? { shotOnly: true } : {}) })
           .then((r) => { if (r?.visual) setTurnVisual(vid, r.visual, r.ref); })
           .catch(() => {});
+        // Drawn answers (owner, Nov 18 2026): the answer drawn on this question's screenshot, or an illustration, when
+        // seeing it helps (the server decides; most answers get none).
+        void drawn({ game: visualGame, question: q, answer: fresh.text, ...(opts.audio ? { shotOnly: true } : {}) })
+          .then((r) => { if (r?.drawn) setTurnDrawn(vid, r.drawn); })
+          .catch(() => {});
       }
     } catch {
       setChat({ busy: false, error: t("backend.down") });
@@ -563,6 +569,12 @@ export function QuickAccessPanel() {
               <ButtonItem layout="below" onClick={() => openPage(ANSWER_ROUTE)}>
                 📍 {t(marked.points!.length === 1 ? "shot.marked1" : "shot.markedN", { n: marked.points!.length })}
               </ButtonItem>
+            </PanelSectionRow>
+          )}
+          {/* Its drawing (drawn answers): first, when there is one. */}
+          {!last.turn.collapsed && last.turn.drawn && !last.turn.drawnHidden && (
+            <PanelSectionRow>
+              <DeckDrawn drawn={last.turn.drawn} onWrong={() => hideDrawn(last.index)} />
             </PanelSectionRow>
           )}
           {/* Its picture or video: it arrives a few seconds after the answer. */}
