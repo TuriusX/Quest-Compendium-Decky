@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.20.0
+- **Answers you can see.** When a picture explains it better than words, the answer comes with one: the route drawn
+  on your screenshot, the spot circled, or a labelled illustration of a puzzle's solution. Press it for full screen.
+- **More of the panel in your language.** The suggested sites and other labels that were still in English are now
+  translated.
+
 ## 0.19.4
 - **Suggested sites for your game.** The Guides tab lists Steam guides, Fandom, GameFAQs, YouTube walkthroughs, an
   interactive map and Reddit for the game you're playing, under Quest Compendium's guide.
