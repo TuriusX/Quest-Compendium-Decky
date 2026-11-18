@@ -185,6 +185,24 @@ export function siteSearchUrl(domain: string, game: string, words: string): stri
   return `https://www.google.com/search?q=${enc(`${q}${words ? "" : " guide"} site:${domain}`)}`;
 }
 
+/**
+ * Sites suggested for the game on the Guides tab: the same list as the desktop app's Guides browser
+ * (Quest-Compendium src/utils/guideSites.ts suggestedSites), so both apps match. Steam guides only for a Steam game.
+ */
+export function suggestedSites(game: string, steamAppId?: number): { key: "steam" | "fandom" | "gamefaqs" | "youtube" | "map" | "reddit"; url: string }[] {
+  const g = (game || "").trim();
+  if (!g) return [];
+  const q = (x: string) => encodeURIComponent(x.trim());
+  return [
+    ...(steamAppId && steamAppId > 0 ? [{ key: "steam" as const, url: `https://steamcommunity.com/app/${steamAppId}/guides/` }] : []),
+    { key: "fandom" as const, url: `https://www.fandom.com/?s=${q(g)}` },
+    { key: "gamefaqs" as const, url: `https://gamefaqs.gamespot.com/search?game=${q(g)}` },
+    { key: "youtube" as const, url: `https://www.youtube.com/results?search_query=${q(`${g} walkthrough`)}` },
+    { key: "map" as const, url: `https://www.google.com/search?q=${q(`${g} interactive map`)}` },
+    { key: "reddit" as const, url: `https://www.reddit.com/search/?q=${q(g)}` },
+  ];
+}
+
 /** A general web search in Steam's browser. */
 export const webSearchUrl = (game: string, words: string): string =>
   `https://www.google.com/search?q=${encodeURIComponent([game, words || "guide"].filter(Boolean).join(" "))}`;

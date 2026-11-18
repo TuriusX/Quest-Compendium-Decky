@@ -2,9 +2,9 @@ import { ButtonItem, DialogButton, Focusable, PanelSection, PanelSectionRow, Tex
 import { useEffect, useState } from "react";
 import { getState, guideFind } from "../api";
 import { QcGuidesPanel } from "./QcGuidesPanel";
-import { siteLabel, siteSearchUrl, webSearchUrl } from "../browser";
+import { siteLabel, siteSearchUrl, suggestedSites, webSearchUrl } from "../browser";
 import { useCurrentGame } from "../game";
-import { guideBrowserSupported, lastGuideUrl, openGuide, resumeGuide, useGuideInfo } from "../guideBrowser";
+import { guideBrowserSupported, lastGuideUrl, openGuide, resumeGuide, setGuideGame, useGuideInfo } from "../guideBrowser";
 import { getLocale, useT } from "../i18n";
 
 export const DEFAULT_SITES = ["gamefaqs.gamespot.com", "neoseeker.com", "fandom.com", "ign.com", "reddit.com", "youtube.com"];
@@ -22,7 +22,12 @@ export function BrowserTab() {
   const t = useT();
   const game = useCurrentGame();
   const gameName = game?.name ?? "";
+  // This game's last page under "Resume guide" (each game keeps its own).
+  setGuideGame(gameName);
   const guide = useGuideInfo();
+  const suggested = suggestedSites(gameName, game?.key?.startsWith("steam:") ? game.appId : 0);
+  const suggestedName = (k: string) =>
+    k === "steam" ? t("guides.s.steam") : k === "youtube" ? t("guides.s.youtube") : k === "map" ? t("guides.s.map") : k === "fandom" ? "Fandom" : k === "gamefaqs" ? "GameFAQs" : "Reddit";
   const [words, setWords] = useState("");
   const [sites, setSites] = useState<string[]>(DEFAULT_SITES);
   const [showSites, setShowSites] = useState(false);
@@ -65,6 +70,21 @@ export function BrowserTab() {
             <ButtonItem layout="below" description={guide.open && guide.title ? guide.title : domainOf(resumeUrl)} onClick={resumeGuide}>
               ▶ {t("guides.resume")}
             </ButtonItem>
+          </PanelSectionRow>
+        </PanelSection>
+      )}
+
+      {/* Suggested for this game: the same sites as the desktop app's Guides tab. */}
+      {suggested.length > 0 && (
+        <PanelSection title={t("guides.suggested", { game: gameName })}>
+          <PanelSectionRow>
+            <Focusable className="qc-site-grid" flow-children="grid">
+              {suggested.map((s) => (
+                <DialogButton key={s.key} onClick={() => openGuide(s.url)}>
+                  {suggestedName(s.key)}
+                </DialogButton>
+              ))}
+            </Focusable>
           </PanelSectionRow>
         </PanelSection>
       )}

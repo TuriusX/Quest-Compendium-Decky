@@ -36,6 +36,20 @@ export interface GuideInfo {
 }
 
 let browser: SteamBrowser | null = null;
+// Each game keeps its own last page (owner, Nov 17 2026: aligned with the desktop app's Guides tab). The Guides tab says
+// which game is on (setGuideGame); pages opened then are remembered for it.
+let gameKey = "";
+const lastKey = () => (gameKey ? `${LAST_URL_KEY}:${gameKey}` : LAST_URL_KEY);
+const remember = (url: string) => {
+  try {
+    localStorage.setItem(lastKey(), url);
+  } catch {
+    /* convenience only */
+  }
+};
+export function setGuideGame(key: string): void {
+  gameKey = (key || "").trim().toLowerCase().slice(0, 80);
+}
 let info: GuideInfo = { open: false, url: "", title: "" };
 const listeners = new Set<() => void>();
 
@@ -94,11 +108,7 @@ function ensureBrowser(): SteamBrowser | null {
     view?.on?.("finished-request", (url: string, title: string) => {
       if (typeof url === "string" && url.startsWith("http")) {
         setInfo({ url, title: typeof title === "string" ? title : info.title });
-        try {
-          localStorage.setItem(LAST_URL_KEY, url);
-        } catch {
-          /* convenience only */
-        }
+        remember(url);
       }
     });
     view?.on?.("set-title", (title: string) => {
@@ -135,20 +145,16 @@ export function openGuide(url: string): void {
   }
   b.LoadURL(url);
   setInfo({ open: true, url, title: "" });
-  try {
-    localStorage.setItem(LAST_URL_KEY, url);
-  } catch {
-    /* convenience only */
-  }
+  remember(url);
   Navigation.CloseSideMenus();
   Navigation.Navigate(GUIDE_ROUTE);
 }
 
-/** The page to offer under "Resume guide": the open one, or the last one from a previous session. */
+/** The page to offer under "Resume guide": the open one, or this game's last one from a previous session. */
 export function lastGuideUrl(): string | null {
   if (info.open && info.url) return info.url;
   try {
-    return localStorage.getItem(LAST_URL_KEY);
+    return localStorage.getItem(lastKey());
   } catch {
     return null;
   }
@@ -177,7 +183,7 @@ export function closeGuide(): void {
   browser = null;
   setInfo({ open: false, url: "", title: "" });
   try {
-    localStorage.removeItem(LAST_URL_KEY);
+    localStorage.removeItem(lastKey());
   } catch {
     /* ignore */
   }
