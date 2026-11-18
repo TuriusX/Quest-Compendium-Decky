@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.19.4
+- **Suggested sites for your game.** The Guides tab lists Steam guides, Fandom, GameFAQs, YouTube walkthroughs, an
+  interactive map and Reddit for the game you're playing, under Quest Compendium's guide.
+- **Resume guide remembers each game.** It reopens the last page you had open for the game you're playing.
+
 ## 0.19.3
 - **See what to look for.** Each marked spot in the checklist and the full answer has a close-up from your screenshot.
 - **Clearer marker names.** Markers say what the thing is instead of "Loot this" or "Proceed here".
