@@ -10,7 +10,7 @@ import {
 import { offerWorth } from "../worthBus";
 import { useEffect, useRef, useState } from "react";
 import { FaCog, FaComments, FaPlus } from "react-icons/fa";
-import { ask, AskRequest, AnswerModel, getQuota, getState, guideFind, learnGame, locate, PluginState, saveSettings, Turn, visual, drawn } from "../api";
+import { ask, AskRequest, AnswerModel, getQuota, getState, guideFind, learnGame, locate, PluginState, saveSettings, Turn, visual, drawn, getRecap, saveRecap } from "../api";
 import { balancesOf, deviceTimeZone, modelOf, questionsLine, settingOf, startingModel } from "../answerModel";
 import { ModelToggle } from "./ModelToggle";
 import { UpdateNotice } from "./UpdateNotice";
@@ -26,6 +26,7 @@ import { ANSWER_ROUTE, openPage, SETTINGS_ROUTE } from "../routes";
 import { getChat, hideDrawn, hideVisual, keepRecentShots, lastAnswerTurn, lastMarkedAnswer, lastQuestion, mergeQuota, resetConversation, setChat, setTurnDrawn, setTurnVisual, switchConversation, useChat } from "../store";
 import { DeckVisual } from "./DeckVisual";
 import { DeckDrawn } from "./DeckDrawn";
+import { agoText, recapFrom, recapShowing, RECAP_GAP_MS, setRecapShowing } from "../recap";
 import { ThemeStyle } from "../theme";
 import { AnswerBlocks } from "./AnswerBlocks";
 import { checkAnswerMarkers } from "../markerCheck";
@@ -240,6 +241,24 @@ export function QuickAccessPanel() {
     setPendingSwitch(null);
     if (switchConversation(key) && key && game) setSwitchedTo(game.name);
   };
+  // "Where was I?" (session companion step 1): a game that starts after a day or more away shows what the player was
+  // last doing there, at the top of the Ask tab, until dismissed or the next question.
+  const [recap, setRecap] = useState(recapShowing());
+  const recapCheckedRef = useRef<string | null>(null);
+  useEffect(() => {
+    const key = followKey;
+    if (!ps || !key || ps.settings.recap === false || recapCheckedRef.current === key) return;
+    recapCheckedRef.current = key;
+    if (recapShowing()?.key === key) return;
+    void getRecap({ gameKey: key }).then((r) => {
+      if (r?.recap && Date.now() - r.recap.at >= RECAP_GAP_MS) {
+        const v = { key, recap: r.recap };
+        setRecapShowing(v);
+        setRecap(v);
+      }
+    }).catch(() => {});
+  }, [followKey, !!ps]);
+  const closeRecap = () => { setRecapShowing(null); setRecap(null); };
   useEffect(() => {
     if (!ps) return;
     const step = followGame(followKey, getChat().gameKey, { auto: ps.settings.auto_switch !== false, hasHistory: getChat().history.length > 0 });
@@ -394,6 +413,10 @@ export function QuickAccessPanel() {
       }
       setChat(patch);
       const fresh = patch.history?.[patch.history.length - 1];
+      // "Where was I?": what this answer says the player is doing, kept for the next time they come back.
+      const recapKey = getChat().gameKey;
+      if (fresh && fresh.role === "assistant" && recapKey) void saveRecap({ gameKey: recapKey, ...recapFrom(fresh, opts.audio ? "" : q) }).catch(() => {});
+      if (recapShowing()) closeRecap();
       if (fresh?.visualId) {
         const vid = fresh.visualId;
         // No running game needed: the server takes the game the question names first, then this one (the running
@@ -761,6 +784,18 @@ export function QuickAccessPanel() {
               </Focusable>
             </PanelSectionRow>
             {showSub && q && !q.isPremium && <PremiumQR linked={!!ps?.linked} startOpen />}
+            {recap && recap.key === getChat().gameKey && (
+              <PanelSectionRow>
+                <Focusable className="qc-recap" flow-children="vertical">
+                  <div className="qc-recap-head">{t("recap.question")}{agoText(Date.now() - recap.recap.at, t) ? ` · ${t("recap.lastPlayed", { when: agoText(Date.now() - recap.recap.at, t) })}` : ""}</div>
+                  {recap.recap.place && <div className="qc-recap-place">{recap.recap.place}</div>}
+                  {recap.recap.title && <div className="qc-recap-title">{recap.recap.title}</div>}
+                  {recap.recap.steps.map((s, i) => <div key={i} className="qc-recap-step"><span>{i + 1}</span>{s}</div>)}
+                  {recap.recap.lastAsked && <div className="qc-recap-asked">{t("recap.lastAsked", { q: recap.recap.lastAsked })}</div>}
+                  <DialogButton className="qc-mini-btn" style={{ marginTop: 6 }} onClick={closeRecap}>{t("recap.gotIt")}</DialogButton>
+                </Focusable>
+              </PanelSectionRow>
+            )}
             <div ref={answerTop} />
             {answerRows}
           </PanelSection>

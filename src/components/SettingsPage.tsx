@@ -129,6 +129,14 @@ export function SettingsPage() {
               />
             </PanelSectionRow>
             <PanelSectionRow>
+              <ToggleField
+                label={t("settings.recap")}
+                description={t("settings.recapDesc")}
+                checked={ps.settings.recap !== false}
+                onChange={(on) => updateSettings({ recap: on })}
+              />
+            </PanelSectionRow>
+            <PanelSectionRow>
               <ButtonItem
                 layout="inline"
                 label={t("settings.check")}

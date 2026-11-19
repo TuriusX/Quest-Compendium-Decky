@@ -104,6 +104,8 @@ DEFAULT_SETTINGS: Dict[str, Any] = {
     "language": "English",
     # Interface + answer language: "auto" follows the Steam language.
     "locale": "auto",
+    # "Where was I?" (session companion step 1): a recap at the top of the panel when a game starts after a day away.
+    "recap": True,
     # Guide sites shown in the Guides tab (they open in Steam's browser).
     "guide_sites": ["gamefaqs.gamespot.com", "neoseeker.com", "fandom.com", "ign.com", "reddit.com", "youtube.com"],
     # Developer override, e.g. "http://192.168.1.20:3000" to test against a local server.
@@ -812,6 +814,7 @@ class Plugin:
                 "include_screenshot": bool(self.state["settings"]["include_screenshot"]),
                 "hint_mode": bool(self.state["settings"].get("hint_mode", False)),
                 "auto_switch": bool(self.state["settings"].get("auto_switch", True)),
+                "recap": bool(self.state["settings"].get("recap", True)),
             },
             "tools": {
                 "gamescopectl": bool(_which("gamescopectl", env)),
@@ -834,6 +837,8 @@ class Plugin:
             s["hint_mode"] = patch["hint_mode"]
         if isinstance(patch.get("auto_switch"), bool):
             s["auto_switch"] = patch["auto_switch"]
+        if isinstance(patch.get("recap"), bool):
+            s["recap"] = patch["recap"]
         if patch.get("locale") in VALID_LOCALES:
             s["locale"] = patch["locale"]
         if isinstance(patch.get("guide_sites"), list):
@@ -987,6 +992,35 @@ class Plugin:
         if not isinstance(v, dict) or v.get("kind") not in ("video", "picture", "link"):
             return {"ok": True, "visual": None}
         return {"ok": True, "visual": v, "ref": data.get("ref") if isinstance(data.get("ref"), str) else None}
+
+    async def save_recap(self, req: Dict[str, Any]) -> Dict[str, Any]:
+        """"Where was I?" (session companion step 1, owner Nov 18 2026): what the player was last doing in a game (the
+        latest answer's title, its open steps, the place, the last question), kept in settings.json so it survives a
+        restart. At most 20 games, oldest dropped. Nothing goes to the server."""
+        key = str(req.get("gameKey") or "").strip()[:120]
+        if not key:
+            return {"ok": False}
+        def s(v: Any, n: int) -> str:
+            return re.sub(r"\s+", " ", str(v or "")).strip()[:n]
+        rec = {
+            "title": s(req.get("title"), 120), "place": s(req.get("place"), 120), "lastAsked": s(req.get("lastAsked"), 160),
+            "steps": [s(x, 140) for x in (req.get("steps") or []) if s(x, 140)][:3], "at": int(time.time() * 1000),
+        }
+        if not rec["title"] and not rec["lastAsked"]:
+            return {"ok": False}
+        recaps = dict(self.state.get("recaps") or {})
+        recaps[key] = rec
+        if len(recaps) > 20:
+            for k in sorted(recaps, key=lambda k: recaps[k].get("at", 0))[: len(recaps) - 20]:
+                recaps.pop(k, None)
+        self.state["recaps"] = recaps
+        self._save()
+        return {"ok": True}
+
+    async def get_recap(self, req: Dict[str, Any]) -> Dict[str, Any]:
+        """The recap saved for a game, or None."""
+        rec = (self.state.get("recaps") or {}).get(str(req.get("gameKey") or "")[:120])
+        return {"ok": True, "recap": rec if isinstance(rec, dict) else None}
 
     async def drawn(self, req: Dict[str, Any]) -> Dict[str, Any]:
         """Drawn answers (owner, Nov 18 2026): the answer drawn on the question's screenshot (or a wiki picture), or an

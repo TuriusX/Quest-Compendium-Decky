@@ -287,6 +287,14 @@ const CSS = `
 .qc-vis-meta { padding: 2px 8px 6px; font-size: 11.5px; color: #a8a3bd; }
 /* Drawn answers (Nov 18 2026): an illustration is labelled on the picture itself (DeckDrawn.tsx). */
 .qc-drawn { position: relative; }
+/* "Where was I?" (session companion step 1): the recap at the top of the Ask tab (QuickAccessPanel.tsx). */
+.qc-recap { display: block; margin: 4px 0 6px; padding: 8px 10px; border: 1px solid rgba(168, 127, 251, 0.45); background: rgba(168, 127, 251, 0.1); border-radius: 4px; }
+.qc-recap-head { font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #c4b5fd; }
+.qc-recap-place { font-size: 11.5px; color: #a8a3bd; margin-top: 2px; }
+.qc-recap-title { font-size: 15px; font-weight: 700; color: #fff; margin: 3px 0 4px; }
+.qc-recap-step { display: flex; gap: 6px; align-items: baseline; font-size: 13px; color: #e4e1ee; margin: 2px 0; }
+.qc-recap-step span { flex: none; width: 16px; height: 16px; border-radius: 50%; background: #a87ffb; color: #16101f; font-size: 10.5px; font-weight: 800; display: inline-grid; place-items: center; }
+.qc-recap-asked { font-size: 12px; color: #a8a3bd; margin-top: 4px; }
 .qc-drawn-tag { position: absolute; left: 6px; top: 6px; padding: 1px 6px; background: rgba(0, 0, 0, 0.78); color: #fff; font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; border-radius: 3px; }
 .qc-vis-pic { display: block; margin: 0 auto; max-width: 100%; max-height: 200px; object-fit: contain; }
 .qc-vis-row { display: flex; align-items: center; gap: 8px; padding: 4px 6px; margin: 0 4px; border-radius: 3px; }

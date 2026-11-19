@@ -12,6 +12,8 @@ export interface Settings {
   hint_mode?: boolean;
   /** A game that starts brings back its own conversation (on by default; off: the current one stays, with Switch). */
   auto_switch?: boolean;
+  /** "Where was I?" at the top of the panel when a game starts after a day away (default on). */
+  recap?: boolean;
   /** "auto" follows the Steam language. */
   locale?: "auto" | "en" | "es" | "pt" | "de" | "fr" | "ru" | "ja" | "ko" | "zh";
   /** Guide sites shown in the Guides tab (domains). */
@@ -259,6 +261,10 @@ export const checkMarkers = callable<
   { ok: boolean; found?: { index: number; x: number; y: number }[]; checked?: number }
 >("check_markers");
 export const visual = callable<[req: { game: string; question: string; answer: string; shotOnly?: boolean }], { ok: boolean; visual: DeckVisual | null; ref?: string | null }>("visual");
+/** "Where was I?" (session companion step 1): what the player was last doing in a game, kept by the backend. */
+export type DeckRecap = { title: string; place: string; lastAsked: string; steps: string[]; at: number };
+export const saveRecap = callable<[req: { gameKey: string; title: string; place: string; lastAsked: string; steps: string[] }], { ok: boolean }>("save_recap");
+export const getRecap = callable<[req: { gameKey: string }], { ok: boolean; recap: DeckRecap | null }>("get_recap");
 /** Drawn answers: the answer drawn on the question's screenshot (the backend keeps it a few minutes), or none. */
 export const drawn = callable<[req: { game: string; question: string; answer: string; shotOnly?: boolean }], { ok: boolean; drawn: DeckDrawn | null }>("drawn");
 /** Help me here (roadmap item 30): where in the guide the player is, from a screenshot, and what they're doing. */
