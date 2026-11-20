@@ -86,7 +86,7 @@ VALID_MODELS = ("pro", "flash")
 VALID_LOCALES = ("auto", "en", "es", "pt", "de", "fr", "ru", "ja", "ko", "zh")
 # The language names the server puts in the AI's instructions ("Respond entirely in ...").
 # The quick questions' ids (src/quick.ts); the server adds what each one asks for.
-QUICK_IDS = ("next", "stuck", "missable", "fight", "choice", "leave", "keep", "hint", "after", "where", "hintInstead")
+QUICK_IDS = ("next", "stuck", "missable", "fight", "choice", "leave", "keep", "after", "where")  # (no hint questions since Nov 20 2026)
 AI_LANGUAGES = ("English", "Spanish", "Brazilian Portuguese", "German", "French", "Russian", "Japanese", "Korean", "Simplified Chinese")
 MAX_GUIDE_SITES = 12
 DOMAIN_RE = re.compile(r"^[a-z0-9-]+(\.[a-z0-9-]+)+$")
@@ -97,8 +97,6 @@ DEFAULT_SETTINGS: Dict[str, Any] = {
     "mode": "standard",
     "model": "pro",
     "include_screenshot": True,
-    # Hint mode: "Just a hint" among the quick questions.
-    "hint_mode": False,
     # A game that starts brings back its own conversation (off: the current one stays, with "Switch").
     "auto_switch": True,
     "language": "English",
@@ -812,7 +810,6 @@ class Plugin:
                 "mode": _mode(self.state["settings"]["mode"]),
                 "model": self.state["settings"]["model"],
                 "include_screenshot": bool(self.state["settings"]["include_screenshot"]),
-                "hint_mode": bool(self.state["settings"].get("hint_mode", False)),
                 "auto_switch": bool(self.state["settings"].get("auto_switch", True)),
                 "recap": bool(self.state["settings"].get("recap", True)),
             },
@@ -833,8 +830,6 @@ class Plugin:
             s["model"] = patch["model"]
         if isinstance(patch.get("include_screenshot"), bool):
             s["include_screenshot"] = patch["include_screenshot"]
-        if isinstance(patch.get("hint_mode"), bool):
-            s["hint_mode"] = patch["hint_mode"]
         if isinstance(patch.get("auto_switch"), bool):
             s["auto_switch"] = patch["auto_switch"]
         if isinstance(patch.get("recap"), bool):
@@ -1196,9 +1191,6 @@ class Plugin:
             }
         if req.get("quick") in QUICK_IDS:
             payload["quick"] = req["quick"]
-            # Hint levels (session companion step 2): this plugin shows a hint's bigger hint and answer, one at a time.
-            if req["quick"] in ("hint", "hintInstead"):
-                payload["hintLevels"] = True
         # Hold to talk: the recorded question (stop_recording), sent as audio like the desktop app's voice questions.
         audio = req.get("audio")
         if isinstance(audio, str) and audio.startswith("data:audio/") and len(audio) <= MAX_AUDIO_CHARS:

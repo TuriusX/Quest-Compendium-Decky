@@ -114,14 +114,6 @@ export function SettingsPage() {
             </PanelSectionRow>
             <PanelSectionRow>
               <ToggleField
-                label={t("settings.hintMode")}
-                description={t("settings.hintModeDesc")}
-                checked={!!ps.settings.hint_mode}
-                onChange={(on) => updateSettings({ hint_mode: on })}
-              />
-            </PanelSectionRow>
-            <PanelSectionRow>
-              <ToggleField
                 label={t("settings.autoSwitch")}
                 description={t("settings.autoSwitchDesc")}
                 checked={ps.settings.auto_switch !== false}

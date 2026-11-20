@@ -26,7 +26,6 @@ import { ANSWER_ROUTE, openPage, SETTINGS_ROUTE } from "../routes";
 import { getChat, hideDrawn, hideVisual, keepRecentShots, lastAnswerTurn, lastMarkedAnswer, lastQuestion, mergeQuota, resetConversation, setChat, setTurnDrawn, setTurnVisual, switchConversation, useChat } from "../store";
 import { DeckVisual } from "./DeckVisual";
 import { DeckDrawn } from "./DeckDrawn";
-import { DeckHints } from "./DeckHints";
 import { agoText, recapFrom, recapShowing, RECAP_GAP_MS, setRecapShowing } from "../recap";
 import { ThemeStyle } from "../theme";
 import { AnswerBlocks } from "./AnswerBlocks";
@@ -396,8 +395,6 @@ export function QuickAccessPanel() {
         if (res.title) answerTurn.title = res.title;
         if (res.sourceLinks?.length) answerTurn.sourceLinks = res.sourceLinks;
         if (res.steps?.length) answerTurn.steps = res.steps;
-        // A hint's bigger levels (session companion step 2): hidden until the player asks for them.
-        if (res.hints && (res.hints.rule || res.hints.answer)) { answerTurn.hints = res.hints; answerTurn.hintShown = 1; }
         if (res.combat) answerTurn.combat = true;
         if (res.place?.name) answerTurn.place = res.place.name;
         if (res.place?.story) answerTurn.story = storyPhrase(res.place.story);
@@ -491,8 +488,8 @@ export function QuickAccessPanel() {
   const canTalk = !!ps?.tools.recorder;
   const askQuick = (id: QuickId) => submit(t(quickLabelKey(id)), { quick: id, ...(id === "where" ? { shot: true } : {}) });
   // The chips that fit (as in the desktop app): starters before an answer, two follow-ups after it ("Show me where on
-  // screen" needs an answer about a screenshot and a fresh screenshot of the game now). Hints only with hint mode on.
-  const chips = quickChips({ asked: !!answer, combat: !!last?.turn.combat, canShowWhere: canNextTurn && !!last?.turn.sawShot, hintMode: !!ps?.settings.hint_mode });
+  // screen" needs an answer about a screenshot and a fresh screenshot of the game now).
+  const chips = quickChips({ asked: !!answer, combat: !!last?.turn.combat, canShowWhere: canNextTurn && !!last?.turn.sawShot });
   const tab = browser.tab;
 
   // ---- Header: the game, where you are, and the questions left (one card, two lines) ----
@@ -590,12 +587,6 @@ export function QuickAccessPanel() {
               </div>
             )}
           </PanelSectionRow>
-          {/* Hint levels: the bigger hint, then the answer, one press at a time. */}
-          {!last.turn.collapsed && last.turn.hints && (
-            <PanelSectionRow>
-              <DeckHints turn={last.turn} turnIndex={last.index} />
-            </PanelSectionRow>
-          )}
           {marked && (
             <PanelSectionRow>
               {/* The AI marked spots on the screenshot: they're drawn on it in the full answer. */}

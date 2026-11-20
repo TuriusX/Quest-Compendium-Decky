@@ -400,14 +400,6 @@ const CSS = `
 .qc-bar > b { display: block; height: 100%; background: ${PURPLE}; transition: width 1s linear; }
 .qc-mini { display: flex; gap: 6px; flex-wrap: wrap; align-items: flex-start; width: 100%; }
 .qc-mini-btn { flex: 1 1 auto; width: auto !important; min-width: 0 !important; padding: 4px 10px !important; font-size: 12px !important; white-space: nowrap; }
-/* Hint levels (DeckHints.tsx) */
-.qc-hints { display: flex; flex-direction: column; gap: 6px; width: 100%; }
-.qc-hint { border-radius: 6px; padding: 6px 8px; font-size: 13px; line-height: 1.45; color: #ece9f6; }
-.qc-hint-rule { background: rgba(252, 211, 77, .08); border: 1px solid rgba(252, 211, 77, .22); }
-.qc-hint-answer { background: rgba(168, 127, 251, .1); border: 1px solid rgba(168, 127, 251, .32); }
-.qc-hint-head { font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #fcd34d; margin-bottom: 2px; }
-.qc-hint-answer .qc-hint-head { color: ${PURPLE}; }
-.qc-hint.qc-focused { box-shadow: 0 0 0 2px #fff; }
 .qc-empty { font-size: 13px; color: #b9b2d6; line-height: 1.45; padding: 4px 2px; }
 .qc-talking { outline: 2px solid ${PURPLE}; }
 .qc-vis-pic-btn { display: block; border-radius: 6px; overflow: hidden; }

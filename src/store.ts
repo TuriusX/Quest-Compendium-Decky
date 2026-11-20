@@ -126,14 +126,6 @@ export function setTurnDrawn(visualId: string, d: Turn["drawn"]): void {
   setChat({ history });
 }
 
-/** Hint levels (session companion step 2): open the next level of a hint answer (2 = the rule, 3 = the answer). */
-export function showHintLevel(turnIndex: number, level: number): void {
-  const turn = state.history[turnIndex];
-  if (!turn?.hints) return;
-  const history = [...state.history];
-  history[turnIndex] = { ...turn, hintShown: Math.max(turn.hintShown ?? 1, level) };
-  setChat({ history });
-}
 
 /** "Not right" on an answer's drawing: it isn't shown again. */
 export function hideDrawn(turnIndex: number): void {

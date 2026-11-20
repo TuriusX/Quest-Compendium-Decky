@@ -8,8 +8,6 @@ export interface Settings {
   /** No longer used: the server has one mode since app v0.3 (kept so older saved settings still load). */
   model?: Model;
   include_screenshot: boolean;
-  /** Hint mode: "Just a hint" among the quick questions (off by default). */
-  hint_mode?: boolean;
   /** A game that starts brings back its own conversation (on by default; off: the current one stays, with Switch). */
   auto_switch?: boolean;
   /** "Where was I?" at the top of the panel when a game starts after a day away (default on). */
@@ -118,10 +116,6 @@ export interface Turn {
   sourceLinks?: { url: string; title: string; site: string }[];
   /** Answers only: the quest log's 1-4 steps (in a fight, the battle plan). */
   steps?: QuestStep[];
-  /** Answers only: a hint's bigger hint (the rule) and the full answer, hidden until asked (session companion step 2). */
-  hints?: { rule?: string; answer?: string };
-  /** How many hint levels are open (1 = only the hint; 2 = the rule too; 3 = the answer too). */
-  hintShown?: number;
   /** Answers only: indexes of the steps the player has ticked off. */
   doneSteps?: number[];
   /** Answers only: the screenshot showed a fight (the steps are the battle plan, markers rank the targets). */
@@ -197,8 +191,6 @@ export interface AskResult {
   shot?: string;
   /** Short quest name for what the player is doing. */
   title?: string;
-  /** A hint's two bigger levels (session companion step 2), hidden until the player asks. */
-  hints?: { rule?: string; answer?: string };
   /** The quest log's steps (in a fight, the battle plan). */
   steps?: QuestStep[];
   /** The screenshot showed a fight. */
