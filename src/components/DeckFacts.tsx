@@ -71,7 +71,9 @@ export function DeckFacts({ game, place }: { game: string; place: string | null 
   useEffect(() => onDoneChange(() => setTick((n) => n + 1)), []);
 
   const w = facts?.worth;
-  const gear = w?.gear || [];
+  // No tick boxes (owner, Nov 20 2026, as on the desktop): an item is removed from the list (kept where its tick was,
+  // so items ticked before stay off too).
+  const allGear = w?.gear || [];
   const achs = facts?.achievements || [];
   if (finding && !facts) {
     return (
@@ -83,10 +85,11 @@ export function DeckFacts({ game, place }: { game: string; place: string | null 
       </PanelSectionRow>
     );
   }
-  if (!facts || (!gear.length && !w?.quests?.length && !w?.people?.length && !achs.length)) return null;
+  if (!facts || (!allGear.length && !w?.quests?.length && !w?.people?.length && !achs.length)) return null;
   const isOpen = (id: string) => open[id] === true;
   const toggle = (id: string) => setOpen((o) => { const n = { ...o, [id]: !isOpen(id) }; try { localStorage.setItem(OPEN_KEY, JSON.stringify(n)); } catch { /* this session only */ } return n; });
   const done = key && slug ? readDone(key, slug) : new Set<string>();
+  const gear = allGear.filter((g) => !done.has(g.id));
   const head = (id: string, title: string, count: number) => (
     <DialogButton className="qc-facts-head" onClick={() => toggle(id)}>
       <span>{isOpen(id) ? "▾" : "▸"} {title}</span><span className="qc-facts-n">{count}</span>
@@ -108,12 +111,11 @@ export function DeckFacts({ game, place }: { game: string; place: string | null 
             {isOpen("worth") && (
               <>
                 {(all.worth ? gear : gear.slice(0, SHOW)).map((g) => {
-                  const on = done.has(g.id);
                   const open = openItem === g.id;
                   return (
                     <div key={g.id} className="qc-facts-item">
-                    <DialogButton className={on ? "qc-facts-row qc-facts-done" : "qc-facts-row"} onClick={() => setOpenItem(open ? null : g.id)}>
-                      <span className="qc-facts-box">{on ? "✓" : ""}</span>
+                    <DialogButton className="qc-facts-row" onClick={() => setOpenItem(open ? null : g.id)}>
+                      <span className="qc-facts-dot" style={{ background: g.rarity ? rarityColor(g.rarity) : undefined }} />
                       <span className="qc-facts-txt">
                         <span className="qc-facts-line">
                           <b>{g.name}</b>
@@ -131,7 +133,7 @@ export function DeckFacts({ game, place }: { game: string; place: string | null 
                         {g.how && <span className="qc-facts-sub"><b>{t("card.how")}</b> {g.how}</span>}
                         {g.confirmed === false && <span className="qc-card-note">{t("card.unchecked")}</span>}
                         <Focusable className="qc-card-btns" flow-children="horizontal">
-                          <DialogButton className="qc-card-btn" onClick={() => setEntryDone(key, slug, g.id, !on)}>{on ? t("card.notYet") : t("card.gotIt")}</DialogButton>
+                          <DialogButton className="qc-card-btn" onClick={() => { setEntryDone(key, slug, g.id, true); setOpenItem(null); }}>✕ {t("card.remove")}</DialogButton>
                           {g.card?.page && (
                             <DialogButton className="qc-card-btn" onClick={() => openInSteamBrowser(g.card!.page!.url)}>📖 {t("card.wiki", { site: g.card.page.site })}</DialogButton>
                           )}

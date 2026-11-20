@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.21.0
+- **Where was I?** Start a game after a day or more away and the panel shows where you were, what you were doing and
+  your next steps.
+- **Hints that don't spoil.** A hint answer gives you the nudge first; "More of a hint" and "Show the answer" open
+  the rest only when you want it.
+- **No more tick boxes.** Press A on a step you're done with or don't need to remove it (Undo for a few seconds).
+  "Worth getting here" items are removed the same way, and A on a marker hides it on screen.
+- **A narrator for every game.** In Roleplay mode each game has its own narrator, someone who belongs in its world.
+
 ## 0.20.0
 - **Answers you can see.** When a picture explains it better than words, the answer comes with one: the route drawn
   on your screenshot, the spot circled, or a labelled illustration of a puzzle's solution. Press it for full screen.

@@ -26,6 +26,7 @@ import { ANSWER_ROUTE, openPage, SETTINGS_ROUTE } from "../routes";
 import { getChat, hideDrawn, hideVisual, keepRecentShots, lastAnswerTurn, lastMarkedAnswer, lastQuestion, mergeQuota, resetConversation, setChat, setTurnDrawn, setTurnVisual, switchConversation, useChat } from "../store";
 import { DeckVisual } from "./DeckVisual";
 import { DeckDrawn } from "./DeckDrawn";
+import { DeckHints } from "./DeckHints";
 import { agoText, recapFrom, recapShowing, RECAP_GAP_MS, setRecapShowing } from "../recap";
 import { ThemeStyle } from "../theme";
 import { AnswerBlocks } from "./AnswerBlocks";
@@ -395,6 +396,8 @@ export function QuickAccessPanel() {
         if (res.title) answerTurn.title = res.title;
         if (res.sourceLinks?.length) answerTurn.sourceLinks = res.sourceLinks;
         if (res.steps?.length) answerTurn.steps = res.steps;
+        // A hint's bigger levels (session companion step 2): hidden until the player asks for them.
+        if (res.hints && (res.hints.rule || res.hints.answer)) { answerTurn.hints = res.hints; answerTurn.hintShown = 1; }
         if (res.combat) answerTurn.combat = true;
         if (res.place?.name) answerTurn.place = res.place.name;
         if (res.place?.story) answerTurn.story = storyPhrase(res.place.story);
@@ -449,7 +452,8 @@ export function QuickAccessPanel() {
 
   // The header's second line: place · story beat · collected · next questions.
   const points = last?.turn.points ?? [];
-  const collected = points.length ? t("status.collected", { n: (last?.turn.donePoints ?? []).length, m: points.length }) : null;
+  // (No "n/m collected": markers aren't ticked any more, Nov 20 2026.)
+  const collected = null;
   const nextTopUp = questionsLine(chat.quota, t, Date.now()) ? TOPUP : null;
   // (The questions left are in the chip; the countdown shows when they run out.)
   const subParts = (game ? [last?.turn.place || t("card.askScreen"), last?.turn.place ? last?.turn.story : null, collected] : [t("card.askAnything"), collected])
@@ -586,6 +590,12 @@ export function QuickAccessPanel() {
               </div>
             )}
           </PanelSectionRow>
+          {/* Hint levels: the bigger hint, then the answer, one press at a time. */}
+          {!last.turn.collapsed && last.turn.hints && (
+            <PanelSectionRow>
+              <DeckHints turn={last.turn} turnIndex={last.index} />
+            </PanelSectionRow>
+          )}
           {marked && (
             <PanelSectionRow>
               {/* The AI marked spots on the screenshot: they're drawn on it in the full answer. */}

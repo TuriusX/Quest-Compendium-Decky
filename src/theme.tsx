@@ -52,7 +52,8 @@ const CSS = `
 .qc-facts .qc-facts-row { width: auto !important; align-self: stretch; min-width: 0 !important; display: flex !important; gap: 8px; align-items: flex-start; text-align: left !important; box-sizing: border-box; padding: 5px 8px !important; font-size: 13px !important; background: rgba(255,255,255,.03) !important; white-space: normal !important; }
 .qc-facts-done { opacity: .5; }
 .qc-facts-box { flex: 0 0 auto; width: 14px; height: 14px; margin-top: 2px; border: 1.5px solid #a1a1aa; border-radius: 3px; font-size: 10px; line-height: 12px; text-align: center; color: #0b0a10; }
-.qc-facts-done .qc-facts-box { background: #a87ffb; border-color: #a87ffb; }
+.qc-pt-undo { opacity: .85; }
+.qc-facts-dot { flex: 0 0 auto; width: 7px; height: 7px; margin-top: 6px; border-radius: 50%; background: #71717a; }
 .qc-facts-txt { display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto; }
 .qc-facts-line { display: block; }
 .qc-facts-pct { font-size: 11px; color: #6ee7b7; }
@@ -399,6 +400,14 @@ const CSS = `
 .qc-bar > b { display: block; height: 100%; background: ${PURPLE}; transition: width 1s linear; }
 .qc-mini { display: flex; gap: 6px; flex-wrap: wrap; align-items: flex-start; width: 100%; }
 .qc-mini-btn { flex: 1 1 auto; width: auto !important; min-width: 0 !important; padding: 4px 10px !important; font-size: 12px !important; white-space: nowrap; }
+/* Hint levels (DeckHints.tsx) */
+.qc-hints { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+.qc-hint { border-radius: 6px; padding: 6px 8px; font-size: 13px; line-height: 1.45; color: #ece9f6; }
+.qc-hint-rule { background: rgba(252, 211, 77, .08); border: 1px solid rgba(252, 211, 77, .22); }
+.qc-hint-answer { background: rgba(168, 127, 251, .1); border: 1px solid rgba(168, 127, 251, .32); }
+.qc-hint-head { font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #fcd34d; margin-bottom: 2px; }
+.qc-hint-answer .qc-hint-head { color: ${PURPLE}; }
+.qc-hint.qc-focused { box-shadow: 0 0 0 2px #fff; }
 .qc-empty { font-size: 13px; color: #b9b2d6; line-height: 1.45; padding: 4px 2px; }
 .qc-talking { outline: 2px solid ${PURPLE}; }
 .qc-vis-pic-btn { display: block; border-radius: 6px; overflow: hidden; }

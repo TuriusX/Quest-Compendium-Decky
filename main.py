@@ -1196,6 +1196,9 @@ class Plugin:
             }
         if req.get("quick") in QUICK_IDS:
             payload["quick"] = req["quick"]
+            # Hint levels (session companion step 2): this plugin shows a hint's bigger hint and answer, one at a time.
+            if req["quick"] in ("hint", "hintInstead"):
+                payload["hintLevels"] = True
         # Hold to talk: the recorded question (stop_recording), sent as audio like the desktop app's voice questions.
         audio = req.get("audio")
         if isinstance(audio, str) and audio.startswith("data:audio/") and len(audio) <= MAX_AUDIO_CHARS:
@@ -1272,6 +1275,13 @@ class Plugin:
             steps = _steps_from(data)
             if steps:
                 result["steps"] = steps
+            # A hint's two bigger levels (the rule, the full answer), hidden until the player asks for them.
+            hints = data.get("hints")
+            if isinstance(hints, dict):
+                levels = {k: str(hints.get(k) or "").strip()[:n] for k, n in (("rule", 400), ("answer", 900))}
+                levels = {k: v for k, v in levels.items() if v}
+                if levels:
+                    result["hints"] = levels
             if data.get("combat") is True:
                 result["combat"] = True
                 fight = str(data.get("fight") or "").strip()[:80]

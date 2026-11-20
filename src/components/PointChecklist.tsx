@@ -2,7 +2,6 @@ import { DialogButton } from "@decky/ui";
 import { useEffect } from "react";
 import type { Turn } from "../api";
 import { useT } from "../i18n";
-import { setEntryDone } from "../qcGuides";
 import { togglePoint } from "../store";
 import { CloseUp } from "./CloseUp";
 
@@ -52,23 +51,20 @@ export function PointChecklist({ turn, turnIndex }: { turn: Turn; turnIndex: num
           p.where,
           p.note,
         ].filter(Boolean).join(" · ");
+        // (No ticks, owner Nov 20 2026: A hides the marker on screen and shows it again; it no longer ticks the guide.)
         const badge = isDone ? "qc-badge qc-badge-done" : p.rank ? "qc-badge qc-badge-rank" : guide ? "qc-badge qc-badge-guide" : "qc-badge";
         return (
           <DialogButton
             key={i}
             className={`qc-pt${isDone ? " qc-pt-done" : ""}${guide ? " qc-pt-guide" : ""}`}
-            onClick={() => {
-              togglePoint(turnIndex, i);
-              // A guide entry found on screen: ticking (or unticking) the marker does the same in the guide.
-              if (guide) setEntryDone(p.guideKey!, p.guideSlug!, p.guideId!, !isDone);
-            }}
+            onClick={() => togglePoint(turnIndex, i)}
           >
-            <span className={badge}>{isDone ? "✓" : i + 1}</span>
+            <span className={badge}>{i + 1}</span>
             {/* What it looks like: a close-up from the answer's screenshot (markers v2). */}
             {turn.shot && <CloseUp src={turn.shot} x={p.x} y={p.y} />}
             <span className="qc-pt-text">
               <span className="qc-pt-label">{p.label}</span>
-              {sub && <span className="qc-pt-sub">{sub}</span>}
+              {(sub || isDone) && <span className="qc-pt-sub">{[isDone ? t("marker.hidden") : "", sub].filter(Boolean).join(" · ")}</span>}
             </span>
           </DialogButton>
         );

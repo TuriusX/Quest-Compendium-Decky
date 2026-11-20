@@ -118,6 +118,10 @@ export interface Turn {
   sourceLinks?: { url: string; title: string; site: string }[];
   /** Answers only: the quest log's 1-4 steps (in a fight, the battle plan). */
   steps?: QuestStep[];
+  /** Answers only: a hint's bigger hint (the rule) and the full answer, hidden until asked (session companion step 2). */
+  hints?: { rule?: string; answer?: string };
+  /** How many hint levels are open (1 = only the hint; 2 = the rule too; 3 = the answer too). */
+  hintShown?: number;
   /** Answers only: indexes of the steps the player has ticked off. */
   doneSteps?: number[];
   /** Answers only: the screenshot showed a fight (the steps are the battle plan, markers rank the targets). */
@@ -193,6 +197,8 @@ export interface AskResult {
   shot?: string;
   /** Short quest name for what the player is doing. */
   title?: string;
+  /** A hint's two bigger levels (session companion step 2), hidden until the player asks. */
+  hints?: { rule?: string; answer?: string };
   /** The quest log's steps (in a fight, the battle plan). */
   steps?: QuestStep[];
   /** The screenshot showed a fight. */
