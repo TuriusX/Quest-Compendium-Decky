@@ -2,7 +2,7 @@ import { useState } from "react";
 import { DialogButton, Focusable } from "@decky/ui";
 import type { Turn } from "../api";
 import { useT } from "../i18n";
-import { toggleStep } from "../store";
+import { toggleStep, answerLooksDone } from "../store";
 
 /**
  * The answer's quest log, like the desktop app's: its title, then the 1-4 things to keep in mind (steps to take,
@@ -69,6 +69,16 @@ export function QuestLog({
           </DialogButton>
         );
       })}
+      {/* Looks done (Nov 20 2026): a later screenshot showed this step finished. Offered, never removed by itself. */}
+      {turn.looksDone !== undefined && left.some(({ i }) => i === turn.looksDone) && (
+        <div className="qc-looks">
+          <div className="qc-note">✓ {t("log.looksDone", { step: steps[turn.looksDone]?.label || steps[turn.looksDone]?.text || "" })}</div>
+          <Focusable flow-children="horizontal" style={{ display: "flex", gap: 6, marginTop: 4 }}>
+            <DialogButton className="qc-mini-btn" onClick={() => answerLooksDone(turnIndex, true)}>{t("log.looksDoneYes")}</DialogButton>
+            <DialogButton className="qc-mini-btn" onClick={() => answerLooksDone(turnIndex, false)}>{t("log.looksDoneNo")}</DialogButton>
+          </Focusable>
+        </div>
+      )}
       {undo && (
         <DialogButton
           className="qc-pt qc-pt-undo"

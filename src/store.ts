@@ -78,6 +78,17 @@ export function togglePoint(turnIndex: number, point: number): void {
   setChat({ history });
 }
 
+/** "Looks done" (Nov 20 2026): Move on (the step is removed) or Not yet (the offer goes). */
+export function answerLooksDone(turnIndex: number, moveOn: boolean): void {
+  const turn = state.history[turnIndex];
+  if (!turn || turn.role !== "assistant" || turn.looksDone === undefined) return;
+  const done = new Set(turn.doneSteps ?? []);
+  if (moveOn) done.add(turn.looksDone);
+  const history = [...state.history];
+  history[turnIndex] = { ...turn, doneSteps: [...done].sort((a, b) => a - b), looksDone: undefined };
+  setChat({ history });
+}
+
 /** Tick a quest-log step off (or back on) in one answer; the ticks stay with the conversation. */
 export function toggleStep(turnIndex: number, step: number): void {
   const turn = state.history[turnIndex];

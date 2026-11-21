@@ -40,7 +40,7 @@ import { storyPhrase } from "../format";
 import { quickChips, quickLabelKey, type QuickId } from "../quick";
 import { PremiumQR, TrialEndsNote } from "./PremiumQR";
 import { DeckFacts } from "./DeckFacts";
-import { startRecording, stopRecording } from "../api";
+import { startRecording, stopRecording, voiceState } from "../api";
 import { GamepadButton } from "@decky/ui";
 import { useQuickAccessVisible } from "@decky/api";
 
@@ -335,6 +335,19 @@ export function QuickAccessPanel() {
     const running = currentGame() ?? game;
     // Only the game's name and Steam app go with a question (none while "Which game is this?" is unanswered).
     const liveGame = running && !running.ask ? { name: running.name, appId: running.appId } : null;
+    // The quest log's objective (the latest answer with steps; its steps not removed), sent so the answer can say which
+    // the question reports done or the screenshot shows finished (as the desktop app does).
+    const objNow = (() => {
+      const h = getChat().history;
+      for (let i = h.length - 1; i >= 0; i--) {
+        const x = h[i];
+        if (x.role !== "assistant" || !x.steps?.length) continue;
+        const done = new Set(x.doneSteps ?? []);
+        const steps = x.steps.map((s, j) => ({ i: j, text: String(s.label || s.text || "").slice(0, 140) })).filter((s) => !done.has(s.i) && s.text);
+        return steps.length ? { index: i, title: x.title || "", steps } : null;
+      }
+      return null;
+    })();
     const req: AskRequest = {
       question: q,
       mode: ps.settings.mode,
@@ -348,6 +361,7 @@ export function QuickAccessPanel() {
       timeZone: deviceTimeZone(),
       ...(opts.quick ? { quick: opts.quick } : {}),
       ...(opts.audio ? { audio: opts.audio } : {}),
+      ...(objNow ? { objective: { title: objNow.title, steps: objNow.steps } } : {}),
     };
     setWorking({ shot: !!req.includeScreenshot, model: answerModel });
     setChat({ busy: true, pending: q, error: null, notice: null, screenshotNote: null, limitReached: false, signInNudge: false, freshAnswer: false });
@@ -402,7 +416,15 @@ export function QuickAccessPanel() {
         answerTurn.visualId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
         patch.pending = null;
         patch.freshAnswer = true;
-        patch.history = keepRecentShots([...getChat().history, { role: "user", text: q }, answerTurn]);
+        const before = [...getChat().history];
+        // The objective's steps the question said are done come off; one the screenshot shows finished is offered.
+        const ot = objNow ? before[objNow.index] : undefined;
+        if (objNow && ot && ot.role === "assistant") {
+          const done = new Set([...(ot.doneSteps ?? []), ...(res.objectiveDone ?? [])]);
+          const looks = (res.objectiveLooksDone ?? []).filter((i) => !done.has(i) && !!ot.steps?.[i]);
+          before[objNow.index] = { ...ot, doneSteps: [...done].sort((a, b) => a - b), looksDone: looks.length ? Math.min(...looks) : undefined };
+        }
+        patch.history = keepRecentShots([...before, { role: "user", text: q }, answerTurn]);
         if (answerTurn.checkId && answerTurn.shot && answerTurn.points) {
           const { checkId, shot, points } = answerTurn;
           // After the answer is stored (the check finds it again by its checkId).
@@ -466,20 +488,43 @@ export function QuickAccessPanel() {
   // Next turn (a fight): a fresh screenshot and a short question for whoever acts now; its answer replaces the plan.
   const canNextTurn = !!ps?.tools.gamescopectl && !!game;
   const nextTurn = () => submit(t("log.nextTurnQ"), { shot: true });
-  // Hold to talk: hold A on the button to speak, let go to send (with a screenshot); a touch tap starts and stops.
+  // Speak (owner, Nov 20 2026, as the desktop's voice): press A (or tap) and talk; it sends with a screenshot by itself
+  // once you stop talking (main.py VoiceEnd), or press again to send sooner. Holding A and letting go still sends then.
   const [talking, setTalking] = useState(false);
+  const talkingRef = useRef(false);
   const [talkError, setTalkError] = useState<string | null>(null);
   // Steam also sends a click when A comes back up: a click right after a gamepad press isn't a touch tap.
   const lastPadAt = useRef(0);
+  const padDownAt = useRef(0);
   const talkStart = async () => {
-    if (talking || chat.busy || !ps) return;
+    if (talkingRef.current || chat.busy || !ps) return;
     setTalkError(null);
-    const r = await startRecording().catch((e) => ({ ok: false, error: String(e?.message || e) }));
-    if (r.ok) setTalking(true);
-    else setTalkError(r.error || t("talk.failed"));
+    const r = await startRecording(true).catch((e) => ({ ok: false, error: String(e?.message || e) }));
+    if (!r.ok) return void setTalkError(r.error || t("talk.failed"));
+    talkingRef.current = true;
+    setTalking(true);
+    // Listening for the end of what's said: it sends, or stops quietly when nothing was said.
+    const watch = async () => {
+      while (talkingRef.current) {
+        await new Promise((res) => setTimeout(res, 200));
+        if (!talkingRef.current) return;
+        const v = await voiceState().catch(() => null);
+        if (!v || v.state === "listen" || v.state === "manual") continue;
+        if (v.state === "end") return void talkEnd();
+        if (v.state === "nothing") {
+          talkingRef.current = false;
+          setTalking(false);
+          await stopRecording().catch(() => null);
+          return void setTalkError(t("talk.nothing"));
+        }
+        if (v.state === "idle") { talkingRef.current = false; setTalking(false); return; }
+      }
+    };
+    void watch();
   };
   const talkEnd = async () => {
-    if (!talking) return;
+    if (!talkingRef.current) return;
+    talkingRef.current = false;
     setTalking(false);
     const r: { ok: boolean; audio?: string; error?: string } = await stopRecording().catch((e) => ({ ok: false, error: String(e?.message || e) }));
     if (r.ok && r.audio) void submit(t("talk.voice"), { audio: r.audio, shot: true });
@@ -665,11 +710,23 @@ export function QuickAccessPanel() {
         <PanelSectionRow>
           <DialogButton
             disabled={chat.busy || !ps}
-            onButtonDown={(e: any) => { if (e?.detail?.button === GamepadButton.OK) { lastPadAt.current = Date.now(); void talkStart(); } }}
-            onButtonUp={(e: any) => { if (e?.detail?.button === GamepadButton.OK) { lastPadAt.current = Date.now(); void talkEnd(); } }}
+            onButtonDown={(e: any) => {
+              if (e?.detail?.button !== GamepadButton.OK) return;
+              lastPadAt.current = Date.now();
+              padDownAt.current = Date.now();
+              // Pressed again while listening: send now.
+              if (talkingRef.current) void talkEnd();
+              else void talkStart();
+            }}
+            onButtonUp={(e: any) => {
+              if (e?.detail?.button !== GamepadButton.OK) return;
+              lastPadAt.current = Date.now();
+              // Held while speaking, then let go: send then. A quick press keeps listening until you stop talking.
+              if (talkingRef.current && Date.now() - padDownAt.current >= 700) void talkEnd();
+            }}
             onClick={() => {
               if (Date.now() - lastPadAt.current < 800) return;
-              if (talking) void talkEnd();
+              if (talkingRef.current) void talkEnd();
               else void talkStart();
             }}
             className={talking ? "qc-talking" : undefined}

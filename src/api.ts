@@ -118,6 +118,8 @@ export interface Turn {
   steps?: QuestStep[];
   /** Answers only: indexes of the steps the player has ticked off. */
   doneSteps?: number[];
+  /** Answers only: a step a later screenshot showed finished (Nov 20 2026): offered on the log, Move on / Not yet. */
+  looksDone?: number;
   /** Answers only: the screenshot showed a fight (the steps are the battle plan, markers rank the targets). */
   combat?: boolean;
   /** Answers only: where the server thought the player was. */
@@ -171,10 +173,15 @@ export interface AskRequest {
   quick?: string;
   /** Hold to talk: the recorded question (stopRecording), a data URL. */
   audio?: string;
+  /** The quest log's objective: the latest answer's steps not removed, by index (the answer can say which are done). */
+  objective?: { title: string; steps: { i: number; text: string }[] };
 }
 
 export interface AskResult {
   ok: boolean;
+  /** Steps of the objective the question said are done (moved off), or the screenshot shows finished (offered). */
+  objectiveDone?: number[];
+  objectiveLooksDone?: number[];
   error?: string;
   text?: string;
   limitReached?: boolean;
@@ -301,7 +308,9 @@ export const emulatorGame = callable<[], { emulator?: string; name?: string | nu
 export const learnGame = callable<[key: string, name: string], boolean>("learn_game");
 /** Report an AI answer for review (Microsoft Store / Steam policy on generated content). */
 /** Hold to talk: record from the Deck's microphone (pw-record), then stop and get it back as a data URL. */
-export const startRecording = callable<[], { ok: boolean; error?: string }>("start_recording");
+export const startRecording = callable<[auto?: boolean], { ok: boolean; error?: string }>("start_recording");
+/** An auto recording (start_recording(true)): "end" when the player stopped talking, "nothing" when nothing was said. */
+export const voiceState = callable<[], { ok: boolean; state: "listen" | "end" | "nothing" | "manual" | "idle" }>("voice_state");
 export const stopRecording = callable<[], { ok: boolean; audio?: string; error?: string }>("stop_recording");
 /** 👍 / 👎 on an AI answer (or "none": taken back), for the answer-quality numbers. */
 export const answerFeedback = callable<

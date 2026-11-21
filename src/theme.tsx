@@ -52,6 +52,7 @@ const CSS = `
 .qc-facts .qc-facts-row { width: auto !important; align-self: stretch; min-width: 0 !important; display: flex !important; gap: 8px; align-items: flex-start; text-align: left !important; box-sizing: border-box; padding: 5px 8px !important; font-size: 13px !important; background: rgba(255,255,255,.03) !important; white-space: normal !important; }
 .qc-facts-done { opacity: .5; }
 .qc-facts-box { flex: 0 0 auto; width: 14px; height: 14px; margin-top: 2px; border: 1.5px solid #a1a1aa; border-radius: 3px; font-size: 10px; line-height: 12px; text-align: center; color: #0b0a10; }
+.qc-looks { width: 100%; padding: 6px 8px; border-radius: 6px; background: rgba(74, 222, 128, .08); border: 1px solid rgba(74, 222, 128, .28); box-sizing: border-box; }
 .qc-pt-undo { opacity: .85; }
 .qc-facts-dot { flex: 0 0 auto; width: 7px; height: 7px; margin-top: 6px; border-radius: 50%; background: #71717a; }
 .qc-facts-txt { display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto; }

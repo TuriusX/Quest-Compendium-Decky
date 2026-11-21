@@ -18,3 +18,4 @@ jobs:
       - run: pnpm run typecheck
       - run: pnpm run build
       - run: python3 -m py_compile main.py
+      - run: python3 tests/test_voice.py

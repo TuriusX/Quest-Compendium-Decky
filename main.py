@@ -14,6 +14,8 @@ Callable-from-frontend methods are the public `async def`s on `Plugin` (no leadi
 import asyncio
 import base64
 import json
+import math
+import struct
 import os
 import pwd
 import secrets
@@ -61,6 +63,73 @@ TOKEN_REFRESH_MARGIN_S = 120  # refresh Firebase ID tokens this long before they
 MAX_QUESTION_CHARS = 2000
 # Hold to talk: a recorded voice question (16 kHz mono WAV, under a minute) as a data URL.
 MAX_AUDIO_CHARS = 3_000_000
+
+
+class VoiceEnd:
+    """Voice that ends by itself (owner, Nov 20 2026; the desktop's src/utils/voiceEnd.ts, same numbers): fed the
+    microphone's loudness (RMS, 0..1) with the time in ms, it says "listen", "end" (the player spoke and has been quiet
+    for a moment, or talked for the longest a question may be) or "nothing" (nothing said in time). The room's own noise
+    is measured first, so a fan or the game's sound doesn't count as talking."""
+
+    CALIBRATE_MS = 250
+    MIN_SPEECH_MS = 250
+    SILENCE_MS = 1300
+    NO_SPEECH_MS = 8000
+    MAX_MS = 45000
+    FLOOR = 0.012
+    CEILING = 0.06
+    FACTOR = 2.8
+
+    def __init__(self) -> None:
+        self.start = -1.0
+        self.last_t = -1.0
+        self.noise = 0.0
+        self.samples = 0
+        self.speech = 0.0
+        self.last_loud = -1.0
+
+    def step(self, level: float, t: float) -> str:
+        if self.start < 0:
+            self.start = t
+        dt = 0.0 if self.last_t < 0 else max(0.0, t - self.last_t)
+        self.last_t = t
+        age = t - self.start
+        v = max(0.0, float(level)) if level == level else 0.0
+        if age < self.CALIBRATE_MS:
+            self.noise = (self.noise * self.samples + v) / (self.samples + 1)
+            self.samples += 1
+            return "listen"
+        threshold = max(self.FLOOR, min(self.CEILING, self.noise * self.FACTOR))
+        if v >= threshold:
+            self.speech += dt
+            self.last_loud = t
+        spoke = self.speech >= self.MIN_SPEECH_MS
+        if spoke and t - self.last_loud >= self.SILENCE_MS:
+            return "end"
+        if age >= self.MAX_MS:
+            return "end" if spoke else "nothing"
+        if not spoke and age >= self.NO_SPEECH_MS:
+            return "nothing"
+        return "listen"
+
+
+def voice_chunks(decide: "VoiceEnd", pcm_bytes: bytes, samples_before: int, rate: int = 16000) -> str:
+    """Feeds 16-bit mono PCM to VoiceEnd 50 ms at a time (time counted from the samples); the first decision that isn't
+    "listen", else "listen"."""
+    n = len(pcm_bytes) // 2
+    if not n:
+        return "listen"
+    pcm = struct.unpack("<%dh" % n, pcm_bytes[: n * 2])
+    step = rate // 20
+    seen = samples_before
+    for i in range(0, n, step):
+        chunk = pcm[i:i + step]
+        seen += len(chunk)
+        level = math.sqrt(sum(x * x for x in chunk) / len(chunk)) / 32768.0
+        state = decide.step(level, seen * 1000.0 / rate)
+        if state != "listen":
+            return state
+    return "listen"
 MAX_HISTORY_TURNS = 10
 MAX_HISTORY_CHARS = 4000
 MAX_IMAGE_BYTES = 6 * 1024 * 1024
@@ -1191,6 +1260,17 @@ class Plugin:
             }
         if req.get("quick") in QUICK_IDS:
             payload["quick"] = req["quick"]
+        # The quest log's objective (the latest answer's steps not removed, with their indexes), so the answer can say
+        # which the question reports done, or the screenshot shows finished (as the desktop app sends it).
+        obj = req.get("objective")
+        if isinstance(obj, dict) and isinstance(obj.get("steps"), list):
+            steps = [
+                {"i": s["i"], "text": str(s.get("text") or "").strip()[:140]}
+                for s in obj["steps"][:8]
+                if isinstance(s, dict) and isinstance(s.get("i"), int) and not isinstance(s.get("i"), bool) and 0 <= s["i"] < 20 and str(s.get("text") or "").strip()
+            ]
+            if steps:
+                payload["objective"] = {"title": str(obj.get("title") or "").strip()[:80], "steps": steps}
         # Hold to talk: the recorded question (stop_recording), sent as audio like the desktop app's voice questions.
         audio = req.get("audio")
         if isinstance(audio, str) and audio.startswith("data:audio/") and len(audio) <= MAX_AUDIO_CHARS:
@@ -1267,13 +1347,14 @@ class Plugin:
             steps = _steps_from(data)
             if steps:
                 result["steps"] = steps
-            # A hint's two bigger levels (the rule, the full answer), hidden until the player asks for them.
-            hints = data.get("hints")
-            if isinstance(hints, dict):
-                levels = {k: str(hints.get(k) or "").strip()[:n] for k, n in (("rule", 400), ("answer", 900))}
-                levels = {k: v for k, v in levels.items() if v}
-                if levels:
-                    result["hints"] = levels
+            # Steps of the quest log's objective (sent as `objective`): the question said they're done (objectiveDone:
+            # moved off), or the screenshot shows them finished (objectiveLooksDone: offered, Nov 20 2026).
+            for key in ("objectiveDone", "objectiveLooksDone"):
+                idx = data.get(key)
+                if isinstance(idx, list):
+                    ok_idx = [i for i in idx if isinstance(i, int) and not isinstance(i, bool) and 0 <= i < 20][:8]
+                    if ok_idx:
+                        result[key] = ok_idx
             if data.get("combat") is True:
                 result["combat"] = True
                 fight = str(data.get("fight") or "").strip()[:80]
@@ -1401,8 +1482,11 @@ class Plugin:
 
     # ---- hold to talk (the Deck's microphone, through PipeWire's pw-record, or arecord) ------------------------
 
-    async def start_recording(self) -> Dict[str, Any]:
-        """Start recording from the default microphone (stopped by stop_recording, or after a minute)."""
+    async def start_recording(self, auto: bool = False) -> Dict[str, Any]:
+        """Start recording from the default microphone (stopped by stop_recording, or after a minute).
+
+        auto (owner, Nov 20 2026, as the desktop's voice): the recording is watched for the player to stop talking;
+        voice_state() then says "end" (send it) or "nothing" (nothing was said in time)."""
         await self._stop_recorder()
         env = _clean_env()
         path = os.path.join(tempfile.gettempdir(), f"qc-voice-{uuid.uuid4().hex}.wav")
@@ -1418,10 +1502,50 @@ class Plugin:
             proc = await asyncio.create_subprocess_exec(*cmd, stdout=DEVNULL, stderr=PIPE, env=env)
         except Exception as e:  # noqa: BLE001
             return {"ok": False, "error": f"Could not start the microphone: {e}"}
-        self._recorder = {"proc": proc, "path": path, "started": time.time()}
+        rec = {"proc": proc, "path": path, "started": time.time(), "voice": "listen" if auto is True else "manual"}
+        self._recorder = rec
         # Never record for more than a minute.
         asyncio.get_event_loop().call_later(60, lambda: asyncio.ensure_future(self._stop_recorder()))
+        if auto is True:
+            asyncio.ensure_future(self._watch_voice(rec))
         return {"ok": True}
+
+    async def _watch_voice(self, rec: Dict[str, Any]) -> None:
+        """Reads the recording as it grows (16 kHz mono s16 WAV) and feeds its loudness, 50 ms at a time, to VoiceEnd.
+        Time is counted in samples, so a recorder that writes in bursts only delays the decision."""
+        decide = VoiceEnd()
+        offset = -1
+        samples_seen = 0
+        while self._recorder is rec and rec.get("voice") == "listen":
+            await asyncio.sleep(0.1)
+            try:
+                size = os.path.getsize(rec["path"])
+                with open(rec["path"], "rb") as f:
+                    if offset < 0:
+                        head = f.read(512)
+                        i = head.find(b"data")
+                        if i < 0 or len(head) < i + 8:
+                            continue
+                        offset = i + 8
+                    if size <= offset + 1:
+                        continue
+                    f.seek(offset)
+                    data = f.read(size - offset)
+            except OSError:
+                continue
+            n = len(data) // 2 * 2
+            offset += n
+            state = voice_chunks(decide, data[:n], samples_seen)
+            samples_seen += n // 2
+            if state != "listen":
+                rec["voice"] = state
+                return
+
+    async def voice_state(self) -> Dict[str, Any]:
+        """Where an auto recording is: "listen", "end" (the player stopped talking: send it), "nothing" (nothing said in
+        time), "manual" (not watched) or "idle" (not recording)."""
+        rec = getattr(self, "_recorder", None)
+        return {"ok": True, "state": rec.get("voice", "manual") if rec else "idle"}
 
     async def _stop_recorder(self) -> Optional[str]:
         rec = getattr(self, "_recorder", None)
