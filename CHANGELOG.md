@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.22.0
+- **Speak.** Press A (or tap) and talk: your question sends itself when you stop talking. Holding A while you talk
+  still works.
+- **The quest log offers to move on** when your screenshot shows a step is done, and telling it "I've done X" removes
+  that step.
+- **Full answers, always.** Hint mode and "Just a hint" are gone.
+
 ## 0.21.0
 - **Where was I?** Start a game after a day or more away and the panel shows where you were, what you were doing and
   your next steps.
