@@ -152,14 +152,15 @@ const CSS = `
 .qc-update-url { font-family: monospace; font-size: 11px; color: #c4b5fd; word-break: break-all; margin-top: 2px; }
 .qc-update-row { display: flex; gap: 6px; margin-top: 6px; }
 .qc-update-row > * { flex: 1 1 0; min-width: 0 !important; padding: 4px 8px !important; font-size: 12px !important; }
-/* Pro / Fast next to Send, each with the questions left */
-.qc-model { display: flex; gap: 4px; width: 100%; }
-.qc-model > .qc-model-opt { flex: 1 1 0 !important; min-width: 0 !important; display: flex !important; align-items: center !important;
-  justify-content: center !important; gap: 6px; padding: 6px 8px !important; font-size: 13px !important; opacity: 0.75; }
-.qc-model > .qc-model-on { opacity: 1; background: rgba(168, 127, 251, 0.32) !important; box-shadow: inset 0 0 0 1px rgba(167, 139, 250, 0.7); }
-.qc-model > .qc-model-empty { opacity: 0.45; }
-.qc-model-n { font-family: 'Silkscreen', monospace; font-size: 12px; color: #c4b5fd; }
-.qc-model-on .qc-model-n { color: #fde68a; }
+/* Today's best answers left (one ask button, Nov 21 2026): a small meter, amber once only quick answers are left */
+.qc-meter { display: flex; align-items: center; gap: 6px; width: 100%; box-sizing: border-box; padding: 5px 8px; border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.1); font-size: 13px; font-weight: 600; color: #e7e5ee; }
+.qc-meter-bars { display: inline-flex; gap: 2px; }
+.qc-meter-bars > i { width: 4px; height: 13px; border-radius: 2px; background: rgba(255, 255, 255, 0.15); }
+.qc-meter-bars > i.on { background: #a87ffb; }
+.qc-meter-quick { color: #f2d9a6; border-color: rgba(251, 191, 36, 0.35); }
+.qc-meter-note { color: #c4a8ff; font-size: 12px; }
+.qc-answer-kind { font-size: 11px; margin-bottom: 4px; }
 /* The quest log: section label, warnings in amber, a fight's top targets in red, Next turn */
 .qc-log-sec { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #b9b2d6; padding: 2px 8px 0; }
 .qc-log-battle { color: #f87171; }

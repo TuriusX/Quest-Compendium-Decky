@@ -190,6 +190,8 @@ export interface AskResult {
   /** Which model answered, and whether that's the other one (the picked one was used up). */
   answeredWith?: AnswerModel;
   switched?: boolean;
+  /** Premium past the month's safety cap: quick answers until the 1st. */
+  monthCap?: boolean;
   modelUsed?: string;
   /** The kind of question (location, puzzle, fight, choice, missable, general). */
   qtype?: string;

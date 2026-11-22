@@ -1332,6 +1332,9 @@ class Plugin:
                 result["answeredWith"] = data["answeredWith"]
                 if data.get("switched") is True:
                     result["switched"] = True
+            # Premium past the month's safety cap (server, Nov 21 2026): quick answers until the 1st, and the panel says so.
+            if data.get("monthCap") is True:
+                result["monthCap"] = True
             # The kind of question (sent back with a thumbs up / down for the answer-quality numbers).
             if str(data.get("qtype") or "") in ("location", "puzzle", "fight", "choice", "missable", "general"):
                 result["qtype"] = data["qtype"]

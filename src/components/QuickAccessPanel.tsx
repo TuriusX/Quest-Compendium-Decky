@@ -10,9 +10,9 @@ import {
 import { offerWorth } from "../worthBus";
 import { useEffect, useRef, useState } from "react";
 import { FaCog, FaComments, FaPlus } from "react-icons/fa";
-import { ask, AskRequest, AnswerModel, getQuota, getState, guideFind, learnGame, locate, PluginState, saveSettings, Turn, visual, drawn, getRecap, saveRecap } from "../api";
-import { balancesOf, deviceTimeZone, modelOf, questionsLine, settingOf, startingModel } from "../answerModel";
-import { ModelToggle } from "./ModelToggle";
+import { ask, AskRequest, AnswerModel, getQuota, getState, guideFind, learnGame, locate, PluginState, Turn, visual, drawn, getRecap, saveRecap } from "../api";
+import { balancesOf, deviceTimeZone, modelKind, questionsLine } from "../answerModel";
+import { AnswerMeter } from "./AnswerMeter";
 import { UpdateNotice } from "./UpdateNotice";
 import { useUpdate } from "../update";
 import { currentGame, fallbackGameName, refreshGame, useCurrentGame } from "../game";
@@ -70,7 +70,7 @@ function Working({ shot, model }: { shot: boolean; model: AnswerModel }) {
       )}
       <div className="qc-step qc-step-now">
         <i aria-hidden="true" />
-        <span>{t("work.asking", { model: model === "pro" ? "Pro" : "Fast" })}</span>
+        <span>{t(model === "pro" ? "work.askingBest" : "work.askingQuick")}</span>
         <span className="qc-step-time">{secs} s · {t("work.typical", { s: typical })}</span>
       </div>
       <div className="qc-bar"><b style={{ width: `${pct}%` }} /></div>
@@ -166,10 +166,9 @@ export function QuickAccessPanel() {
   // The question being worked on: whether a screenshot went with it, and which model answers (the working state).
   const [working, setWorking] = useState<{ shot: boolean; model: AnswerModel }>({ shot: false, model: "pro" });
   const update = useUpdate();
-  // Pro / Fast next to Send: the saved pick when it has questions left, else the other one (with a short note).
-  const [answerModel, setAnswerModel] = useState<AnswerModel>("pro");
+  // One ask button (owner, Nov 21 2026, as desktop 0.9.7): no Pro / Fast pick. Every question asks for a best answer;
+  // the server answers with a quick one when today's best answers are used. The note stays until the next question.
   const [modelNote, setModelNote] = useState("");
-  const noteTimer = useRef<number | undefined>(undefined);
 
   const refreshState = async () => {
     try {
@@ -196,38 +195,15 @@ export function QuickAccessPanel() {
     void refreshQuota();
   }, []);
 
-  const noteSwitch = (to: AnswerModel) => {
-    setModelNote(t(to === "fast" ? "model.switchedToFast" : "model.switchedToPro"));
-    window.clearTimeout(noteTimer.current);
-    noteTimer.current = window.setTimeout(() => setModelNote(""), 5000);
-  };
-  const chooseModel = (m: AnswerModel) => {
-    setAnswerModel(m);
-    setModelNote("");
-    if (ps) setPs({ ...ps, settings: { ...ps.settings, model: settingOf(m) } });
-    void saveSettings({ model: settingOf(m) }).catch(() => {});
-  };
-  // Start with the saved pick once the settings are in.
-  const savedModel = modelOf(ps?.settings.model);
-  useEffect(() => {
-    if (ps) setAnswerModel(startingModel(savedModel, getChat().quota));
-  }, [ps?.settings.model]);
-  // New counts (an answer or a status check): back to the saved pick when it has questions again (a new day), or off a
-  // pick that just ran out, saying so.
+  // Which kind of answer the next question gets: best while any are left today (or before the counts are known).
   const bal = balancesOf(chat.quota);
+  const nextKind: AnswerModel = bal.pro === 0 && (bal.fast ?? 0) > 0 ? "fast" : "pro";
+  // The last best answer was just used (the counts dropped to none): say so once, until the next question.
+  const prevPro = useRef<number | null>(null);
   useEffect(() => {
-    if (!ps || bal.pro === null || bal.fast === null) return;
-    const left = (m: AnswerModel) => (m === "pro" ? bal.pro : bal.fast) as number;
-    if (answerModel !== savedModel && left(savedModel) > 0) {
-      setAnswerModel(savedModel);
-      return;
-    }
-    const other: AnswerModel = answerModel === "pro" ? "fast" : "pro";
-    if (left(answerModel) === 0 && left(other) > 0) {
-      setAnswerModel(other);
-      noteSwitch(other);
-    }
-  }, [bal.pro, bal.fast]);
+    if (prevPro.current !== null && prevPro.current > 0 && bal.pro === 0 && (bal.fast ?? 0) > 0) setModelNote(t("ask.lastBest"));
+    prevPro.current = bal.pro;
+  }, [bal.pro]);
 
   // Following the game that starts (owner, Oct 30 2026; the desktop app's rule, with each game's conversation as the
   // Deck's tab): a game that had a conversation gets it back ("Switched to X" for a few seconds); a new one starts its
@@ -357,13 +333,15 @@ export function QuickAccessPanel() {
       history: getChat().history.map(({ role, text }) => ({ role, text })),
       game: liveGame,
       language: aiLanguageName(),
-      answerModel,
+      // Always a best answer when one is left (the server decides: quick ones after, and for simple lookups).
+      answerModel: "pro",
       timeZone: deviceTimeZone(),
       ...(opts.quick ? { quick: opts.quick } : {}),
       ...(opts.audio ? { audio: opts.audio } : {}),
       ...(objNow ? { objective: { title: objNow.title, steps: objNow.steps } } : {}),
     };
-    setWorking({ shot: !!req.includeScreenshot, model: answerModel });
+    setWorking({ shot: !!req.includeScreenshot, model: nextKind });
+    setModelNote("");
     setChat({ busy: true, pending: q, error: null, notice: null, screenshotNote: null, limitReached: false, signInNudge: false, freshAnswer: false });
     try {
       // Where the player last was (not confirmed) and that guide area's ticks: the answer uses that guide page and can
@@ -383,11 +361,8 @@ export function QuickAccessPanel() {
           res.screenshot === "failed" ? t("answer.shotFailed", { error: res.screenshotError ?? "?" }) : null,
       };
       if (res.quota) patch.quota = mergeQuota(getChat().quota, res.quota);
-      // The picked model was used up today and the other one answered: follow it, and say so.
-      if (res.switched && res.answeredWith && res.answeredWith !== answerModel) {
-        setAnswerModel(res.answeredWith);
-        noteSwitch(res.answeredWith);
-      }
+      // Premium past the month's safety cap: quick answers until the 1st, said once here.
+      if (res.monthCap) setModelNote(t("ask.monthCap"));
       if (res.ok && res.limitReached) {
         patch.pending = null;
         patch.limitReached = true;
@@ -628,6 +603,8 @@ export function QuickAccessPanel() {
               <ReportedNote turnIndex={last.index} />
             ) : (
               <div className="qc-answer" key={last.index}>
+                {/* Which kind of answer this was (one ask button: best while they last, then quick). */}
+                {modelKind(last.turn.model) && <div className="qc-answer-kind qc-muted">{t(modelKind(last.turn.model) === "pro" ? "ask.best" : "ask.quick")}</div>}
                 <AnswerBlocks text={answer} autoFocusFirst={chat.freshAnswer} />
               </div>
             )}
@@ -737,9 +714,9 @@ export function QuickAccessPanel() {
         </PanelSectionRow>
       )}
       <PanelSectionRow>
-        {/* Pro / Fast for the next question, with the questions left of each (as in the desktop app). */}
-        <ModelToggle value={answerModel} onChange={chooseModel} pro={bal.pro} fast={bal.fast} disabled={chat.busy || !ps} />
-        {modelNote && <div className="qc-note qc-muted" style={{ marginTop: 4 }}>{modelNote}</div>}
+        {/* Today's best answers left (one ask button: no Pro / Fast pick, as desktop 0.9.7). */}
+        <AnswerMeter quota={chat.quota} />
+        {modelNote && <div className="qc-note qc-meter-note" style={{ marginTop: 4 }}>{modelNote}</div>}
       </PanelSectionRow>
       <AskBox followUp={!!answer} busy={chat.busy} ready={!!ps} onAsk={(text) => void submit(text)} />
     </PanelSection>

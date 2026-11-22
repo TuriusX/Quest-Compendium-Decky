@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.23.0
+- **One ask button.** No more choosing Pro or Fast: every question gets a best answer while you have some left today,
+  then quick answers until midnight. A small meter shows how many best answers you have left, and each answer says
+  whether it was a best or a quick one.
+- **Quick facts, fast.** Simple questions like "How much Strength for the Greatsword?" get a short, checked answer in a
+  few seconds and don't use up a best answer.
+- **Better "what now?" answers:** first the things worth doing nearby, then the dangers on the way, then where to go
+  next.
+- **Answers in your language:** ask in Spanish, Portuguese, German or another language and the answer comes back in it.
+
 ## 0.22.0
 - **Speak.** Press A (or tap) and talk: your question sends itself when you stop talking. Holding A while you talk
   still works.

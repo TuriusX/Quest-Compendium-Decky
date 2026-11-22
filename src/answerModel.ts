@@ -8,6 +8,18 @@ export const modelOf = (setting: string | undefined): AnswerModel => (setting ==
 /** A pick as the saved setting. */
 export const settingOf = (m: AnswerModel): "pro" | "flash" => (m === "fast" ? "flash" : "pro");
 
+/**
+ * Which kind of answer an answer was, from the server's model line ("OpenAI Pro (gpt-…)", "OpenAI Fast (…)", "Gemini
+ * 3.8 Flash"): "pro" (a best answer), "fast" (a quick one), or '' for the app's own notes. As the desktop app's modelKind.
+ */
+export function modelKind(modelUsed?: string): AnswerModel | "" {
+  const m = String(modelUsed || "");
+  if (!m || /offline|limit reached|session expired|unavailable|^eval$|^app$/i.test(m)) return "";
+  if (/flash|lite|fast/i.test(m)) return "fast";
+  if (/\bpro\b/i.test(m)) return "pro";
+  return "";
+}
+
 /** Questions left of each model (null while unknown: older servers, or before the first status check). */
 export function balancesOf(q: Quota | null): { pro: number | null; fast: number | null } {
   return { pro: typeof q?.pro === "number" ? q.pro : null, fast: typeof q?.fast === "number" ? q.fast : null };
