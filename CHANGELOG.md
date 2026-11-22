@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.24.0
+- Answers now come from Google's newest Gemini 4 models and talk you through your run like a guide who knows it: one
+  clear pick, why it fits your character and party, and what to do next. You'll see a single count of questions left
+  today, and each answer shows which model wrote it.
+
 ## 0.23.0
 - **One ask button.** No more choosing Pro or Fast: every question gets a best answer while you have some left today,
   then quick answers until midnight. A small meter shows how many best answers you have left, and each answer says

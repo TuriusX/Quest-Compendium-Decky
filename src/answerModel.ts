@@ -20,6 +20,18 @@ export function modelKind(modelUsed?: string): AnswerModel | "" {
   return "";
 }
 
+/**
+ * The model named on an answer (owner, Nov 22 2026: show which model answered, e.g. "Gemini 4 Hydrogen (medium)"; no
+ * Best / Quick). Older answers get readable names; '' for the app's own notes. As the desktop app's modelLabel.
+ */
+export function modelLabel(modelUsed?: string): string {
+  const m = String(modelUsed || "").trim();
+  if (!m || /offline|limit reached|session expired|unavailable|^eval$|^app$/i.test(m)) return "";
+  const gpt = m.match(/\((gpt-[a-z0-9.-]+)\)/i)?.[1] || (/^gpt-/i.test(m) ? m : "");
+  if (gpt) return gpt.replace(/^gpt-/i, "GPT-").replace(/-([a-z])/g, (_x, c) => ` ${c.toUpperCase()}`);
+  return m.replace(/\s*\((?:emergency )?fallback\)/i, "");
+}
+
 /** Questions left of each model (null while unknown: older servers, or before the first status check). */
 export function balancesOf(q: Quota | null): { pro: number | null; fast: number | null } {
   return { pro: typeof q?.pro === "number" ? q.pro : null, fast: typeof q?.fast === "number" ? q.fast : null };
@@ -59,7 +71,8 @@ export function clock(ms: number): string {
  */
 export function questionsLine(q: Quota | null, t: (k: string, v?: Record<string, string | number>) => string, now = Date.now()): string {
   if (!q || (q.pro === undefined && q.fast === undefined)) return "";
-  const parts = [`${t("model.pro")} ${q.pro ?? 0}`, `${t("model.fast")} ${q.fast ?? 0}`];
+  // One count of questions (owner, Nov 22 2026): players never see the two kinds.
+  const parts = [t("ask.qLeft", { n: (q.pro ?? 0) + (q.fast ?? 0) })];
   if (q.resetAt) parts.push(`⏱ ${clock(q.resetAt - now)}`);
   return parts.join(" · ");
 }
@@ -72,13 +85,12 @@ export function questionsLine(q: Quota | null, t: (k: string, v?: Record<string,
 export function topUpLine(q: Quota | null, t: (k: string, v?: Record<string, string | number>) => string, now = Date.now()): string {
   if (!q?.resetAt || (!q.dailyPro && !q.dailyFast)) return "";
   const cap = q.rollover && q.bankCap ? q.bankCap : 0;
-  const part = (model: string, left: number | undefined, daily: number | undefined) => {
+  const add = (left: number | undefined, daily: number | undefined) => {
     const l = left ?? 0, d = daily ?? 0;
-    if (cap && l >= cap) return t("topup.max", { model, n: cap });
-    const n = cap ? Math.min(d, cap - l) : d;
-    return n > 0 ? t("topup.add", { model, n }) : "";
+    return cap ? Math.max(0, Math.min(d, cap - l)) : d;
   };
-  const parts = [part(t("model.pro"), q.pro, q.dailyPro), part(t("model.fast"), q.fast, q.dailyFast)].filter(Boolean).join(" · ");
+  const n = add(q.pro, q.dailyPro) + add(q.fast, q.dailyFast);
+  const parts = n > 0 ? t("topup.addQ", { n }) : t("topup.fullQ");
   const mins = Math.max(0, Math.ceil((q.resetAt - now) / 60_000));
   const h = Math.floor(mins / 60), m = mins % 60;
   return t("topup.line", { parts, when: h > 0 ? t("topup.hm", { h, m }) : t("topup.m", { m }) });

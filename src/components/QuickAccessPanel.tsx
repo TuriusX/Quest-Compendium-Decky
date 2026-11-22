@@ -11,7 +11,7 @@ import { offerWorth } from "../worthBus";
 import { useEffect, useRef, useState } from "react";
 import { FaCog, FaComments, FaPlus } from "react-icons/fa";
 import { ask, AskRequest, AnswerModel, getQuota, getState, guideFind, learnGame, locate, PluginState, Turn, visual, drawn, getRecap, saveRecap } from "../api";
-import { balancesOf, deviceTimeZone, modelKind, questionsLine } from "../answerModel";
+import { balancesOf, deviceTimeZone, modelLabel, questionsLine } from "../answerModel";
 import { AnswerMeter } from "./AnswerMeter";
 import { UpdateNotice } from "./UpdateNotice";
 import { useUpdate } from "../update";
@@ -70,7 +70,7 @@ function Working({ shot, model }: { shot: boolean; model: AnswerModel }) {
       )}
       <div className="qc-step qc-step-now">
         <i aria-hidden="true" />
-        <span>{t(model === "pro" ? "work.askingBest" : "work.askingQuick")}</span>
+        <span>{t("work.askingQ")}</span>
         <span className="qc-step-time">{secs} s · {t("work.typical", { s: typical })}</span>
       </div>
       <div className="qc-bar"><b style={{ width: `${pct}%` }} /></div>
@@ -201,7 +201,7 @@ export function QuickAccessPanel() {
   // The last best answer was just used (the counts dropped to none): say so once, until the next question.
   const prevPro = useRef<number | null>(null);
   useEffect(() => {
-    if (prevPro.current !== null && prevPro.current > 0 && bal.pro === 0 && (bal.fast ?? 0) > 0) setModelNote(t("ask.lastBest"));
+    // (Switching between the server's two models is silent since Nov 22 2026: no note.)
     prevPro.current = bal.pro;
   }, [bal.pro]);
 
@@ -362,7 +362,6 @@ export function QuickAccessPanel() {
       };
       if (res.quota) patch.quota = mergeQuota(getChat().quota, res.quota);
       // Premium past the month's safety cap: quick answers until the 1st, said once here.
-      if (res.monthCap) setModelNote(t("ask.monthCap"));
       if (res.ok && res.limitReached) {
         patch.pending = null;
         patch.limitReached = true;
@@ -529,7 +528,7 @@ export function QuickAccessPanel() {
         </div>
         <span className={q?.isPremium ? "qc-chip qc-chip-gold" : "qc-chip"}>
           {/* Both counts when the server sends them (Pro / Fast), else the older single count. */}
-          {!q ? t("card.checking") : bal.pro !== null && bal.fast !== null ? t("status.models", { pro: bal.pro, fast: bal.fast }) : t("status.left", { n: q.left ?? "?" })}
+          {!q ? t("card.checking") : bal.pro !== null || bal.fast !== null ? t("status.left", { n: (bal.pro ?? 0) + (bal.fast ?? 0) }) : t("status.left", { n: q.left ?? "?" })}
         </span>
       </div>
     </PanelSectionRow>
@@ -603,8 +602,8 @@ export function QuickAccessPanel() {
               <ReportedNote turnIndex={last.index} />
             ) : (
               <div className="qc-answer" key={last.index}>
-                {/* Which kind of answer this was (one ask button: best while they last, then quick). */}
-                {modelKind(last.turn.model) && <div className="qc-answer-kind qc-muted">{t(modelKind(last.turn.model) === "pro" ? "ask.best" : "ask.quick")}</div>}
+                {/* Which model answered (owner, Nov 22 2026: e.g. "Gemini 4 Hydrogen (medium)"). */}
+                {modelLabel(last.turn.model) && <div className="qc-answer-kind qc-muted">{modelLabel(last.turn.model)}</div>}
                 <AnswerBlocks text={answer} autoFocusFirst={chat.freshAnswer} />
               </div>
             )}
