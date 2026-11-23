@@ -1,6 +1,6 @@
 // Run: npx tsx tests/running.test.ts
 import assert from "node:assert/strict";
-import { cleanShortcutName, followGame, runningFrom, swapConversation } from "../src/running";
+import { cleanShortcutName, followGame, gameFromFileName, runningFrom, swapConversation } from "../src/running";
 
 let passed = 0;
 function test(name: string, fn: () => void) {
@@ -33,6 +33,19 @@ test("a file with no name: \"Which game is this?\" (nothing goes to questions as
   const g = runningFrom(shortcut("RetroArch"), { emulator: "RetroArch", name: null, key: "kbbb", ask: true });
   assert.deepEqual(g?.ask, { key: "kbbb", emulator: "RetroArch" });
   assert.equal(runningFrom(shortcut("RetroArch"), { emulator: "RetroArch", name: null, key: "kbbb", notGame: true }), null);
+});
+
+test("a shortcut named after its file: the game's name from it, or no game when it's a tool", () => {
+  assert.equal(runningFrom(shortcut("PS5Upload-12.6.11-linux-x64.appimage"), null), null);
+  assert.equal(gameFromFileName("PS5Upload-12.6.11-linux-x64.appimage"), null);
+  assert.equal(gameFromFileName("Heroic-2.15.2.AppImage"), null);
+  assert.equal(gameFromFileName("Hades_v1.38.x86_64"), "Hades");
+  assert.equal(gameFromFileName("ProtonUp-Qt-2.10.2-x86_64.AppImage"), null);
+  assert.equal(gameFromFileName("Celeste-linux-x64.AppImage"), "Celeste");
+  assert.equal(gameFromFileName("start.sh"), null);
+  assert.equal(gameFromFileName("12.6.11.appimage"), null);
+  assert.equal(gameFromFileName("Hollow Knight"), "Hollow Knight");
+  assert.deepEqual(runningFrom(shortcut("Celeste-linux-x64.AppImage"), null), { name: "Celeste", appId: 0, key: "name:celeste" });
 });
 
 test("following the game: switch to it, stay (with Switch) when switching is off and there are questions", () => {

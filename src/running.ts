@@ -15,6 +15,29 @@ const NOT_A_GAME_NAME = /^(retroarch|emudeck|emulationstation|es-de|emulationsta
 
 const loose = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
 
+/** A shortcut named after its program file ("PS5Upload-12.6.11-linux-x64.appimage"; Steam names added files that way). */
+const FILE_NAME = /\.(appimage|sh|exe|x86_64|x86|bin|run|jar|py|desktop|flatpakref)$/i;
+/** A version or platform tag and everything after it ("-12.6.11-linux-x64", "_v1.2", " x86_64"). */
+const FILE_TAIL = /[-_. ]+(?:v?\d+(?:[._]\d+)+|linux|x86[-_]?64|x64|x86|amd64|arm64|aarch64|win(?:dows)?(?:32|64)?|steam ?deck|portable)(?![\p{L}\p{N}]).*$/iu;
+/** What a tool's file is called: an uploader, a launcher, an installer. Not a game. */
+const PROGRAM_WORD = /(upload|download|install|launcher|setup|updat|manager|tool|server|client|helper|patch|config|settings|editor|convert|backup|sync|overlay|flasher|uninstall)/i;
+/** The Deck's usual non-game programs, and a file name that says nothing ("start.sh"). */
+const PROGRAM_NAME = /^(heroic|lutris|bottles|protonup( qt)?|protonplus|decky|flatseal|warehouse|chiaki(4deck| ng)?|moonlight|greenlight|junk store|nonsteamlaunchers|boilr|minigalaxy|itch|playnite|steamtinkerlaunch|start|run|launch|play|game|main|app)$/i;
+
+/**
+ * A file-name shortcut as a game's name (owner, Nov 22 2026: "PS5Upload-12.6.11-linux-x64.appimage" was counted as a
+ * game): the file's name without its extension, version and platform ("Celeste-linux-x64.AppImage" is Celeste), or null
+ * when what's left is a tool's name or nothing, so QC can't tell which game it is and treats it as no game. Any other
+ * name comes back as it was.
+ */
+export function gameFromFileName(s: string): string | null {
+  const name = String(s || "").trim();
+  if (!FILE_NAME.test(name)) return name;
+  const left = name.replace(FILE_NAME, "").replace(FILE_TAIL, "").replace(/[-_.]+/g, " ").replace(/\s{2,}/g, " ").trim();
+  if (!left || !/\p{L}/u.test(left) || PROGRAM_WORD.test(left) || PROGRAM_NAME.test(left)) return null;
+  return left;
+}
+
 /** A shortcut's name as a game's: tags Steam ROM Manager or the player added ("(Switch)", "[Ryujinx]") gone. */
 export function cleanShortcutName(s: string): string {
   return String(s || "")
@@ -40,7 +63,7 @@ export function runningFrom(
     if (emu.name) return { name: emu.name, appId: 0, key: `name:${loose(emu.name)}` };
     if (emu.ask) return { name: emu.emulator || steam.name, appId: 0, key: emu.key, ask: { key: emu.key, emulator: emu.emulator || steam.name } };
   }
-  const name = cleanShortcutName(steam.name);
+  const name = gameFromFileName(cleanShortcutName(steam.name));
   if (!name || NOT_A_GAME_NAME.test(name)) return null;
   return { name, appId: 0, key: `name:${loose(name)}` };
 }
