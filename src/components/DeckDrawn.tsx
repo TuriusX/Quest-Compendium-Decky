@@ -16,7 +16,7 @@ export function DeckDrawn({ drawn, onWrong }: { drawn: Drawn; onWrong: () => voi
   const small = { minWidth: 0, width: "auto", padding: "4px 12px", fontSize: 12 } as const;
   if (wrong) return <div className="qc-vis qc-vis-note">{t("drawn.thanks")}</div>;
   const illus = drawn.on === "illustration";
-  const label = illus ? t("drawn.illustrationNote") : drawn.on === "wiki" ? t("drawn.onWiki", { site: drawn.page?.site || "wiki" }) : t("drawn.onScreen");
+  const label = illus ? t("drawn.illustrationNote") : drawn.found ? t("visual.map") : drawn.on === "wiki" ? t("drawn.onWiki", { site: drawn.page?.site || "wiki" }) : t("drawn.onScreen");
   const open = () => openPicture(drawn.url, drawn.alt, illus ? t("drawn.illustration") : label);
   return (
     <Focusable className="qc-vis" flow-children="vertical">

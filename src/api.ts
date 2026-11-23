@@ -93,7 +93,7 @@ export type DeckVisual =
 /** A wiki page shown as a link row under the answer (owner, Nov 14 2026). */
 export type WikiPage = { url: string; title: string; site: string };
 /** Drawn answers (owner, Nov 18 2026): the answer drawn on the question's screenshot or a wiki picture, or an illustration. */
-export type DeckDrawn = { kind: "drawn"; url: string; on: "screen" | "wiki" | "illustration"; alt: string; page?: WikiPage };
+export type DeckDrawn = { kind: "drawn"; url: string; on: "screen" | "wiki" | "illustration"; alt: string; page?: WikiPage; found?: boolean };
 
 export interface Turn {
   role: "user" | "assistant";
