@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.24.1
+- Tools you added to Steam as non-Steam shortcuts (an uploader, a launcher, ProtonUp-Qt) are no longer taken for the game
+  you're playing. A game added as its download file (like "Celeste-linux-x64.AppImage") is still recognised by its name.
+
 ## 0.24.0
 - Answers now come from Google's newest Gemini 4 models and talk you through your run like a guide who knows it: one
   clear pick, why it fits your character and party, and what to do next. You'll see a single count of questions left
