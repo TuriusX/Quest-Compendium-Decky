@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.25.0
+- A tidier panel with fewer presses: Speak comes first, the quick questions fit on one row with More… for the rest,
+  and the Ask button only shows once you've typed something.
+- Questions left show once, in the top card. Press it to see when more arrive and how to get Premium.
+- Report this answer moved to the full answer page, and the model name sits under the answer.
+- The Guides tab's full-screen button says what it does.
+- Fixed: the Premium card said "8 best and 25 quick answers a day". Premium is 25 questions a day; free is 7.
+
 ## 0.24.1
 - Tools you added to Steam as non-Steam shortcuts (an uploader, a launcher, ProtonUp-Qt) are no longer taken for the game
   you're playing. A game added as its download file (like "Celeste-linux-x64.AppImage") is still recognised by its name.
