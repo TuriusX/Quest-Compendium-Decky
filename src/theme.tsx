@@ -209,7 +209,7 @@ const CSS = `
 .qcgp-art-banner .qcgp-art-ph { font-size: 22px; }
 .qcgp-row-art { flex-direction: row !important; align-items: center !important; gap: 10px; }
 .qcgp-row-text { display: flex; flex-direction: column; min-width: 0; }
-.qcgp-fs { flex: 0 0 40px; width: 40px !important; min-width: 40px !important; padding: 6px 0 !important; text-align: center !important; font-size: 16px !important; }
+.qcgp-fs { flex: 0 0 auto; width: auto !important; min-width: 40px !important; padding: 6px 10px !important; text-align: center !important; font-size: 13px !important; white-space: nowrap; }
 .qcgp-sort { display: flex; gap: 6px; width: 100%; }
 .qcgp-sort > * { flex: 1 1 0; min-width: 0 !important; padding: 4px 8px !important; font-size: 12px !important; }
 .qcgp-sort .qcgp-on { background: rgba(168, 127, 251, 0.35) !important; color: #fff !important; }
@@ -386,6 +386,17 @@ const CSS = `
 .qc-head-game { font-size: 14px; font-weight: 700; color: #f4f1ff; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .qc-head-sub { font-size: 11.5px; color: #b9b2d6; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
 .qc-head > .qc-chip { flex: 0 0 auto; white-space: nowrap; font-variant-numeric: tabular-nums; }
+/* The chip as a button (Nov 24 2026, Deck audit): the one count, and the way into Premium. */
+.qc-head > .qc-chip-btn { width: auto !important; min-width: 0 !important; height: auto !important; padding: 4px 9px !important; border-radius: 999px !important; background: rgba(0,0,0,.3) !important; border: 1px solid rgba(168,127,251,.5) !important; color: #efeaff !important; font-size: 11px !important; line-height: 1.2 !important; display: inline-flex !important; align-items: center; gap: 5px; }
+.qc-head > .qc-chip-btn.qc-chip-gold { border-color: rgba(232,184,74,.6) !important; color: #f3d27a !important; }
+.qc-head > .qc-chip-btn.qc-chip-out { border-color: rgba(251,191,36,.6) !important; color: #fcd34d !important; }
+.qc-chip-caret { font-size: 9px; opacity: .8; }
+.qc-chip-card { width: 100%; box-sizing: border-box; padding: 8px 10px; border-radius: 8px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); display: flex; flex-direction: column; gap: 4px; }
+.qc-answer-kind-end { margin: 6px 0 0; }
+/* More... at the end of the quick questions; the rest open in rows of two under it. */
+.qc-presets > .qc-more-btn { flex: 0 0 auto !important; width: auto !important; min-width: 0 !important; padding: 8px 10px !important; color: #d9c8ff !important; }
+.qc-presets-more { flex-wrap: wrap; }
+.qc-presets-more > * { flex: 1 1 calc(50% - 6px) !important; }
 .qc-tabs > .qc-tab { flex: 1 1 0; min-width: 0 !important; }
 .qc-working-wrap { display: flex; flex-direction: column; gap: 6px; width: 100%; }
 .qc-working { display: flex; flex-direction: column; gap: 7px; padding: 10px; border-radius: 8px; background: rgba(168,127,251,.12); }

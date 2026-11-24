@@ -181,8 +181,9 @@ function TopBar({ backLabel, full }: { backLabel?: string; full: boolean }) {
             <span className="qcgp-back-label">◀ {backLabel}</span>
           </DialogButton>
         )}
+        {/* Labelled (owner, Nov 24 2026, Deck audit: the bare ⛶ wasn't clear, and there's no hovering on a Deck). */}
         <DialogButton className="qcgp-back qcgp-fs" onClick={() => openPage(QC_GUIDES_ROUTE)} aria-label={t("qcg.fullscreen")}>
-          ⛶
+          ⛶ {t("qcg.fullscreen")}
         </DialogButton>
       </Focusable>
     </Row>

@@ -1,7 +1,6 @@
 import {
   ButtonItem,
   DialogButton,
-  DropdownItem,
   Focusable,
   PanelSection,
   PanelSectionRow,
@@ -30,7 +29,7 @@ import { agoText, recapFrom, recapShowing, RECAP_GAP_MS, setRecapShowing } from 
 import { ThemeStyle } from "../theme";
 import { AnswerBlocks } from "./AnswerBlocks";
 import { checkAnswerMarkers } from "../markerCheck";
-import { ReportButton, ReportedNote } from "./ReportAnswer";
+import { ReportedNote } from "./ReportAnswer";
 import { VoteButtons } from "./VoteButtons";
 import { BrowserTab } from "./BrowserTab";
 import { PointChecklist } from "./PointChecklist";
@@ -137,11 +136,14 @@ function AskBox({ followUp, busy, ready, onAsk }: { followUp: boolean; busy: boo
           }}
         />
       </PanelSectionRow>
-      <PanelSectionRow>
-        <ButtonItem layout="below" disabled={busy || !ready || !hasText} onClick={send}>
-          {busy ? t("ask.sending") : t("ask.button")}
-        </ButtonItem>
-      </PanelSectionRow>
+      {/* Ask only once there's something to send (owner, Nov 24 2026, Deck audit: a greyed-out Ask was always a row). */}
+      {(hasText || busy) && (
+        <PanelSectionRow>
+          <ButtonItem layout="below" disabled={busy || !ready || !hasText} onClick={send}>
+            {busy ? t("ask.sending") : t("ask.button")}
+          </ButtonItem>
+        </PanelSectionRow>
+      )}
     </>
   );
 }
@@ -162,6 +164,8 @@ export function QuickAccessPanel() {
   // Subscribe (owner, Nov 15 2026): on its own row under the strip, so the game's name keeps its room; it opens the
   // Premium QR code right under it.
   const [showSub, setShowSub] = useState(false);
+  // The rest of the quick questions, opened by More... in their row (Nov 24 2026, Deck audit).
+  const [moreOpen, setMoreOpen] = useState(false);
   const [helping, setHelping] = useState(false);
   // The question being worked on: whether a screenshot went with it, and which model answers (the working state).
   const [working, setWorking] = useState<{ shot: boolean; model: AnswerModel }>({ shot: false, model: "pro" });
@@ -439,6 +443,8 @@ export function QuickAccessPanel() {
   const asked = lastQuestion(chat);
   const earlier = Math.max(0, chat.history.filter((turn) => turn.role === "user").length - 1);
   const q = chat.quota;
+  // The questions left, as one count (the top card's chip).
+  const leftN: number | null = bal.pro !== null || bal.fast !== null ? (bal.pro ?? 0) + (bal.fast ?? 0) : typeof q?.left === "number" ? q.left : null;
   // Answer-first: once there's a question in flight, an answer or a problem, it sits right under Help me here.
   const showAnswerSection = chat.busy || !!answer || !!chat.error || !!chat.notice || !!chat.screenshotNote;
   const canRetry = !!chat.error && !chat.busy && !chat.limitReached && !!chat.pending;
@@ -526,10 +532,12 @@ export function QuickAccessPanel() {
             ))}
           </div>
         </div>
-        <span className={q?.isPremium ? "qc-chip qc-chip-gold" : "qc-chip"}>
-          {/* Both counts when the server sends them (Pro / Fast), else the older single count. */}
-          {!q ? t("card.checking") : bal.pro !== null || bal.fast !== null ? t("status.left", { n: (bal.pro ?? 0) + (bal.fast ?? 0) }) : t("status.left", { n: q.left ?? "?" })}
-        </span>
+        {/* The questions left (owner, Nov 24 2026, Deck audit): the one count on the panel, and the way into Premium. Pressed,
+            it shows when more arrive and, off Premium, the Premium QR code (Subscribe was a button beside Help me here). */}
+        <DialogButton className={`qc-chip qc-chip-btn${q?.isPremium ? " qc-chip-gold" : ""}${leftN === 0 ? " qc-chip-out" : ""}`} disabled={!q} onClick={() => setShowSub((v) => !v)} aria-expanded={showSub}>
+          {!q ? t("card.checking") : t("status.left", { n: leftN ?? "?" })}
+          <span className="qc-chip-caret" aria-hidden="true">{showSub ? "▾" : "▸"}</span>
+        </DialogButton>
       </div>
     </PanelSectionRow>
   );
@@ -602,9 +610,10 @@ export function QuickAccessPanel() {
               <ReportedNote turnIndex={last.index} />
             ) : (
               <div className="qc-answer" key={last.index}>
-                {/* Which model answered (owner, Nov 22 2026: e.g. "Gemini 4 Hydrogen (medium)"). */}
-                {modelLabel(last.turn.model) && <div className="qc-answer-kind qc-muted">{modelLabel(last.turn.model)}</div>}
                 <AnswerBlocks text={answer} autoFocusFirst={chat.freshAnswer} />
+                {/* Which model answered (owner, Nov 22 2026: e.g. "Gemini 4 Hydrogen (medium)"), under the answer as on the
+                    desktop (Nov 24 2026). */}
+                {modelLabel(last.turn.model) && <div className="qc-answer-kind qc-muted qc-answer-kind-end">{modelLabel(last.turn.model)}</div>}
               </div>
             )}
           </PanelSectionRow>
@@ -635,7 +644,7 @@ export function QuickAccessPanel() {
                 <DialogButton className="qc-mini-btn" onClick={() => openPage(ANSWER_ROUTE)}>
                   {last.turn.sourceLinks?.length ? t("answer.fullSources", { n: last.turn.sourceLinks.length }) : t("answer.full")}
                 </DialogButton>
-                <ReportButton info={{ turn: last.turn, turnIndex: last.index, question: asked ?? "", game: game?.name ?? "" }} />
+                {/* (Report this answer is on the full answer page: owner, Nov 24 2026, Deck audit, one row less here.) */}
               </Focusable>
             </PanelSectionRow>
           )}
@@ -658,30 +667,39 @@ export function QuickAccessPanel() {
   );
 
   // ---- The question box: quick questions, talk, type, Pro / Fast ----
-  const composer = (
-    <PanelSection>
+  // Speak first, then the quick questions in one row ending in More..., then typing (owner, Nov 24 2026, Deck audit: on
+  // a controller every row is a press; talking is the main way to ask on a Deck).
+  const quickRow = (
+    <>
       <PanelSectionRow>
         <Focusable className="qc-presets" flow-children="horizontal">
-          {chips.shown.map((id) => (
+          {chips.shown.slice(0, chips.extra.length > 0 ? 2 : 3).map((id) => (
             <DialogButton key={id} disabled={chat.busy || !ps} onClick={() => askQuick(id)}>
               {t(quickLabelKey(id))}
             </DialogButton>
           ))}
+          {chips.extra.length > 0 && (
+            <DialogButton className="qc-more-btn" disabled={chat.busy || !ps} onClick={() => setMoreOpen((v) => !v)} aria-expanded={moreOpen}>
+              {moreOpen ? t("more.less") : t("more.button")}
+            </DialogButton>
+          )}
         </Focusable>
       </PanelSectionRow>
-      {!answer && chips.extra.length > 0 && (
+      {moreOpen && chips.extra.length > 0 && (
         <PanelSectionRow>
-          {/* The same quick questions as the desktop app; picking one asks it right away. */}
-          <DropdownItem
-            label={t("more.label")}
-            strDefaultLabel={t("more.pick")}
-            rgOptions={chips.extra.map((id) => ({ data: id, label: t(quickLabelKey(id)) }))}
-            selectedOption={null}
-            disabled={chat.busy || !ps}
-            onChange={(opt) => askQuick(opt.data as QuickId)}
-          />
+          <Focusable className="qc-presets qc-presets-more" flow-children="horizontal">
+            {[...chips.shown.slice(2), ...chips.extra].map((id) => (
+              <DialogButton key={id} disabled={chat.busy || !ps} onClick={() => { setMoreOpen(false); askQuick(id); }}>
+                {t(quickLabelKey(id))}
+              </DialogButton>
+            ))}
+          </Focusable>
         </PanelSectionRow>
       )}
+    </>
+  );
+  const composer = (
+    <PanelSection>
       {canTalk && (
         <PanelSectionRow>
           <DialogButton
@@ -712,11 +730,13 @@ export function QuickAccessPanel() {
           {talkError && <div className="qc-note qc-muted" style={{ marginTop: 4 }}>{talkError}</div>}
         </PanelSectionRow>
       )}
-      <PanelSectionRow>
-        {/* Today's best answers left (one ask button: no Pro / Fast pick, as desktop 0.9.7). */}
-        <AnswerMeter quota={chat.quota} />
-        {modelNote && <div className="qc-note qc-meter-note" style={{ marginTop: 4 }}>{modelNote}</div>}
-      </PanelSectionRow>
+      {quickRow}
+      {/* (The questions-left row went into the top card's chip, Nov 24 2026.) */}
+      {modelNote && (
+        <PanelSectionRow>
+          <div className="qc-note qc-meter-note" style={{ marginTop: 4 }}>{modelNote}</div>
+        </PanelSectionRow>
+      )}
       <AskBox followUp={!!answer} busy={chat.busy} ready={!!ps} onAsk={(text) => void submit(text)} />
     </PanelSection>
   );
@@ -787,6 +807,15 @@ export function QuickAccessPanel() {
             <div className="qc-note qc-err">{t("backend.down")}</div>
           </PanelSectionRow>
         )}
+        {showSub && q && (
+          <PanelSectionRow>
+            <div className="qc-chip-card">
+              {/* The count with when more arrive ("6 questions left · in 5:25"), or just the count. */}
+              {nextTopUp ? <div className="qc-note"><TopUp quota={chat.quota} /></div> : <AnswerMeter quota={chat.quota} />}
+            </div>
+          </PanelSectionRow>
+        )}
+        {showSub && q && !q.isPremium && <PremiumQR linked={!!ps?.linked} startOpen />}
         <PanelSectionRow>
           <Focusable className="qc-tabs" flow-children="horizontal">
             {([["companion", t("tab.ask")], ["log", t("tab.log")], ["browser", t("tab.guides")]] as const).map(([id, label]) => (
@@ -810,14 +839,8 @@ export function QuickAccessPanel() {
                 <DialogButton className="qc-help-btn" disabled={helping} onClick={() => void helpHere()}>
                   {helping ? t("help.working") : t("help.button")}
                 </DialogButton>
-                {q && !q.isPremium && (
-                  <DialogButton className="qc-sub-btn" onClick={() => setShowSub((v) => !v)}>
-                    {t("premium.subscribe")}
-                  </DialogButton>
-                )}
               </Focusable>
             </PanelSectionRow>
-            {showSub && q && !q.isPremium && <PremiumQR linked={!!ps?.linked} startOpen />}
             {recap && recap.key === getChat().gameKey && (
               <PanelSectionRow>
                 <Focusable className="qc-recap" flow-children="vertical">

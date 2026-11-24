@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DialogButton, Focusable } from "@decky/ui";
 import type { Turn } from "../api";
 import { useT } from "../i18n";
@@ -26,6 +26,9 @@ export function QuestLog({
 }) {
   const t = useT();
   const [undo, setUndo] = useState<{ i: number; text: string; timer: ReturnType<typeof setTimeout> } | null>(null);
+  // The removing hint shows the first 3 times the log has steps, then never (owner, Nov 24 2026, Deck audit).
+  const [showHint] = useState(() => { try { return Number(localStorage.getItem("qc-log-hint-seen") || 0) < 3; } catch { return true; } });
+  useEffect(() => { if (!showHint) return; try { localStorage.setItem("qc-log-hint-seen", String(Number(localStorage.getItem("qc-log-hint-seen") || 0) + 1)); } catch { /* fine */ } }, [showHint]);
   const steps = turn.steps ?? [];
   if (!steps.length && !turn.title) return null;
   const removed = new Set(turn.doneSteps ?? []);
@@ -94,7 +97,8 @@ export function QuestLog({
           </span>
         </DialogButton>
       )}
-      {steps.length > 0 && left.length > 0 && <div className="qc-note qc-muted">{t("log.removeHint")}</div>}
+      {/* How removing works: the first few times only (owner, Nov 24 2026, Deck audit). */}
+      {steps.length > 0 && left.length > 0 && showHint && <div className="qc-note qc-muted">{t("log.removeHint")}</div>}
       {turn.combat && onNextTurn && (
         <DialogButton className="qc-next-turn" disabled={nextTurnDisabled} onClick={onNextTurn}>
           ⟳ {t("log.nextTurn")}
